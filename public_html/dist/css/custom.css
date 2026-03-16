@@ -1,0 +1,30 @@
+
+#example1_filter ,#customer2_filter ,#supplier2_filter ,#account2_filter ,#fund2_filter ,#expense2_filter ,#other2_filter ,#employee2_filter ,#vat2_filter{
+    float: right;
+}
+#example1_paginate ,#customer2_paginate ,#supplier2_paginate ,#account2_paginate ,#fund2_paginate ,#expense2_paginate ,#other2_paginate ,#employee2_paginate ,#vat2_paginate{
+    float: right;
+}
+
+.head-cash{
+    position: absolute;
+    left: 60px;
+    top: 10px;
+    color: #ffffff;
+    font-size: 18px;
+}
+#dashp{
+    color: #FFFFFF;
+    font-size: 22px;
+}
+#btnSize{
+    height: 35px;
+    padding: 8px;
+}
+
+.content-wrapper{
+    margin-top: 50px ;
+}
+#super_ad .content-wrapper{
+    margin-top: 0px ;
+}

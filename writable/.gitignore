@@ -1,0 +1,7 @@
+/debugbar/*
+/logs/*
+/session/*
+/uploads/*
+/cache/*
+!cache/index.html
+!uploads/index.html
