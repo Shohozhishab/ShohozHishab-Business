@@ -52,15 +52,15 @@
                                     </thead>
                                     <tbody>
                                     <?php $start = 1;
-                                    foreach ($bank_deposit as $bank_deposit) { ?>
+                                    foreach ($bank_deposit as $val) { ?>
                                         <tr>
                                             <td width="80px"><?php echo ++$start ?></td>
-                                            <td><?php echo get_data_by_id('name', 'bank', 'bank_id', $bank_deposit->bank_id) ?></td>
-                                            <td><?php echo showWithCurrencySymbol($bank_deposit->amount) ?></td>
-                                            <td><?php echo $bank_deposit->commont ?></td>
+                                            <td><?php echo get_data_by_id('name', 'bank', 'bank_id', $val->bank_id) ?></td>
+                                            <td><?php echo showWithCurrencySymbol($val->amount) ?></td>
+                                            <td><?php echo $val->commont ?></td>
                                             <td>
-                                                <?php if(edit_expire_check($bank_deposit->createdDtm) == true){ ?>
-                                                <a href="javascript:void(0)" class="btn btn-xs btn-warning"  onclick="depositEdit('<?= $bank_deposit->dep_id;?>')" data-toggle="modal" data-target="#modal-default">Edit</a>
+                                                <?php if(edit_expire_check($val->createdDtm) == true){ ?>
+                                                <a href="javascript:void(0)" class="btn btn-xs btn-warning"  onclick="depositEdit('<?= $val->dep_id;?>')" data-toggle="modal" data-target="#modal-default">Edit</a>
                                                 <?php } ?>
                                             </td>
 
@@ -68,6 +68,52 @@
                                     <?php } ?>
                                     </tbody>
                                 </table>
+
+                                <div class="row no-print" >
+                                    <div class="col-xs-12">
+                                        <button onclick="printDiv('ledgPrint')" class="print_line btn btn-primary pull-right" ><i class="fa fa-print "></i> Print Now</button>
+                                        <button type="button" class="btn btn-info pull-right" style="margin-right: 10px;" onclick="downloadPDF('ledgPrint','bankDeposit')"><i class="fa fa-file-pdf-o "></i> Download PDF </button>
+                                        <button type="button" class="btn btn-success pull-right" style="margin-right: 10px;" onclick="downloadCSV('ledgPrint','bankDeposit')"><i class="fa fa-file-excel-o "></i> Download CSV</button>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-12" id="ledgPrint" style="display: none; text-transform: capitalize; " >
+                                    <div class="col-xs-12" style="margin-bottom: 20px;   ">
+                                        <div class="col-xs-6">
+                                            <?php if(logo_image() == NULL){ ?>
+                                                <img src="<?php echo base_url() ?>/uploads/schools/no_image.jpg" alt="User Image" >
+                                            <?php }else{ ?>
+                                                <img src="<?php echo base_url(); ?>/uploads/schools/<?php echo logo_image(); ?>" class="" alt="User Image">
+                                            <?php } ?>
+                                        </div>
+                                        <div class="col-xs-6">
+                                            <?php print address(); ?>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12" >
+                                        <table class="table table-bordered table-striped text-capitalize">
+                                            <thead>
+                                            <tr>
+                                                <th>No</th>
+                                                <th>Bank Name</th>
+                                                <th>Amount</th>
+                                                <th>Comment</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            <?php $start = 1;
+                                            foreach ($bank_deposit as $item) { ?>
+                                                <tr>
+                                                    <td width="80px"><?php echo ++$start ?></td>
+                                                    <td><?php echo get_data_by_id('name', 'bank', 'bank_id', $item->bank_id) ?></td>
+                                                    <td><?php echo showWithCurrencySymbol($item->amount) ?></td>
+                                                    <td><?php echo $item->commont ?></td>
+                                                </tr>
+                                            <?php } ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
                             <div class="col-md-4">
                                 <table class="table table-bordered table-striped" >

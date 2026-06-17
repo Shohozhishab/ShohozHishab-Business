@@ -28,16 +28,37 @@ class Return_sale_ajax extends BaseController
      * @description This method provides return sale view
      * @return RedirectResponse|void
      */
-    public function index()
+       public function index()
     {
         $isLoggedIn = $this->session->isLoggedIn;
         $role_id = $this->session->role;
         if (!isset($isLoggedIn) || $isLoggedIn != TRUE) {
             return redirect()->to(site_url('Admin/login'));
         } else {
+            $customer_id = $this->request->getGet('customer');
+
             $shopId = $this->session->shopId;
-            $return_saleTable = DB()->table('return_sale');
-            $data['return_sale_data'] = $return_saleTable->where('sch_id', $shopId)->where('deleted IS NULL')->get()->getResult();
+
+            $st_date = $this->request->getGet('st_date');
+            $en_date = $this->request->getGet('en_date');
+
+            $table = DB()->table('return_sale');
+            $table->where('return_sale.sch_id', $shopId);
+            $table->where('return_sale.deleted', null);
+            if (!empty($customer_id)) {
+                $table->join('invoice', 'invoice.invoice_id = return_sale.invoice_id');
+                $table->where('invoice.customer_id', $customer_id);
+            }
+            if (!empty($st_date) && !empty($en_date)) {
+                // Assuming your database column name is 'date'
+                $table->where('createdDtm >=', $st_date . ' 00:00:00');
+                $table->where('createdDtm <=', $en_date . ' 23:59:59');
+            }
+            $data['return_sale_data'] = $table->get()->getResult();
+
+            $data['customerId'] = $customer_id ?? '';
+            $data['st_date'] = isset($st_date)?$st_date:'';
+            $data['en_date'] = isset($en_date)?$en_date:'';
 
             $data['menu'] = view('Admin/menu_sales', $data);
             // All Permissions

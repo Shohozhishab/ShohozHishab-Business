@@ -29,7 +29,7 @@ class Stock_report extends BaseController
      * @description This method provides stock report view
      * @return RedirectResponse|void
      */
-    public function index()
+     public function index()
     {
         $isLoggedIn = $this->session->isLoggedIn;
         $role_id = $this->session->role;

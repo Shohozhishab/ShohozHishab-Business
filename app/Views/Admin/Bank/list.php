@@ -49,24 +49,68 @@
                             </tr>
                             </thead>
                             <tbody>
-                            <?php $start=1; foreach ($bank as $bank) {
-                                $isDeletable = is_deletable('ledger_bank','bank_id',$bank->bank_id);
+                            <?php $start=1; foreach ($bank as $val) {
+                                $isDeletable = is_deletable('ledger_bank','bank_id',$val->bank_id);
                                 ?>
                                 <tr>
                                     <td width="80px"><?php echo $start++ ?></td>
-                                    <td><?php echo $bank->name ?></td>
-                                    <td><?php echo $bank->account_no ?></td>
-                                    <td><?php echo showWithCurrencySymbol($bank->balance) ?></td>
+                                    <td><?php echo $val->name ?></td>
+                                    <td><?php echo $val->account_no ?></td>
+                                    <td><?php echo showWithCurrencySymbol($val->balance) ?></td>
                                     <td width="180px">
-                                        <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Bank_ajax/update/'.$bank->bank_id); ?>','<?php echo '/Admin/Bank/update/'.$bank->bank_id; ?>')"  class="btn btn-xs btn-info">Update</a>
+                                        <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Bank_ajax/update/'.$val->bank_id); ?>','<?php echo '/Admin/Bank/update/'.$val->bank_id; ?>')"  class="btn btn-xs btn-info">Update</a>
                                         <?php if($isDeletable == true){ ?>
-                                            <a href="<?php echo site_url('/Admin/Bank/delete/' . $bank->bank_id); ?>" onclick="return confirm('Are you sure you want to delete this item?');"  class="btn btn-danger btn-xs">Delete</a>
+                                            <a href="<?php echo site_url('/Admin/Bank/delete/' . $val->bank_id); ?>" onclick="return confirm('Are you sure you want to delete this item?');"  class="btn btn-danger btn-xs">Delete</a>
                                         <?php } ?>
                                     </td>
                                 </tr>
                                 <?php } ?>
                             </tbody>
                         </table>
+                        <div class="row no-print" >
+                            <div class="col-xs-12">
+                                <button onclick="printDiv('ledgPrint')" class="print_line btn btn-primary pull-right" ><i class="fa fa-print "></i> Print Now</button>
+                                <button type="button" class="btn btn-info pull-right" style="margin-right: 10px;" onclick="downloadPDF('ledgPrint','sales')"><i class="fa fa-file-pdf-o "></i> Download PDF </button>
+                                <button type="button" class="btn btn-success pull-right" style="margin-right: 10px;" onclick="downloadCSV('ledgPrint','sales')"><i class="fa fa-file-excel-o "></i> Download CSV</button>
+                            </div>
+                        </div>
+
+                        <div class="col-md-12" id="ledgPrint" style="display: none; text-transform: capitalize; " >
+                            <div class="col-xs-12" style="margin-bottom: 20px;   ">
+                                <div class="col-xs-6">
+                                    <?php if(logo_image() == NULL){ ?>
+                                        <img src="<?php echo base_url() ?>/uploads/schools/no_image.jpg" alt="User Image" >
+                                    <?php }else{ ?>
+                                        <img src="<?php echo base_url(); ?>/uploads/schools/<?php echo logo_image(); ?>" class="" alt="User Image">
+                                    <?php } ?>
+                                </div>
+                                <div class="col-xs-6">
+                                    <?php print address(); ?>
+                                </div>
+                            </div>
+                            <div class="col-md-12" >
+                                <table class="table table-bordered table-striped text-capitalize">
+                                    <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Name</th>
+                                        <th>Account No</th>
+                                        <th>Balance</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <?php $start=1; foreach ($bank as $item) { ?>
+                                        <tr>
+                                            <td width="80px"><?php echo $start++ ?></td>
+                                            <td><?php echo $item->name ?></td>
+                                            <td><?php echo $item->account_no ?></td>
+                                            <td><?php echo showWithCurrencySymbol($item->balance) ?></td>
+                                        </tr>
+                                    <?php } ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                     <!-- /.box-body -->
                 </div>

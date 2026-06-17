@@ -41,9 +41,30 @@ class Sales extends BaseController
             return redirect()->to(site_url('Admin/login'));
         } else {
             $shopId = $this->session->shopId;
-            $salesTable = DB()->table('sales');
-            $data['sales'] = $salesTable->where('sch_id', $shopId)->where('deleted IS NULL')->get()->getResult();
+            $customer_id = $this->request->getGet('customer');
 
+            $st_date = $this->request->getGet('st_date');
+            $en_date = $this->request->getGet('en_date');
+
+            $table = DB()->table('sales');
+            $table->where('sales.sch_id', $shopId);
+
+            if (!empty($customer_id)) {
+                $table->join('invoice', 'invoice.invoice_id = sales.invoice_id');
+                $table->where('invoice.customer_id', $customer_id);
+            }
+            // Apply date filters only if they are present in the request
+            if (!empty($st_date) && !empty($en_date)) {
+                // Assuming your database column name is 'date'
+                $table->where('sales.createdDtm >=', $st_date . ' 00:00:00');
+                $table->where('sales.createdDtm <=', $en_date . ' 23:59:59');
+            }
+            $data['sales'] = $table->get()->getResult();
+
+            $data['st_date'] = isset($st_date)?$st_date:'';
+            $data['en_date'] = isset($en_date)?$en_date:'';
+            $data['customer_id'] = isset($customer_id)?$customer_id:'';
+            
             $data['menu'] = view('Admin/menu_sales', $data);
             // All Permissions
             //$perm = array('create','read','update','delete','mod_access');

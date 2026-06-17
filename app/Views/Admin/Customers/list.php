@@ -43,13 +43,11 @@
                             <thead>
                                 <tr>
                                     <th>No</th>
+                                    <th>Customer ID</th>
                                     <th>Name</th>
-                                    <th>FatherName</th>
-                                    <th>MotherName</th>
                                     <th>Mobile</th>
+                                    <th>Balance</th>
                                     <th>Address</th>
-                                    <th>PresentAddress</th>
-                                    <th>Age</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
@@ -60,14 +58,14 @@
                                 ?>
                                 <tr>
                                     <td><?php echo $i++ ?></td>
+                                    <td><?php echo $val->customer_id; ?></td>
                                     <td><?php echo $val->customer_name; ?></td>
-                                    <td><?php echo $val->father_name; ?></td>
-                                    <td><?php echo $val->mother_name; ?></td>
                                     <td><?php echo $val->mobile; ?></td>
+                                    <td><?php echo showWithCurrencySymbol($val->balance); ?></td>
                                     <td><?php echo $val->address; ?></td>
-                                    <td><?php echo $val->present_address; ?></td>
-                                    <td><?php echo $val->age; ?></td>
                                     <td>
+                                        <a href="<?= site_url('/Admin/Return_sale?customer=' . $val->customer_id)?>" class="btn btn-warning btn-xs">Return List</a>
+                                        
                                         <a href="javascript:void(0)"
                                            onclick="showData('<?php echo site_url('/Admin/Customers_ajax/transaction/' . $val->customer_id); ?>','<?php echo '/Admin/Customers/transaction/' . $val->customer_id; ?>')"
                                            class="btn btn-primary btn-xs">Transaction</a>
@@ -84,6 +82,58 @@
 
                             </tbody>
                         </table>
+
+                        <div class="row no-print" >
+                            <div class="col-xs-12">
+                                <button onclick="printDiv('ledgPrint')" class="print_line btn btn-primary pull-right" ><i class="fa fa-print "></i> Print Now</button>
+                                <button type="button" class="btn btn-info pull-right" style="margin-right: 10px;" onclick="downloadPDF('ledgPrint','customer')"><i class="fa fa-file-pdf-o "></i> Download PDF </button>
+                                <button type="button" class="btn btn-success pull-right" style="margin-right: 10px;" onclick="downloadCSV('ledgPrint','customer')"><i class="fa fa-file-excel-o "></i> Download CSV</button>
+                            </div>
+                        </div>
+
+                        <div class="col-md-12" id="ledgPrint" style="display: none; text-transform: capitalize; " >
+                            <div class="col-xs-12" style="margin-bottom: 20px;   ">
+                                <div class="col-xs-6">
+                                    <?php if(logo_image() == NULL){ ?>
+                                        <img src="<?php echo base_url() ?>/uploads/schools/no_image.jpg" alt="User Image" >
+                                    <?php }else{ ?>
+                                        <img src="<?php echo base_url(); ?>/uploads/schools/<?php echo logo_image(); ?>" class="" alt="User Image">
+                                    <?php } ?>
+                                </div>
+                                <div class="col-xs-6">
+                                    <?php print address(); ?>
+                                </div>
+                            </div>
+                            <div class="col-md-12" >
+                                <table class="table table-bordered table-striped text-capitalize">
+                                    <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Name</th>
+                                        <th>Mobile</th>
+                                        <th>Balance</th>
+                                        <th>Address</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <?php $i = 1;
+                                    foreach ($customer as $val) {
+                                        $isDeletable = is_deletable('ledger','customer_id',$val->customer_id);
+                                        ?>
+                                        <tr>
+                                            <td><?php echo $i++ ?></td>
+                                            <td><?php echo $val->customer_name; ?></td>
+                                            <td><?php echo $val->mobile; ?></td>
+                                            <td><?php echo showWithCurrencySymbol($val->balance); ?></td>
+                                            <td><?php echo $val->address; ?></td>
+                                        </tr>
+                                    <?php } ?>
+
+                                    </tbody>
+                                </table>
+
+                            </div>
+                        </div>
                     </div>
                     <!-- /.box-body -->
                 </div>

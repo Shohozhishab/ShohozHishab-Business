@@ -58,6 +58,8 @@
                                 </tfoot>
                             </table>
                             <button onclick="printDiv('aqu_customer')" class="btn btn-primary" style="float: right;">Print</button>
+                            <button type="button" class="btn btn-info pull-right" style="margin-right: 10px;" onclick="downloadPDF('aqu_customer','aquCustomer')"><i class="fa fa-file-pdf-o "></i> Download PDF </button>
+                            <button type="button" class="btn btn-success pull-right" style="margin-right: 10px;" onclick="downloadCSV('aqu_customer','aquCustomer')"><i class="fa fa-file-excel-o "></i> Download CSV</button>
                         </div>
 
                         <div class="col-xs-12" style="display: none; text-transform: capitalize; "  id="aqu_customer" >
@@ -131,6 +133,8 @@
                                 </tfoot>
                             </table>
                             <button onclick="printDiv('aqu_supplier')" class="btn btn-primary" style="float: right;">Print</button>
+                            <button type="button" class="btn btn-info pull-right" style="margin-right: 10px;" onclick="downloadPDF('aqu_supplier','aquSupplier')"><i class="fa fa-file-pdf-o "></i> Download PDF </button>
+                            <button type="button" class="btn btn-success pull-right" style="margin-right: 10px;" onclick="downloadCSV('aqu_supplier','aquSupplier')"><i class="fa fa-file-excel-o "></i> Download CSV</button>
                         </div>
 
                         <div class="col-xs-12" style="display: none;"   id="aqu_supplier" >
@@ -211,6 +215,8 @@
                                 </tfoot>
                             </table>
                             <button onclick="printDiv('aqu_lone')" class="btn btn-primary" style="float: right;">Print</button>
+                            <button type="button" class="btn btn-info pull-right" style="margin-right: 10px;" onclick="downloadPDF('aqu_lone','aquLone')"><i class="fa fa-file-pdf-o "></i> Download PDF </button>
+                            <button type="button" class="btn btn-success pull-right" style="margin-right: 10px;" onclick="downloadCSV('aqu_lone','aquLone')"><i class="fa fa-file-excel-o "></i> Download CSV</button>
                         </div>
 
                         <div class="col-xs-12" style="display: none;"   id="aqu_lone" >

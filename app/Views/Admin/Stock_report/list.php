@@ -41,6 +41,7 @@
 
                         </div>
                         <div class="col-md-8"></div>
+
                     </div>
                     <!-- /.box-body -->
                 </div>
@@ -50,6 +51,30 @@
 
             <div class="col-md-12" id="product"></div>
 
+            <div class="row no-print" >
+                <div class="col-xs-12">
+                    <button onclick="printDiv('ledgPrint')" class="print_line btn btn-primary pull-right" ><i class="fa fa-print "></i> Print Now</button>
+                    <button type="button" class="btn btn-info pull-right" style="margin-right: 10px;" onclick="downloadPDF('ledgPrint','stockReport')"><i class="fa fa-file-pdf-o "></i> Download PDF </button>
+                    <button type="button" class="btn btn-success pull-right" style="margin-right: 10px;" onclick="downloadCSV('ledgPrint','stockReport')"><i class="fa fa-file-excel-o "></i> Download CSV</button>
+                </div>
+            </div>
+
+            <div class="col-md-12" id="ledgPrint" style="display: none; text-transform: capitalize; " >
+                <div class="col-xs-12" style="margin-bottom: 20px;   ">
+                    <div class="col-xs-6">
+                        <?php if(logo_image() == NULL){ ?>
+                            <img src="<?php echo base_url() ?>/uploads/schools/no_image.jpg" alt="User Image" >
+                        <?php }else{ ?>
+                            <img src="<?php echo base_url(); ?>/uploads/schools/<?php echo logo_image(); ?>" class="" alt="User Image">
+                        <?php } ?>
+                    </div>
+                    <div class="col-xs-6">
+                        <?php print address(); ?>
+                    </div>
+                </div>
+                <div class="col-md-12" id="prentView">
+                </div>
+            </div>
 
         </div>
         <!-- /.row -->
