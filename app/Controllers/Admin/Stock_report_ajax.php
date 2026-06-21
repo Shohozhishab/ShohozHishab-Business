@@ -24,7 +24,7 @@ class Stock_report_ajax extends BaseController
         $this->crop = \Config\Services::image();
     }
 
-    public function index()
+     public function index()
     {
         $isLoggedIn = $this->session->isLoggedIn;
         $role_id = $this->session->role;

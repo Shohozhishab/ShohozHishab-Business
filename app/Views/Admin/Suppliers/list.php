@@ -41,6 +41,7 @@
                                 <th>No</th>
                                 <th>Supplier Id</th>
                                 <th>Name</th>
+                                <th>Balance</th>
                                 <th>Address</th>
                                 <th>Phone</th>
                                 <th>Action</th>
@@ -55,6 +56,7 @@
                                     <td width="80px"><?php echo $start++ ?></td>
                                     <td><?php echo $suppliers->supplier_id ?></td>
                                     <td><?php echo $suppliers->name ?></td>
+                                    <td><?php echo showWithCurrencySymbol($suppliers->balance) ?></td>
                                     <td><?php echo $suppliers->address ?></td>
                                     <td><?php echo showWithPhoneNummberCountryCode($suppliers->phone) ?></td>
                                     <td>
@@ -72,6 +74,57 @@
 
                             </tbody>
                         </table>
+
+                        <div class="row no-print" >
+                            <div class="col-xs-12">
+                                <button onclick="printDiv('ledgPrint')" class="print_line btn btn-primary pull-right" ><i class="fa fa-print "></i> Print Now</button>
+                                <button type="button" class="btn btn-info pull-right" style="margin-right: 10px;" onclick="downloadPDF('ledgPrint','suppliers')"><i class="fa fa-file-pdf-o "></i> Download PDF </button>
+                                <button type="button" class="btn btn-success pull-right" style="margin-right: 10px;" onclick="downloadCSV('ledgPrint','suppliers')"><i class="fa fa-file-excel-o "></i> Download CSV</button>
+                            </div>
+                        </div>
+
+                        <div class="col-md-12" id="ledgPrint" style="display: none; text-transform: capitalize; " >
+                            <div class="col-xs-12" style="margin-bottom: 20px;   ">
+                                <div class="col-xs-6">
+                                    <?php if(logo_image() == NULL){ ?>
+                                        <img src="<?php echo base_url() ?>/uploads/schools/no_image.jpg" alt="User Image" >
+                                    <?php }else{ ?>
+                                        <img src="<?php echo base_url(); ?>/uploads/schools/<?php echo logo_image(); ?>" class="" alt="User Image">
+                                    <?php } ?>
+                                </div>
+                                <div class="col-xs-6">
+                                    <?php print address(); ?>
+                                </div>
+                            </div>
+                            <div class="col-md-12" >
+                                <table class="table table-bordered table-striped text-capitalize">
+                                    <thead>
+                                    <tr>
+                                        <th>Supplier Id</th>
+                                        <th>Name</th>
+                                        <th>Balance</th>
+                                        <th>Phone</th>
+                                        <th>Address</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <?php $start = 1;
+                                    foreach ($supplier as $suppliers) {
+                                        $isDeletable = is_deletable('ledger_suppliers','supplier_id',$suppliers->supplier_id);
+                                        ?>
+                                        <tr>
+                                            <td><?php echo $suppliers->supplier_id ?></td>
+                                            <td><?php echo $suppliers->name ?></td>
+                                            <td><?php echo showWithCurrencySymbol($suppliers->balance) ?></td>
+                                            <td><?php echo showWithPhoneNummberCountryCode($suppliers->phone) ?></td>
+                                            <td width="200"><?php echo $suppliers->address ?></td>
+                                        </tr>
+                                    <?php } ?>
+
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                     <!-- /.box-body -->
                 </div>

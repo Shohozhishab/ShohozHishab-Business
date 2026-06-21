@@ -40,7 +40,84 @@ class Transaction extends BaseController
         } else {
             $shopId = $this->session->shopId;
             $transactionTable = DB()->table('transaction');
+
+            // Date Filter
+            $start_date = $this->request->getGet('start_date');
+            $end_date = $this->request->getGet('end_date');
+            $category = $this->request->getGet('category');
+
+            if ($start_date) {
+                $transactionTable->where('createdDtm >=', $start_date . ' 00:00:00');
+            }
+            if ($end_date) {
+                $transactionTable->where('createdDtm <=', $end_date . ' 23:59:59');
+            }
+
+            // Exclusive Entity Filters based on Category
+            $customer_id = $this->request->getGet('customer_id');
+            $supplier_id = $this->request->getGet('supplier_id');
+            $loan_pro_id = $this->request->getGet('loan_pro_id');
+            $bank_id = $this->request->getGet('bank_id');
+            $employee_id = $this->request->getGet('employee_id');
+
+            if ($category == 'customer') {
+                $transactionTable->where('customer_id !=', NULL);
+                if ($customer_id) $transactionTable->where('customer_id', $customer_id);
+            } elseif ($category == 'supplier') {
+                $transactionTable->where('supplier_id !=', NULL);
+                if ($supplier_id) $transactionTable->where('supplier_id', $supplier_id);
+            } elseif ($category == 'loan_provider') {
+                $transactionTable->where('loan_pro_id !=', NULL);
+                if ($loan_pro_id) $transactionTable->where('loan_pro_id', $loan_pro_id);
+            } elseif ($category == 'fund_transfer') {
+                $transactionTable->where('bank_to_id !=', NULL);
+                if ($bank_id) {
+                    $transactionTable->groupStart()
+                        ->where('bank_id', $bank_id)
+                        ->orWhere('bank_to_id', $bank_id)
+                        ->groupEnd();
+                }
+            } elseif ($category == 'employee') {
+                $transactionTable->where('employee_id !=', NULL);
+                if ($employee_id) $transactionTable->where('employee_id', $employee_id);
+            } elseif ($category == 'vat') {
+                $transactionTable->where('vat_id !=', NULL);
+            } elseif ($category == 'expense') {
+                $transactionTable->where('loan_pro_id', NULL)
+                    ->where('customer_id', NULL)
+                    ->where('supplier_id', NULL)
+                    ->where('bank_id', NULL)
+                    ->where('lc_id', NULL)
+                    ->where('employee_id', NULL)
+                    ->where('trangaction_type', 'Cr.');
+            } elseif ($category == 'othersales') {
+                $transactionTable->where('loan_pro_id', NULL)
+                    ->where('customer_id', NULL)
+                    ->where('supplier_id', NULL)
+                    ->where('bank_id', NULL)
+                    ->where('lc_id', NULL)
+                    ->where('trangaction_type', 'Dr.');
+            } else {
+                $category = 'customer';
+                $transactionTable->where('customer_id !=', NULL);
+            }
+
             $data['transaction_data'] = $transactionTable->where('sch_id', $shopId)->get()->getResult();
+            $data['st_date'] = isset($st_date) ? $st_date : '';
+            $data['en_date'] = isset($en_date) ? $en_date : '';
+            $data['active_category'] = $category;
+
+            $data['customer_id_filter'] = $customer_id;
+            $data['supplier_id_filter'] = $supplier_id;
+            $data['loan_pro_id_filter'] = $loan_pro_id;
+            $data['bank_id_filter'] = $bank_id;
+            $data['employee_id_filter'] = $employee_id;
+
+            $data['customers'] = DB()->table('customers')->where('sch_id', $shopId)->get()->getResult();
+            $data['suppliers'] = DB()->table('suppliers')->where('sch_id', $shopId)->get()->getResult();
+            $data['loan_providers'] = DB()->table('loan_provider')->where('sch_id', $shopId)->get()->getResult();
+            $data['banks'] = DB()->table('bank')->where('sch_id', $shopId)->get()->getResult();
+            $data['employees'] = DB()->table('employee')->where('sch_id', $shopId)->get()->getResult();
 
 
             // All Permissions
@@ -59,7 +136,6 @@ class Transaction extends BaseController
             echo view('Admin/footer');
         }
     }
-
     /**
      * @description This method provides transaction create view
      * @return RedirectResponse|void
@@ -348,8 +424,6 @@ class Transaction extends BaseController
                 } else {
                     print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
                 }
-
-
             } else {
                 if ($chequeNo > 0) {
 
@@ -378,7 +452,7 @@ class Transaction extends BaseController
                         $bankRestBalan = $bankCash + $amount;
                     }
 
-//                    if ($custBalance >= $amount) {
+                    //                    if ($custBalance >= $amount) {
                     $custRestBalan = $custBalance - $amount;
                     $shopRestBalan = $shopsBalance + $amount;
 
@@ -519,16 +593,14 @@ class Transaction extends BaseController
                     DB()->transComplete();
 
                     print '<div class="alert alert-success alert-dismissible" role="alert">Your transaction is successful<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
-//                    } else {
-//                        print '<div class="alert alert-danger alert-dismissible" role="alert">This customer could pay maximum<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
-//                    }
+                    //                    } else {
+                    //                        print '<div class="alert alert-danger alert-dismissible" role="alert">This customer could pay maximum<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+                    //                    }
                 }
             }
         } else {
             print '<div class="alert alert-danger alert-dismissible" role="alert">Please input valid customer<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
-
-
     }
 
     /**
@@ -761,7 +833,6 @@ class Transaction extends BaseController
                         );
                         $tranBank = DB()->table('transaction');
                         $tranBank->where('trans_id', $ledgSupId)->update($tranDataBank);
-
                     }
                 } else {
                     if ($chequeNo > 0) {
@@ -918,9 +989,7 @@ class Transaction extends BaseController
                             );
                             $tranBank = DB()->table('transaction');
                             $tranBank->where('trans_id', $ledgSupId2)->update($tranDataBank);
-
                         }
-
                     }
                 }
 
@@ -932,7 +1001,6 @@ class Transaction extends BaseController
                 }
 
                 print '<div class="alert alert-success alert-dismissible" role="alert">Your transaction is successful<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
-
             } else {
 
                 print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
@@ -940,7 +1008,6 @@ class Transaction extends BaseController
         } else {
             print '<div class="alert alert-danger alert-dismissible" role="alert">Please input valid supplier<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
-
     }
 
     /**
@@ -1209,7 +1276,6 @@ class Transaction extends BaseController
                         );
                         $tranBank = DB()->table('transaction');
                         $tranBank->where('trans_id', $transId)->update($tranDataBank);
-
                     }
                     DB()->transComplete();
                     if (!empty($sms)) {
@@ -1349,12 +1415,10 @@ class Transaction extends BaseController
                         );
                         $tranBank = DB()->table('transaction');
                         $tranBank->where('trans_id', $transId)->update($tranDataBank);
-
                     }
                     DB()->transComplete();
 
                     print '<div class="alert alert-success alert-dismissible" role="alert">Your transaction is successful<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
-
                 } else {
                     print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
                 }
@@ -1362,8 +1426,6 @@ class Transaction extends BaseController
         } else {
             print '<div class="alert alert-danger alert-dismissible" role="alert">Please input valid Account Head<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
-
-
     }
 
     /**
@@ -1555,15 +1617,12 @@ class Transaction extends BaseController
                 DB()->transComplete();
 
                 print '<div class="alert alert-success alert-dismissible" role="alert">Your transaction is successful<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
-
             } else {
                 print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
             }
         } else {
             print '<div class="alert alert-danger alert-dismissible" role="alert">Please input valid Bank<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
-
-
     }
 
     /**
@@ -1640,7 +1699,6 @@ class Transaction extends BaseController
         } else {
             print '<span style="color:green">Balance is ok</span>';
         }
-
     }
 
     /**
@@ -1808,7 +1866,6 @@ class Transaction extends BaseController
                 );
                 $tranBank = DB()->table('transaction');
                 $tranBank->where('trans_id', $ledgtranId)->update($tranDataBank);
-
             }
 
             DB()->transComplete();
@@ -1818,7 +1875,6 @@ class Transaction extends BaseController
 
             print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
-
     }
 
     /**
@@ -1918,7 +1974,6 @@ class Transaction extends BaseController
         DB()->transComplete();
 
         print '<div class="alert alert-success alert-dismissible" role="alert">Your transaction is successful<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
-
     }
 
     /**
@@ -2092,21 +2147,17 @@ class Transaction extends BaseController
                     );
                     $tranBank = DB()->table('transaction');
                     $tranBank->where('trans_id', $ledgSupId)->update($tranDataBank);
-
                 }
 
                 DB()->transComplete();
 
                 print '<div class="alert alert-success alert-dismissible" role="alert">Your transaction is successful<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
-
             } else {
                 print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
             }
         } else {
             print '<div class="alert alert-danger alert-dismissible" role="alert">Please input valid employee<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
-
-
     }
 
     /**
@@ -2304,7 +2355,6 @@ class Transaction extends BaseController
                         );
                         $tranBank = DB()->table('transaction');
                         $tranBank->where('trans_id', $ledgSupId)->update($tranDataBank);
-
                     }
 
                     DB()->transComplete();
@@ -2313,14 +2363,12 @@ class Transaction extends BaseController
                 } else {
                     print '<div class="alert alert-danger alert-dismissible" role="alert">Vat amount to large<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
                 }
-
             } else {
                 print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
             }
         } else {
             print '<div class="alert alert-danger alert-dismissible" role="alert">Please input valid Vat id<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
-
     }
 
     /**
@@ -2556,7 +2604,6 @@ class Transaction extends BaseController
         $view .= '</form>';
 
         print $view;
-
     }
 
     /**
@@ -2663,7 +2710,6 @@ class Transaction extends BaseController
         } else {
             print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
-
     }
 
     /**
@@ -2839,7 +2885,7 @@ class Transaction extends BaseController
      * @param float $amount
      * @return void
      */
-    private function customer_ledger_rest_balance_update($transactionId, $customer_id, $amount,$type)
+    private function customer_ledger_rest_balance_update($transactionId, $customer_id, $amount, $type)
     {
         // Get the specific ledger log entry using a helper function that returns table data by transaction ID
         $ledLog = $this->transactionLog->get_table_name_by_row('ledger', $transactionId);
@@ -2882,13 +2928,12 @@ class Transaction extends BaseController
                     array_push($arrayUpData, $data);
                 }
             }
-
         }
         if (!empty($arrayUpData)) {
             $table = DB()->table('ledger');
             $table->updateBatch($arrayUpData, 'ledg_id');
         }
-//        return $arrayUpData;
+        //        return $arrayUpData;
     }
 
     private function customer_ledger_rest_balance_update_cr($transactionId, $customer_id, $amount, $type)
@@ -2940,7 +2985,7 @@ class Transaction extends BaseController
             $table = DB()->table('ledger');
             $table->updateBatch($arrayUpData, 'ledg_id');
         }
-//        return $arrayUpData;
+        //        return $arrayUpData;
     }
 
     /**
@@ -2989,13 +3034,12 @@ class Transaction extends BaseController
                     array_push($arrayUpData, $data);
                 }
             }
-
         }
         if (!empty($arrayUpData)) {
             $table = DB()->table('ledger_nagodan');
             $table->updateBatch($arrayUpData, 'ledg_nagodan_id');
         }
-//        return $arrayUpData;
+        //        return $arrayUpData;
     }
 
     private function shop_ledger_rest_balance_update_cr($transactionId, $amount, $type)
@@ -3038,13 +3082,12 @@ class Transaction extends BaseController
                     array_push($arrayUpData, $data);
                 }
             }
-
         }
         if (!empty($arrayUpData)) {
             $table = DB()->table('ledger_nagodan');
             $table->updateBatch($arrayUpData, 'ledg_nagodan_id');
         }
-//        return $arrayUpData;
+        //        return $arrayUpData;
     }
 
     /**
@@ -3167,13 +3210,12 @@ class Transaction extends BaseController
                 $data['rest_balance'] = $val->rest_balance - ($preAmount - $amount);
                 array_push($arrayUpData, $data);
             }
-
         }
         if (!empty($arrayUpData)) {
             $table = DB()->table('ledger_bank');
             $table->updateBatch($arrayUpData, 'ledgBank_id');
         }
-//        return $arrayUpData;
+        //        return $arrayUpData;
     }
 
     /**
@@ -3340,7 +3382,6 @@ class Transaction extends BaseController
 
             print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
-
     }
 
     /**
@@ -3392,13 +3433,12 @@ class Transaction extends BaseController
                     array_push($arrayUpData, $data);
                 }
             }
-
         }
         if (!empty($arrayUpData)) {
             $table = DB()->table('ledger_suppliers');
             $table->updateBatch($arrayUpData, 'ledg_sup_id');
         }
-//        return $arrayUpData;
+        //        return $arrayUpData;
     }
 
     private function supplier_ledger_rest_balance_update_cr($transactionId, $supplier_id, $amount, $type)
@@ -3444,13 +3484,12 @@ class Transaction extends BaseController
                     array_push($arrayUpData, $data);
                 }
             }
-
         }
         if (!empty($arrayUpData)) {
             $table = DB()->table('ledger_suppliers');
             $table->updateBatch($arrayUpData, 'ledg_sup_id');
         }
-//        return $arrayUpData;
+        //        return $arrayUpData;
     }
 
     /**
@@ -3607,7 +3646,7 @@ class Transaction extends BaseController
                 $this->dr_payment_data_update($paymentType, $particulars, $tanId, $amount, $transaction->bank_id, $ledgerType);
             }
             //transaction payment amount payment cash or bank(end)
-            
+
             //transaction log all amount update
             $this->transactionLog->transaction_log_all_amount_update($tanId, $amount);
             //transaction log all amount update
@@ -3669,13 +3708,12 @@ class Transaction extends BaseController
                     array_push($arrayUpData, $data);
                 }
             }
-
         }
         if (!empty($arrayUpData)) {
             $table = DB()->table('ledger_loan');
             $table->updateBatch($arrayUpData, 'ledg_loan_id');
         }
-//        return $arrayUpData;
+        //        return $arrayUpData;
     }
 
     private function account_ledger_rest_balance_update_cr($transactionId, $loan_pro_id, $amount, $type)
@@ -3720,7 +3758,6 @@ class Transaction extends BaseController
                     array_push($arrayUpData, $data);
                 }
             }
-
         }
         if (!empty($arrayUpData)) {
             $table = DB()->table('ledger_loan');
@@ -3868,7 +3905,6 @@ class Transaction extends BaseController
             DB()->transComplete();
 
             print '<div class="alert alert-success alert-dismissible" role="alert">Your transaction is successful<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
-
         } else {
             print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
@@ -4051,8 +4087,6 @@ class Transaction extends BaseController
 
             print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
-
-
     }
 
     /**
@@ -4087,13 +4121,12 @@ class Transaction extends BaseController
                 $data['rest_balance'] = $val->rest_balance - ($shopInfo->amount - $amount);
                 array_push($arrayUpData, $data);
             }
-
         }
         if (!empty($arrayUpData)) {
             $table = DB()->table('ledger_expense');
             $table->updateBatch($arrayUpData, 'ledg_exp_id');
         }
-//        return $arrayUpData;
+        //        return $arrayUpData;
     }
 
     /**
@@ -4289,11 +4322,9 @@ class Transaction extends BaseController
             DB()->transComplete();
 
             print '<div class="alert alert-success alert-dismissible" role="alert">Your transaction is successful<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
-
         } else {
             print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
-
     }
 
     /**
@@ -4333,13 +4364,12 @@ class Transaction extends BaseController
                 $data['rest_balance'] = $val->rest_balance - ($ledLog->amount - $amount);
                 array_push($arrayUpData, $data);
             }
-
         }
         if (!empty($arrayUpData)) {
             $table = DB()->table('ledger_employee');
             $table->updateBatch($arrayUpData, 'ledg_emp_id');
         }
-//        return $arrayUpData;
+        //        return $arrayUpData;
     }
 
     /**
@@ -4448,7 +4478,6 @@ class Transaction extends BaseController
         DB()->transComplete();
 
         print '<div class="alert alert-success alert-dismissible" role="alert">Your transaction is successful<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
-
     }
 
     /**
@@ -4632,11 +4661,9 @@ class Transaction extends BaseController
             } else {
                 print '<div class="alert alert-danger alert-dismissible" role="alert">Vat amount to large<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
             }
-
         } else {
             print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
-
     }
 
     /**
@@ -4676,14 +4703,11 @@ class Transaction extends BaseController
                 $data['rest_balance'] = $val->rest_balance + ($ledLog->amount - $amount);
                 array_push($arrayUpData, $data);
             }
-
         }
         if (!empty($arrayUpData)) {
             $table = DB()->table('ledger_vat');
             $table->updateBatch($arrayUpData, 'ledg_vat_id');
         }
-//        return $arrayUpData;
+        //        return $arrayUpData;
     }
-
-
 }

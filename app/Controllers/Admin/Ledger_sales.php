@@ -38,8 +38,22 @@ class Ledger_sales extends BaseController
         } else {
             $shopId = $this->session->shopId;
 
+            $st_date = $this->request->getGet('st_date');
+            $en_date = $this->request->getGet('en_date');
+
             $ledger_salesTab = DB()->table('ledger_sales');
-            $data['saleLedg'] = $ledger_salesTab->where('sch_id', $shopId)->get()->getResult();
+            $ledger_salesTab->where('sch_id', $shopId);
+            // Apply date filters only if they are present in the request
+            if (!empty($st_date) && !empty($en_date)) {
+                // Assuming your database column name is 'date'
+                $ledger_salesTab->where('createdDtm >=', $st_date . ' 00:00:00');
+                $ledger_salesTab->where('createdDtm <=', $en_date . ' 23:59:59');
+            }
+            $data['saleLedg'] = $ledger_salesTab->get()->getResult();
+
+            $data['st_date'] = isset($st_date)?$st_date:'';
+            $data['en_date'] = isset($en_date)?$en_date:'';
+
             $data['menu'] = view('Admin/menu_ledger');
             // All Permissions
             //$perm = array('create','read','update','delete','mod_access');
