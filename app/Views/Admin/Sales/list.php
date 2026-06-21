@@ -69,9 +69,9 @@
 
                                         <a href="javascript:void(0)"
                                            onclick="showData('<?php echo site_url('/Admin/Invoice_ajax/view/' . $sales->invoice_id); ?>','<?php echo '/Admin/Invoice/view/' . $sales->invoice_id; ?>')" class="btn btn-primary btn-xs">View</a>
-                                        <?php if(edit_expire_check($sales->createdDtm) == true){ ?>
+
                                             <a href="javascript:void(0)" class="btn btn-xs btn-warning"  onclick="saleEdit('<?= $sales->sales_id;?>')" data-toggle="modal" data-target="#modal-default">Edit</a>
-                                        <?php } ?>
+
                                     </td>
                                 </tr>
                             <?php } ?>

@@ -60,9 +60,9 @@
                                             <td><?php echo showWithCurrencySymbol($bank_withdraw->amount) ?></td>
                                             <td><?php echo $bank_withdraw->commont ?></td>
                                             <td>
-                                                <?php if(edit_expire_check($bank_withdraw->createdDtm) == true){ ?>
+
                                                 <a href="javascript:void(0)" class="btn btn-xs btn-warning"  onclick="withdrawEdit('<?= $bank_withdraw->wthd_id;?>')" data-toggle="modal" data-target="#modal-default">Edit</a>
-                                                <?php } ?>
+
                                             </td>
                                         </tr>
                                     <?php } ?>

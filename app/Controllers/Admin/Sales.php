@@ -984,41 +984,77 @@ class Sales extends BaseController
 
         //discount ledger make (start)
         if (!empty($alldiscount)) {
-            $discountLedInfo = $this->transactionLog->get_table_name_by_row_invoice_id('ledger_discount',$invoiceId);
-            $prevDisLed = get_data_by_id('amount', 'ledger_discount', 'discount_ledg_id', $discountLedInfo->id);
-            $restDisBal = ($prevDisLed - $discountLedInfo->amount) + $alldiscount;
-            $disLedgher = array(
-                'amount' => $alldiscount,
-                'rest_balance' => $restDisBal,
-            );
-            $ledger_discountTab = DB()->table('ledger_discount');
-            $ledger_discountTab->where('discount_ledg_id', $discountLedInfo->id)->update($disLedgher);
-            $this->ledger_discount_rest_balance_update($invoiceId,$alldiscount,$discountLedInfo->id,$discountLedInfo->amount);
-            //transaction edit log data insert
-            $this->transactionLog->transaction_edit_log_data_insert('ledger_discount','','',$this->session->userId,$discountLedInfo->amount,$alldiscount,$invoiceId,'');
-            //insert Transaction in transaction table (end)
-            //transaction edit log data insert
-            $this->transactionLog->transaction_edit_log_data_insert('ledger_discount',$discountLedInfo->id,'',$this->session->userId,$discountLedInfo->amount,$alldiscount,$invoiceId,'' );
-            //insert Transaction in transaction table (end)
+            if (!empty($discountLedInfo)) {
+                $discountLedInfo = $this->transactionLog->get_table_name_by_row_invoice_id('ledger_discount', $invoiceId);
+                $prevDisLed = get_data_by_id('amount', 'ledger_discount', 'discount_ledg_id', $discountLedInfo->id);
+                $restDisBal = ($prevDisLed - $discountLedInfo->amount) + $alldiscount;
+                $disLedgher = array(
+                    'amount' => $alldiscount,
+                    'rest_balance' => $restDisBal,
+                );
+                $ledger_discountTab = DB()->table('ledger_discount');
+                $ledger_discountTab->where('discount_ledg_id', $discountLedInfo->id)->update($disLedgher);
+                $this->ledger_discount_rest_balance_update($invoiceId, $alldiscount, $discountLedInfo->id, $discountLedInfo->amount);
+                //transaction edit log data insert
+                $this->transactionLog->transaction_edit_log_data_insert('ledger_discount', '', '', $this->session->userId, $discountLedInfo->amount, $alldiscount, $invoiceId, '');
+                //insert Transaction in transaction table (end)
+                //transaction edit log data insert
+                $this->transactionLog->transaction_edit_log_data_insert('ledger_discount', $discountLedInfo->id, '', $this->session->userId, $discountLedInfo->amount, $alldiscount, $invoiceId, '');
+                //insert Transaction in transaction table (end)
 
 
-            $prevDis = get_data_by_id('discount', 'shops', 'sch_id', $shopId);
-            $disRestBel = ($prevDis - $discountLedInfo->amount) + $alldiscount;
-            //update discount balance(start)
-            $disData = array(
-                'discount' => $disRestBel,
-                'updatedBy' => $userId,
-            );
-            $shopsTab = DB()->table('shops');
-            $shopsTab->where('sch_id', $shopId)->update($disData);
-            //update discount balance(end)
-            //transaction edit log data insert
-            $this->transactionLog->transaction_edit_log_data_insert('shops','','',$this->session->userId,$discountLedInfo->amount,$alldiscount,$invoiceId,'','discount');
-            //insert Transaction in transaction table (end)
+                $prevDis = get_data_by_id('discount', 'shops', 'sch_id', $shopId);
+                $disRestBel = ($prevDis - $discountLedInfo->amount) + $alldiscount;
+                //update discount balance(start)
+                $disData = array(
+                    'discount' => $disRestBel,
+                    'updatedBy' => $userId,
+                );
+                $shopsTab = DB()->table('shops');
+                $shopsTab->where('sch_id', $shopId)->update($disData);
+                //update discount balance(end)
+                //transaction edit log data insert
+                $this->transactionLog->transaction_edit_log_data_insert('shops', '', '', $this->session->userId, $discountLedInfo->amount, $alldiscount, $invoiceId, '', 'discount');
+                //insert Transaction in transaction table (end)
 
-            //transaction edit log data insert
-            $this->transactionLog->transaction_edit_log_data_insert('shops',$shopId,'',$this->session->userId,$discountLedInfo->amount,$alldiscount,$invoiceId,'','discount' );
-            //insert Transaction in transaction table (end)
+                //transaction edit log data insert
+                $this->transactionLog->transaction_edit_log_data_insert('shops', $shopId, '', $this->session->userId, $discountLedInfo->amount, $alldiscount, $invoiceId, '', 'discount');
+                //insert Transaction in transaction table (end)
+            }else {
+
+
+                $prevdis = get_data_by_id('discount', 'shops', 'sch_id', $shopId);
+                $disRestBel = $prevdis + $alldiscount;
+
+                $disLedgher = array(
+                    'sch_id' => $shopId,
+                    'invoice_id' => $invoiceId,
+                    'amount' => $alldiscount,
+                    'particulars' => 'Sale discount',
+                    'trangaction_type' => 'Dr.',
+                    'rest_balance' => $disRestBel,
+                    'createdDtm' => date('Y-m-d h:i:s')
+                );
+                $ledger_discountTab = DB()->table('ledger_discount');
+                $ledger_discountTab->insert($disLedgher);
+                $discount_ledg_id = DB()->insertID();
+
+                //insert log (start)
+                $this->transactionLog->insert_log_data('ledger_discount', $discount_ledg_id, '', $alldiscount, '', '', $invoiceId, '');
+                //insert log (end)
+
+                //update discount balance(start)
+                $disData = array(
+                    'discount' => $disRestBel,
+                    'updatedBy' => $userId,
+                );
+                $shopsTab = DB()->table('shops');
+                $shopsTab->where('sch_id', $shopId)->update($disData);
+                //update discount balance(end)
+                //insert log (start)
+                $this->transactionLog->insert_log_data('shops', $shopId, '', $alldiscount, '', '', $invoiceId, '', 'discount');
+                //insert log (end)
+            }
         }
         //discount ledger make (end)
 
@@ -1097,6 +1133,8 @@ class Sales extends BaseController
         $table = DB()->table('transaction_log');
         $proQty = $table->where('invoice_id',$invoiceId)->where('table_name','products')->where('colum_name','quantity')->get()->getResult();
         $totalpurPrice = 0;
+
+
         $number = count($proId);
         for ($i = 0; $i < $number; $i++) {
 

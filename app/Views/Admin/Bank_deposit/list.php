@@ -59,9 +59,9 @@
                                             <td><?php echo showWithCurrencySymbol($bank_deposit->amount) ?></td>
                                             <td><?php echo $bank_deposit->commont ?></td>
                                             <td>
-                                                <?php if(edit_expire_check($bank_deposit->createdDtm) == true){ ?>
+
                                                 <a href="javascript:void(0)" class="btn btn-xs btn-warning"  onclick="depositEdit('<?= $bank_deposit->dep_id;?>')" data-toggle="modal" data-target="#modal-default">Edit</a>
-                                                <?php } ?>
+
                                             </td>
 
                                         </tr>

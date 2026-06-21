@@ -52,7 +52,7 @@
                                         <td><input type="number" name="qty[]" value="<?= $item->quantity;?>" class="qty"></td>
                                         <td>
                                             <input type="hidden" name="total[]" value="<?= $item->final_price;?>" class="totalVal">
-                                            <span class="rowTotal"><?= showWithCurrencySymbol($item->total_price);?></span>
+                                            <span ><?= showWithCurrencySymbol($item->price);?></span>
                                         </td>
 
                                         <td><input type="text" name="discount[]" value="<?= $item->discount;?>" class="discount"></td>
@@ -70,35 +70,20 @@
                             <div class="col-md-6" ></div>
                             <div class="col-md-6" style="background-color: #e8b96f;padding: 10px;">
                                 <div class="col-xs-12" style="border:1px dashed #D0D3D8 ;padding-top: 10px;">
-                                    <label>Customer</label>
                                     <div class="panel with-nav-tabs panel-default nav-tabs-custom"
                                          style="background-color: #e8b96f; border-color: ;" >
-                                        <ul class="nav nav-tabs" >
-                                            <li class="<?= !empty($invoice->customer_id)?'active':'';?>"><a href="#existing" data-toggle="tab">Existing Customer</a></li>
-                                            <li class="<?= !empty($invoice->customer_id)?'':'active';?>"><a href="#new" data-toggle="tab">New Customer</a></li>
-                                        </ul>
+
                                         <div class="panel-body">
                                             <div class="tab-content">
-                                                <div class="tab-pane fade <?= !empty($invoice->customer_id)?'active':'';?> in" id="existing">
-                                                    <div class="row">
-                                                        <div class="col-xs-12">
-                                                            <select class="form-control" onchange="createBtnShow(),customerBalanceShow(this.value)" style=" width: 100%;" name="customer_id"
-                                                                    id="cus">
-
-                                                                <option value="">Please Select</option>
-                                                                <?php echo getAllListInOptionWithStatus($invoice->customer_id, 'customer_id', 'customer_name', 'customers','customer_name'); ?>
-                                                            </select>
-                                                            <span id="balance"></span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div class="tab-pane fade <?= !empty($invoice->customer_id)?'':'active';?> in" id="new">
-                                                    <div class="row">
-                                                        <div class="col-xs-12">
-                                                            <input type="text" class="form-control " name="name" id="name"
-                                                                   placeholder="Name" value=""/>
-                                                        </div>
+                                                <div class="row">
+                                                    <div class="col-xs-12">
+                                                        <?php if (!empty($invoice->customer_id)){ ?>
+                                                            <input type="hidden" name="customer_id" value="<?= $invoice->customer_id; ?>">
+                                                            <p><b>Customer:</b> <?= get_data_by_id('customer_name','customers','customer_id',$invoice->customer_id)?></p>
+                                                        <?php }else{ ?>
+                                                            <input type="text" class="form-control" name="name"   value="<?= $invoice->customer_name; ?>"/>
+                                                            <p><b>Customer:</b> <?= $invoice->customer_name; ?></p>
+                                                        <?php } ?>
                                                     </div>
                                                 </div>
                                             </div>

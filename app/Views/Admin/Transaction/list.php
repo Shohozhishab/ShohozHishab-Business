@@ -80,12 +80,10 @@
                                                             <td>
                                                                 <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/moneyReceipt/' . $row->trans_id); ?>','<?php echo '/Admin/Transaction/moneyReceipt/' . $row->trans_id; ?>')"
                                                                    class="btn btn-xs btn-info">Money Receipt</a>
-                                                                <?php if(edit_expire_check($row->createdDtm) == true){ ?>
                                                                 <a href="javascript:void(0)" class="btn btn-xs btn-warning" onclick="cusTranEdit('<?= $row->trans_id;?>')" data-toggle="modal" data-target="#modal-default" >Edit</a>
-                                                                <?php } ?>
-
                                                                 <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/read/' . $row->trans_id); ?>','<?php echo '/Admin/Transaction/read/' . $row->trans_id; ?>')"
                                                                    class="btn btn-xs btn-success">View</a>
+                                                                <a href="<?php echo site_url('/Admin/Transaction/delete/' . $row->trans_id); ?>" onclick="return confirm('Are you sure you want to delete this item?');"  class="btn btn-danger btn-xs">Delete</a>
 
                                                             </td>
                                                         </tr>
@@ -128,6 +126,7 @@
                                                                 <a href="javascript:void(0)"
                                                                    onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/read/' . $row->trans_id); ?>','<?php echo '/Admin/Transaction/read/' . $row->trans_id; ?>')"
                                                                    class="btn btn-xs btn-success">View</a>
+                                                                <a href="<?php echo site_url('/Admin/Transaction/delete/' . $row->trans_id); ?>" onclick="return confirm('Are you sure you want to delete this item?');"  class="btn btn-danger btn-xs">Delete</a>
 
                                                             </td>
                                                         </tr>
@@ -170,6 +169,7 @@
                                                                 <a href="javascript:void(0)"
                                                                    onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/read/' . $row->trans_id); ?>','<?php echo '/Admin/Transaction/read/' . $row->trans_id; ?>')"
                                                                    class="btn btn-xs btn-success">View</a>
+                                                                <a href="<?php echo site_url('/Admin/Transaction/delete/' . $row->trans_id); ?>" onclick="return confirm('Are you sure you want to delete this item?');"  class="btn btn-danger btn-xs">Delete</a>
 
                                                             </td>
                                                         </tr>
@@ -211,6 +211,7 @@
                                                                 <?php } ?>
                                                                 <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/read/' . $row->trans_id); ?>','<?php echo '/Admin/Transaction/read/' . $row->trans_id; ?>')"
                                                                    class="btn btn-xs btn-success">View</a>
+                                                                <a href="<?php echo site_url('/Admin/Transaction/delete/' . $row->trans_id); ?>" onclick="return confirm('Are you sure you want to delete this item?');"  class="btn btn-danger btn-xs">Delete</a>
                                                             </td>
                                                         </tr>
                                                 <?php } } ?>
@@ -238,7 +239,7 @@
                                                 <tbody>
                                                 <?php $i = 0;
                                                 foreach ($transaction_data as $row) {
-                                                    if ($row->loan_pro_id == NULL && $row->customer_id == NULL && $row->supplier_id == NULL && $row->bank_id == NULL && $row->lc_id == NULL && $row->employee_id == NULL && $row->trangaction_type == 'Cr.') { ?>
+                                                    if ($row->loan_pro_id == NULL && $row->customer_id == NULL && $row->supplier_id == NULL && $row->bank_to_id == NULL && $row->lc_id == NULL && $row->employee_id == NULL && $row->trangaction_type == 'Cr.') { ?>
                                                         <tr>
                                                             <td><?php echo ++$i; ?></td>
                                                             <td>Expense</td>
@@ -251,6 +252,7 @@
                                                                 <a href="javascript:void(0)"
                                                                    onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/read/' . $row->trans_id); ?>','<?php echo '/Admin/Transaction/read/' . $row->trans_id; ?>')"
                                                                    class="btn btn-xs btn-success">View</a>
+                                                                <a href="<?php echo site_url('/Admin/Transaction/delete/' . $row->trans_id); ?>" onclick="return confirm('Are you sure you want to delete this item?');"  class="btn btn-danger btn-xs">Delete</a>
                                                             </td>
                                                         </tr>
                                                     <?php }
@@ -292,6 +294,7 @@
                                                                 <a href="javascript:void(0)"
                                                                    onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/read/' . $row->trans_id); ?>','<?php echo '/Admin/Transaction/read/' . $row->trans_id; ?>')"
                                                                    class="btn btn-xs btn-success">View</a>
+                                                                <a href="<?php echo site_url('/Admin/Transaction/delete/' . $row->trans_id); ?>" onclick="return confirm('Are you sure you want to delete this item?');"  class="btn btn-danger btn-xs">Delete</a>
 
                                                             </td>
                                                         </tr>
@@ -331,12 +334,12 @@
                                                                 <a href="javascript:void(0)"
                                                                    onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/salaryreceipt/' . $row->trans_id); ?>','<?php echo '/Admin/Transaction/salaryreceipt/' . $row->trans_id; ?>')"
                                                                    class="btn btn-xs btn-info">Salary Receipt</a>
-                                                                <?php if(edit_expire_check($row->createdDtm) == true){ ?>
                                                                 <a href="javascript:void(0)" class="btn btn-xs btn-warning " onclick="employeeTranEdit('<?= $row->trans_id;?>')" data-toggle="modal" data-target="#modal-default">Edit</a>
-                                                                <?php } ?>
+
                                                                 <a href="javascript:void(0)"
                                                                    onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/read/' . $row->trans_id); ?>','<?php echo '/Admin/Transaction/read/' . $row->trans_id; ?>')"
                                                                    class="btn btn-xs btn-success">View</a>
+                                                                <a href="<?php echo site_url('/Admin/Transaction/delete/' . $row->trans_id); ?>" onclick="return confirm('Are you sure you want to delete this item?');"  class="btn btn-danger btn-xs">Delete</a>
 
                                                             </td>
                                                         </tr>
@@ -379,6 +382,7 @@
                                                                 <a href="javascript:void(0)"
                                                                    onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/read/' . $row->trans_id); ?>','<?php echo '/Admin/Transaction/read/' . $row->trans_id; ?>')"
                                                                    class="btn btn-xs btn-success">View</a>
+                                                                <a href="<?php echo site_url('/Admin/Transaction/delete/' . $row->trans_id); ?>" onclick="return confirm('Are you sure you want to delete this item?');"  class="btn btn-danger btn-xs">Delete</a>
                                                             </td>
                                                         </tr>
                                                     <?php } } ?>
