@@ -36,9 +36,14 @@ class Products_short_list extends BaseController
             return redirect()->to(site_url('Admin/login'));
         } else {
             $shopId = $this->session->shopId;
-            $productTable = DB()->table('products');
-            $data['products_data'] = $productTable->where('quantity  <=', 5)->where('sch_id', $shopId)->where('deleted IS NULL')->get()->getResult();
 
+            $data['products_data'] = DB()->table('product_stock_relation psr')
+                ->select('p.*, SUM(psr.quantity) as total_quantity')
+                ->join('products p', 'p.prod_id = psr.product_id')
+                ->where('p.sch_id',$shopId)
+                ->groupBy('psr.product_id')
+                ->having('total_quantity <=', 5)
+                ->get()->getResult();
 
             // All Permissions
             //$perm = array('create','read','update','delete','mod_access');

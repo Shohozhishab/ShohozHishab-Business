@@ -10,8 +10,34 @@
 
     <!-- Main content -->
     <section class="content">
-        <!-- Small boxes (Stat box) -->
-        <div class="row">
+        <?php if (isDefaultRole() == true){ ?>
+            <div class="row" id="reloadRoleDiv">
+                <div class="col-lg-12" >
+                    <button class="btn btn-sm btn-info " style="float: right;" onclick="rollPermissionBtn()">Roll Permission</button>
+                </div>
+                <div class="col-lg-12" id="permissionDiv" style="display: none; margin-top: 20px">
+                    <form id="roleUpdateform" action="<?= base_url('Admin/Role/modulePermissionAction')?>" method="post">
+                        <div class="box box-primary">
+                            <div class="box-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <select class="form-control" onchange="rolePermission(this.value,'Daily_book')" name="role_id">
+                                            <option value="">Please Select</option>
+                                            <?php  foreach (userRole() as $val ){ ?>
+                                                <option value="<?= $val->role_id;?>"><?= $val->role;?></option>
+                                            <?php } ?>
+                                        </select>
+                                        <input type="hidden" name="moduleName" value="Daily_book">
+                                    </div>
+                                    <div class="col-md-12" id="rolView"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        <?php } ?>
+        <div class="row" style="margin-top: 20px;">
 
             <div class="col-xs-12">
 
@@ -22,11 +48,14 @@
                                 <h3 class="box-title">Daily Book</h3>
                             </div>
                             <div class="col-lg-4">
+                                <?php if (isset($print) && $print == 1){ ?>
                                 <a href="<?php echo site_url('Admin/Daily_book/print_preview'); ?>"
                                    class="print_line btn btn-primary pull-right" style="margin-right: 20px;"><i
                                             class="fa fa-print"></i> Print Statement Now</a>
+                                <?php } ?>
                             </div>
                             <div class="col-lg-4">
+                                <?php if (isset($filter) && $filter == 1){ ?>
                                 <form action="<?php echo site_url('Admin/Daily_book/search'); ?>" method="post">
                                     <div class="input-group pull-right no-print">
                                 <span class="input-group-addon " style="background-color:#367FA9; ">
@@ -38,6 +67,7 @@
                                 </span>
                                     </div>
                                 </form>
+                                <?php } ?>
                             </div>
                             <div class="col-lg-12" style="margin-top: 20px;">
                                 <?php if (session()->getFlashdata('message') !== NULL) : echo session()->getFlashdata('message'); endif; ?>

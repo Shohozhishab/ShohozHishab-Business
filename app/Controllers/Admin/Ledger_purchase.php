@@ -38,8 +38,24 @@ class Ledger_purchase extends BaseController
         } else {
             $shopId = $this->session->shopId;
 
+            $st_date = $this->request->getGet('st_date');
+            $en_date = $this->request->getGet('en_date');
+
             $ledger_purchaseTab = DB()->table('ledger_purchase');
-            $data['ledger_purchase'] = $ledger_purchaseTab->where('sch_id', $shopId)->get()->getResult();
+            $ledger_purchaseTab->where('sch_id', $shopId);
+
+            // Apply date filters only if they are present in the request
+            if (!empty($st_date) && !empty($en_date)) {
+                // Assuming your database column name is 'date'
+                $ledger_purchaseTab->where('createdDtm >=', $st_date . ' 00:00:00');
+                $ledger_purchaseTab->where('createdDtm <=', $en_date . ' 23:59:59');
+            }
+
+            $data['ledger_purchase'] = $ledger_purchaseTab->get()->getResult();
+
+            $data['st_date'] = isset($st_date) ? $st_date : '';
+            $data['en_date'] = isset($en_date) ? $en_date : '';
+            
             $data['menu'] = view('Admin/menu_ledger');
             // All Permissions
             //$perm = array('create','read','update','delete','mod_access');
@@ -57,6 +73,4 @@ class Ledger_purchase extends BaseController
             echo view('Admin/footer');
         }
     }
-
-
 }

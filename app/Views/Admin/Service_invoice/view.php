@@ -174,11 +174,13 @@
         <!-- /.row -->
 
         <!-- this row will not appear when printing -->
+        <?php if (isset($print) && $print == 1){ ?>
         <div class="row no-print">
             <div class="col-xs-12">
                 <div class="print_line btn btn-primary pull-right" onclick="print(document);"><i class="fa fa-print"></i> Print Now</div>
 
             </div>
         </div>
+        <?php } ?>
     </section>
 </div>

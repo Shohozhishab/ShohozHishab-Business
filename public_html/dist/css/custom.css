@@ -1,8 +1,8 @@
 
-#example1_filter ,#customer2_filter ,#supplier2_filter ,#account2_filter ,#fund2_filter ,#expense2_filter ,#other2_filter ,#employee2_filter ,#vat2_filter{
+#example1_filter ,#customer2_filter ,#supplier2_filter ,#account2_filter ,#fund2_filter ,#expense2_filter ,#other2_filter ,#employee2_filter ,#vat2_filter,#assets1_filter{
     float: right;
 }
-#example1_paginate ,#customer2_paginate ,#supplier2_paginate ,#account2_paginate ,#fund2_paginate ,#expense2_paginate ,#other2_paginate ,#employee2_paginate ,#vat2_paginate{
+#example1_paginate ,#customer2_paginate ,#supplier2_paginate ,#account2_paginate ,#fund2_paginate ,#expense2_paginate ,#other2_paginate ,#employee2_paginate,#assets1_paginate ,#vat2_paginate{
     float: right;
 }
 
@@ -27,4 +27,7 @@
 }
 #super_ad .content-wrapper{
     margin-top: 0px ;
+}
+.trail a:hover{
+    color: #0b3e6f !important;
 }

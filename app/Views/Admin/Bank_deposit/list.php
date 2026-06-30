@@ -10,11 +10,38 @@
 
     <!-- Main content -->
     <section class="content">
-        <!-- Small boxes (Stat box) -->
-        <div class="row">
-            <div class="col-xs-12" style="margin-bottom: 15px;">
-                <?php echo $menu;?>
+        <div class="col-xs-12" style="margin-bottom: 15px;">
+            <?php echo $menu;?>
+        </div>
+        <?php if (isDefaultRole() == true){ ?>
+            <div class="row" id="reloadRoleDiv">
+                <div class="col-lg-12" >
+                    <button class="btn btn-sm btn-info " style="float: right;" onclick="rollPermissionBtn()">Roll Permission</button>
+                </div>
+                <div class="col-lg-12" id="permissionDiv" style="display: none; margin-top: 20px">
+                    <form id="roleUpdateform" action="<?= base_url('Admin/Role/modulePermissionAction')?>" method="post">
+                        <div class="box box-primary">
+                            <div class="box-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <select class="form-control" onchange="rolePermission(this.value,'Bank_deposit')" name="role_id">
+                                            <option value="">Please Select</option>
+                                            <?php  foreach (userRole() as $val ){ ?>
+                                                <option value="<?= $val->role_id;?>"><?= $val->role;?></option>
+                                            <?php } ?>
+                                        </select>
+                                        <input type="hidden" name="moduleName" value="Bank_deposit">
+                                    </div>
+                                    <div class="col-md-12" id="rolView"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
             </div>
+        <?php } ?>
+        <div class="row" style="margin-top: 20px;">
+
 
             <div class="col-xs-12">
 
@@ -25,9 +52,11 @@
                                 <h3 class="box-title">Bank Deposit List </h3>
                             </div>
                             <div class="col-lg-3">
+                                <?php if (isset($create) && $create == 1){ ?>
                                 <a href="javascript:void(0)"
                                    onclick="showData('<?php echo site_url('/Admin/Bank_deposit_ajax/create/'); ?>','<?php echo '/Admin/Bank_deposit/create/'; ?>'),activeTab(this)"
                                    class="btn btn-block btn-primary">Deposit</a>
+                                <?php } ?>
                             </div>
                             <div class="col-lg-12" style="margin-top: 20px;" id="messageAcc">
                                 <?php if (session()->getFlashdata('message') !== NULL) : echo session()->getFlashdata('message'); endif; ?>
@@ -52,22 +81,81 @@
                                     </thead>
                                     <tbody>
                                     <?php $start = 1;
-                                    foreach ($bank_deposit as $bank_deposit) { ?>
+                                    foreach ($bank_deposit as $val) { ?>
                                         <tr>
                                             <td width="80px"><?php echo ++$start ?></td>
-                                            <td><?php echo get_data_by_id('name', 'bank', 'bank_id', $bank_deposit->bank_id) ?></td>
-                                            <td><?php echo showWithCurrencySymbol($bank_deposit->amount) ?></td>
-                                            <td><?php echo $bank_deposit->commont ?></td>
+                                            <td><?php echo get_data_by_id('name', 'bank', 'bank_id', $val->bank_id) ?></td>
+                                            <td><?php echo showWithCurrencySymbol($val->amount) ?></td>
+                                            <td><?php echo $val->commont ?></td>
                                             <td>
-
-                                                <a href="javascript:void(0)" class="btn btn-xs btn-warning"  onclick="depositEdit('<?= $bank_deposit->dep_id;?>')" data-toggle="modal" data-target="#modal-default">Edit</a>
-
+                                                <?php if (isset($transaction_flow) && $transaction_flow == 1){ ?>
+                                                <a href="javascript:void(0)"
+                                                   onclick="showData('<?php echo site_url('/Admin/Bank_deposit_ajax/transaction_flow/' . $val->dep_id); ?>','<?php echo '/Admin/Bank_deposit/transaction_flow/' . $val->dep_id; ?>')"
+                                                   class="btn btn-success btn-xs">Transaction Flow </a>
+                                                <?php } ?>
+                                                <?php if (isset($update) && $update == 1){ ?>
+                                                <?php if(edit_expire_check($val->createdDtm) == true){ ?>
+                                                    <a href="javascript:void(0)" class="btn btn-xs btn-warning"  onclick="depositEdit('<?= $val->dep_id;?>')" data-toggle="modal" data-target="#modal-default">Edit</a>
+                                                <?php } ?>
+                                                <?php } ?>
                                             </td>
 
                                         </tr>
                                     <?php } ?>
                                     </tbody>
                                 </table>
+
+                                <div class="row no-print" >
+                                    <div class="col-xs-12">
+                                        <?php if (isset($print) && $print == 1){ ?>
+                                        <button onclick="printDiv('ledgPrint')" class="print_line btn btn-primary pull-right" ><i class="fa fa-print "></i> Print Now</button>
+                                        <?php } ?>
+                                        <?php if (isset($download_PDF) && $download_PDF == 1){ ?>
+                                        <button type="button" class="btn btn-info pull-right" style="margin-right: 10px;" onclick="downloadPDF('ledgPrint','bankDeposit')"><i class="fa fa-file-pdf-o "></i> Download PDF </button>
+                                        <?php } ?>
+                                        <?php if (isset($download_CSV) && $download_CSV == 1){ ?>
+                                        <button type="button" class="btn btn-success pull-right" style="margin-right: 10px;" onclick="downloadCSV('ledgPrint','bankDeposit')"><i class="fa fa-file-excel-o "></i> Download CSV</button>
+                                        <?php } ?>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-12" id="ledgPrint" style="display: none; text-transform: capitalize; " >
+                                    <div class="col-xs-12" style="margin-bottom: 20px;   ">
+                                        <div class="col-xs-6">
+                                            <?php if(logo_image() == NULL){ ?>
+                                                <img src="<?php echo base_url() ?>/uploads/schools/no_image.jpg" alt="User Image" >
+                                            <?php }else{ ?>
+                                                <img src="<?php echo base_url(); ?>/uploads/schools/<?php echo logo_image(); ?>" class="" alt="User Image">
+                                            <?php } ?>
+                                        </div>
+                                        <div class="col-xs-6">
+                                            <?php print address(); ?>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12" >
+                                        <table class="table table-bordered table-striped text-capitalize">
+                                            <thead>
+                                            <tr>
+                                                <th>No</th>
+                                                <th>Bank Name</th>
+                                                <th>Amount</th>
+                                                <th>Comment</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            <?php $start = 1;
+                                            foreach ($bank_deposit as $item) { ?>
+                                                <tr>
+                                                    <td width="80px"><?php echo ++$start ?></td>
+                                                    <td><?php echo get_data_by_id('name', 'bank', 'bank_id', $item->bank_id) ?></td>
+                                                    <td><?php echo showWithCurrencySymbol($item->amount) ?></td>
+                                                    <td><?php echo $item->commont ?></td>
+                                                </tr>
+                                            <?php } ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
                             <div class="col-md-4">
                                 <table class="table table-bordered table-striped" >

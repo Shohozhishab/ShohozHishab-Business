@@ -10,8 +10,34 @@
 
     <!-- Main content -->
     <section class="content">
-        <!-- Small boxes (Stat box) -->
-        <div class="row">
+        <?php if (isDefaultRole() == true){ ?>
+            <div class="row" id="reloadRoleDiv">
+                <div class="col-lg-12" >
+                    <button class="btn btn-sm btn-info " style="float: right;" onclick="rollPermissionBtn()">Roll Permission</button>
+                </div>
+                <div class="col-lg-12" id="permissionDiv" style="display: none; margin-top: 20px">
+                    <form id="roleUpdateform" action="<?= base_url('Admin/Role/modulePermissionAction')?>" method="post">
+                        <div class="box box-primary">
+                            <div class="box-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <select class="form-control" onchange="rolePermission(this.value,'Settings')" name="role_id">
+                                            <option value="">Please Select</option>
+                                            <?php  foreach (userRole() as $val ){ ?>
+                                                <option value="<?= $val->role_id;?>"><?= $val->role;?></option>
+                                            <?php } ?>
+                                        </select>
+                                        <input type="hidden" name="moduleName" value="Settings">
+                                    </div>
+                                    <div class="col-md-12" id="rolView"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        <?php } ?>
+        <div class="row" style="margin-top: 20px;">
 
             <div class="col-xs-12">
 
@@ -69,7 +95,9 @@
                                     </td>
                                     <td><?php echo statusView($stores->status); ?></td>
                                     <td width="180px">
+                                        <?php if (isset($update) && $update == 1){ ?>
                                         <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Settings_ajax/update/'.$stores->sch_id); ?>','<?php echo '/Admin/Settings/update/'.$stores->sch_id; ?>')"  class="btn btn-xs btn-info">Update</a>
+                                        <?php } ?>
                                     </td>
                                 </tr>
                             </tbody>

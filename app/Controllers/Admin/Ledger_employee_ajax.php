@@ -37,6 +37,25 @@ class Ledger_employee_ajax extends BaseController
             return redirect()->to(site_url('Admin/login'));
         } else {
 
+            $employee_id = $this->request->getGet('employee_id');
+            $st_date = $this->request->getGet('st_date');
+            $en_date = $this->request->getGet('en_date');
+            $query = [];
+            if (!empty($employee_id)) {
+                $table = DB()->table('ledger_employee');
+                if (!empty($st_date) && !empty($en_date)) {
+                    // Assuming your database column name is 'date'
+                    $table->where('createdDtm >=', $st_date . ' 00:00:00');
+                    $table->where('createdDtm <=', $en_date . ' 23:59:59');
+                }
+                $table->where("employee_id", $employee_id);
+                $query = $table->get()->getResult();
+            }
+            $data['result'] = $query;
+
+            $data['st_date'] = isset($st_date)?$st_date:'';
+            $data['en_date'] = isset($en_date)?$en_date:'';
+            $data['employee_id'] = $employee_id;
 
             // All Permissions
             //$perm = array('create','read','update','delete','mod_access');

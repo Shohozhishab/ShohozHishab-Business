@@ -67,22 +67,19 @@ class Stock_report extends BaseController
 
 
         $productsTb = DB()->table('products');
-        $data = $productsTb->where('store_id', $storeId)->where('sch_id', $shopId)->orderBy('prod_id', "DESC")->get()->getResult();
+        $productsTb->join('product_stock_relation relation', 'relation.product_id = products.prod_id');
+        $data = $productsTb->where('relation.store_id', $storeId)->where('products.sch_id', $shopId)->orderBy('prod_id', "DESC")->get()->getResult();
 
-
-        $prodQtyTb = DB()->table('products');
-        $quty = $prodQtyTb->where('store_id', $storeId)->where('sch_id', $shopId)->orderBy('prod_id', "DESC")->get()->getRow();
         $quantity = '0';
-        if (!empty($quty)) {
-            $quantity = $quty->quantity;
+        if (!empty($data)) {
+            foreach ($data as $result) {
+                $quantity += $result->quantity;
+            }
         }
 
-        $prodPurTb = DB()->table('products');
-        $purchasePricequery = $prodPurTb->where('store_id', $storeId)->where('sch_id', $shopId)->orderBy('prod_id', "DESC")->get()->getResult();
 
         $purchasePrice = 0;
-
-        foreach ($purchasePricequery as  $pur) {
+        foreach ($data as  $pur) {
             $purchasePrice += $pur->quantity * $pur->purchase_price;
         }
 

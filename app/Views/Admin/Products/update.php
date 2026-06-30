@@ -44,13 +44,7 @@
                                     <div class="col-lg-6 ">
                                         <form id="geniusformUpdate" action="<?php echo base_url('Admin/Products/general_update'); ?>" method="post">
 
-                                            <div class="form-group">
-                                                <label for="varchar">Store</label>
-                                                <select class="form-control" name="store_id" id="store_id">
-                                                    <option value="">Please Select</option>
-                                                    <?php echo getAllListInOption($product->store_id,'store_id','name','stores'); ?>
-                                                </select>
-                                            </div>
+
                                             <div class="form-group">
                                                 <label for="varchar">Name </label>
                                                 <input type="text" class="form-control" name="name" id="name" placeholder="Name" value="<?php echo $product->name; ?>" >

@@ -5,6 +5,7 @@ namespace App\Controllers\Admin;
 use App\Controllers\BaseController;
 use App\Libraries\Permission;
 use CodeIgniter\HTTP\RedirectResponse;
+use stdClass;
 
 
 class Role extends BaseController
@@ -215,5 +216,39 @@ class Role extends BaseController
         }
     }
 
+    public function modulePermission(){
+        $shopId = $this->session->shopId;
+        $role_id = $this->request->getPost('role_id');
+        $module = $this->request->getPost('module');
+        if (!empty($role_id)) {
+            $table = DB()->table('roles');
+            $adminRole = $table->where('sch_id', $shopId)->where('is_default', '1')->get()->getRow();
+
+            $data['main'] = $this->permission->module_permission_list($adminRole->role_id, $module);
+            $data['permission'] = $this->permission->module_permission_list($role_id, $module);
+            echo view('Admin/Role/permission', $data);
+        }else{
+            echo '<p style="color: red;">Please Select Any Role</p>';
+        }
+    }
+    public function modulePermissionAction()
+    {
+        $role_id    = $this->request->getPost('role_id');
+        $module     = $this->request->getPost('moduleName');
+        $permission = $this->request->getPost('permission');
+
+        $role = DB()->table('roles')->where('role_id', $role_id)->get()->getRow();
+        $mainRole = json_decode($role->permission);
+        if (!$mainRole) {
+            $mainRole = new stdClass();
+        }
+
+        // Create or update the module
+        $mainRole->$module = (object) $permission;
+         //Save back to database
+        DB()->table('roles')->where('role_id', $role_id)->update(['permission' => json_encode($mainRole)]);
+
+        print '<div class="alert alert-success alert-dismissible" role="alert"> Update data successfully  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+    }
 
 }

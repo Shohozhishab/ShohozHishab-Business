@@ -38,6 +38,26 @@ class Ledger_bank extends BaseController
         } else {
             $shopId = $this->session->shopId;
 
+            $bank_id = $this->request->getGet('bank_id');
+            $st_date = $this->request->getGet('st_date');
+            $en_date = $this->request->getGet('en_date');
+            $query = [];
+            if (!empty($bank_id)) {
+                $table = DB()->table('ledger_bank');
+                if (!empty($st_date) && !empty($en_date)) {
+                    // Assuming your database column name is 'date'
+                    $table->where('createdDtm >=', $st_date . ' 00:00:00');
+                    $table->where('createdDtm <=', $en_date . ' 23:59:59');
+                }
+                $table->where("bank_id", $bank_id);
+                $query = $table->get()->getResult();
+            }
+            $data['result'] = $query;
+
+            $data['st_date'] = isset($st_date)?$st_date:'';
+            $data['en_date'] = isset($en_date)?$en_date:'';
+            $data['bank_id'] = $bank_id;
+
             $data['id'] = $shopId;
             $data['menu'] = view('Admin/menu_ledger');
             // All Permissions
@@ -72,8 +92,7 @@ class Ledger_bank extends BaseController
         $name = get_data_by_id('name', 'bank', 'bank_id', $bankId);
         $account = get_data_by_id('account_no', 'bank', 'bank_id', $bankId);
         $balance = get_data_by_id('balance', 'bank', 'bank_id', $bankId);
-        $dr = get_total('ledger_bank', 'amount', 'Dr.', 'bank_id', $bankId);
-        $cr = get_total('ledger_bank', 'amount', 'Cr.', 'bank_id', $bankId);
+
         $view = ' <div class="box" >
                         <div class="box-header">
                             <h3 class="box-title">
@@ -96,31 +115,25 @@ class Ledger_bank extends BaseController
                                 </tr>
                             </thead>
                             <tbody>';
-        $restBalance = 0;
         $totalRows = count($data) - 1;
         for ($i = $totalRows; $i >= 0; $i--) {
             $particulars = ($data[$i]->particulars == NULL) ? "Pay due" : $data[$i]->particulars;
             $amountCr = ($data[$i]->trangaction_type != "Cr.") ? "---" : showWithCurrencySymbol($data[$i]->amount);
             $amountDr = ($data[$i]->trangaction_type != "Dr.") ? "---" : showWithCurrencySymbol($data[$i]->amount);
-            $transId = ($data[$i]->trans_id == NULL) ? "---" : $data[$i]->trans_id;
-            $purchaseId = ($data[$i]->purchase_id == NULL) ? "---" : $data[$i]->purchase_id;
-            $invoiceId = ($data[$i]->invoice_id == 0) ? "---" : $data[$i]->invoice_id;
-            if ($data[$i]->trangaction_type == 'Dr.'){
-                $restBalance = $restBalance + $data[$i]->amount;
-            }else{
-                $restBalance = $restBalance - $data[$i]->amount;
-            }
+            $transId = ($data[$i]->trans_id == NULL) ? "---" : '<a href="'.base_url('Admin/Transaction/read/'.$data[$i]->trans_id).'"> TRNS_'.$data[$i]->trans_id.'</a>';
+            $purchaseId = ($data[$i]->purchase_id == NULL) ? "---" : '<a href="'.base_url('Admin/Purchase/view/'.$data[$i]->purchase_id).'"> PURS_'.$data[$i]->purchase_id.'</a>';
+            $invoiceId = ($data[$i]->invoice_id == 0) ? "---" : '<a href="'.base_url('Admin/Invoice/view/'.$data[$i]->invoice_id).'"> INV_'.$data[$i]->invoice_id.'</a>';
             $view .= '<tr>
-                        <td>' . $data[$i]->ledgBank_id . '</td>
-                        <td>' . $data[$i]->createdDtm . '</td>
-                        <td>' . $particulars . '</td>
-                        <td>' . $transId . '</td>
-                        <td>' . $purchaseId . '</td>
-                        <td>' . $invoiceId . '</td>
-                        <td>' . $amountDr . '</td>
-                        <td>' . $amountCr . '</td>
-                        <td>' . showWithCurrencySymbol($restBalance) . '</td>
-                    </tr>';
+                                    <td>' . $data[$i]->ledgBank_id . '</td>
+                                    <td>' . $data[$i]->createdDtm . '</td>
+                                    <td>' . $particulars . '</td>
+                                    <td>' . $transId . '</td>
+                                    <td>' . $purchaseId . '</td>
+                                    <td>' . $invoiceId . '</td>
+                                    <td>' . $amountDr . '</td>
+                                    <td>' . $amountCr . '</td>
+                                    <td>' . showWithCurrencySymbol($data[$i]->rest_balance) . '</td>
+                                </tr>';
         }
 
         $view .= '</tbody>
@@ -143,9 +156,9 @@ class Ledger_bank extends BaseController
                                     <th></th>
                                     <th></th>
                                     <th>Total</th>
-                                    <th>= ' . showWithCurrencySymbol($dr) . '</th>
-                                    <th>= ' . showWithCurrencySymbol($cr) . '</th>
-                                    <th>= ' . showWithCurrencySymbol($dr - $cr) . '</th>
+                                    <th>= ' . showWithCurrencySymbol(get_total('ledger_bank', 'amount', 'Dr.', 'bank_id', $bankId)) . '</th>
+                                    <th>= ' . showWithCurrencySymbol(get_total('ledger_bank', 'amount', 'Cr.', 'bank_id', $bankId)) . '</th>
+                                    <th>= ' . showWithCurrencySymbol($balance) . '</th>
                                 </tr>
                             </tfoot>
                         </table>

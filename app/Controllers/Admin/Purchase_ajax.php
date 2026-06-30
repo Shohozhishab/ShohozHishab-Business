@@ -36,8 +36,22 @@ class Purchase_ajax extends BaseController
             return redirect()->to(site_url('Admin/login'));
         } else {
             $shopId = $this->session->shopId;
-            $purchaseTable = DB()->table('purchase');
-            $data['purchase_data'] = $purchaseTable->where('sch_id', $shopId)->get()->getResult();
+
+            $st_date = $this->request->getGet('st_date');
+            $en_date = $this->request->getGet('en_date');
+
+            $table = DB()->table('purchase');
+            $table->where('sch_id', $shopId);
+            // Apply date filters only if they are present in the request
+            if (!empty($st_date) && !empty($en_date)) {
+                // Assuming your database column name is 'date'
+                $table->where('createdDtm >=', $st_date . ' 00:00:00');
+                $table->where('createdDtm <=', $en_date . ' 23:59:59');
+            }
+            $data['purchase_data'] = $table->get()->getResult();
+
+            $data['st_date'] = isset($st_date) ? $st_date : '';
+            $data['en_date'] = isset($en_date) ? $en_date : '';
 
 
             //purchase table null value delete (start)
@@ -129,10 +143,10 @@ class Purchase_ajax extends BaseController
                 }
 
                 //old image unlink
-//                $old_img = get_data_by_id('image','users','user_id',$data['user_id']);
-//                if (!empty($old_img)){
-//                    unlink($target_dir.''.$old_img);
-//                }
+                //                $old_img = get_data_by_id('image','users','user_id',$data['user_id']);
+                //                if (!empty($old_img)){
+                //                    unlink($target_dir.''.$old_img);
+                //                }
 
                 //new image uplode
                 $pic = $this->request->getFile('image');
@@ -187,5 +201,36 @@ class Purchase_ajax extends BaseController
         }
     }
 
+    public function transaction_flow($purchase_id){
+        $isLoggedIn = $this->session->isLoggedIn;
+        $role_id = $this->session->role;
+        if (!isset($isLoggedIn) || $isLoggedIn != TRUE) {
+            return redirect()->to(site_url('Admin/login'));
+        } else {
+            $shopId = $this->session->shopId;
 
+            $data['flow'] = DB()->table('transaction_entries')
+                ->where('purchase_id',$purchase_id)
+                ->get()
+                ->getResult();
+
+            $data['purchaseData'] = DB()->table('purchase')
+                ->join('suppliers', 'suppliers.supplier_id = purchase.supplier_id')
+                ->where('purchase.purchase_id', $purchase_id)
+                ->get()
+                ->getRow();
+
+            // All Permissions
+            //$perm = array('create','read','update','delete','mod_access');
+            $perm = $this->permission->module_permission_list($role_id, $this->module_name);
+            foreach ($perm as $key => $val) {
+                $data[$key] = $this->permission->have_access($role_id, $this->module_name, $key);
+            }
+            if (isset($data['mod_access']) and $data['mod_access'] == 1) {
+                echo view('Admin/Purchase/transaction_flow', $data);
+            } else {
+                echo view('no_permission');
+            }
+        }
+    }
 }

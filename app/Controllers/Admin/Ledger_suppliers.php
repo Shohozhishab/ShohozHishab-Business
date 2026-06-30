@@ -37,6 +37,27 @@ class Ledger_suppliers extends BaseController
             return redirect()->to(site_url('Admin/login'));
         } else {
             $shopId = $this->session->shopId;
+
+            $supplier_id = $this->request->getGet('supplier_id');
+            $st_date = $this->request->getGet('st_date');
+            $en_date = $this->request->getGet('en_date');
+            $query = [];
+            if (!empty($supplier_id)) {
+                $table = DB()->table('ledger_suppliers');
+                if (!empty($st_date) && !empty($en_date)) {
+                    // Assuming your database column name is 'date'
+                    $table->where('createdDtm >=', $st_date . ' 00:00:00');
+                    $table->where('createdDtm <=', $en_date . ' 23:59:59');
+                }
+                $table->where("supplier_id", $supplier_id);
+                $query = $table->get()->getResult();
+            }
+            $data['result'] = $query;
+
+            $data['st_date'] = isset($st_date)?$st_date:'';
+            $data['en_date'] = isset($en_date)?$en_date:'';
+            $data['supplier_id'] = $supplier_id;
+
             $data['id'] = $shopId;
             $data['menu'] = view('Admin/menu_ledger');
             // All Permissions
@@ -69,8 +90,7 @@ class Ledger_suppliers extends BaseController
 
         $name = get_data_by_id('name', 'suppliers', 'supplier_id', $supplierId);
         $balance = get_data_by_id('balance', 'suppliers', 'supplier_id', $supplierId);
-        $dr = get_total('ledger_suppliers', 'amount', 'Dr.', 'supplier_id', $supplierId);
-        $cr = get_total('ledger_suppliers', 'amount', 'Cr.', 'supplier_id', $supplierId);
+
         $view = ' <div class="box" >
                         <div class="box-header">
                             <h3 class="box-title">Supplier: ' . $name . '</h3>
@@ -90,17 +110,12 @@ class Ledger_suppliers extends BaseController
                                 </tr>
                             </thead>
                             <tbody>';
-        $restBalance = 0;
         $totalRows = count($data) - 1;
         for ($i = $totalRows; $i >= 0; $i--) {
             $particulars = ($data[$i]->particulars == NULL) ? "Pay due" : $data[$i]->particulars;
             $amountCr = ($data[$i]->trangaction_type != "Cr.") ? "---" : showWithCurrencySymbol($data[$i]->amount);
             $amountDr = ($data[$i]->trangaction_type != "Dr.") ? "---" : showWithCurrencySymbol($data[$i]->amount);
-            if ($data[$i]->trangaction_type == 'Dr.') {
-                $restBalance = $restBalance + $data[$i]->amount;
-            }else {
-                $restBalance = $restBalance - $data[$i]->amount;
-            }
+
             if (($data[$i]->purchase_id == NULL) && ($data[$i]->trans_id == NULL)) {
                 $purchaseId = '---';
             } else {
@@ -114,7 +129,7 @@ class Ledger_suppliers extends BaseController
                                     <td>' . $purchaseId . '</td>
                                     <td>' . $amountDr . '</td>
                                     <td>' . $amountCr . '</td>
-                                    <td>' . showWithCurrencySymbol($restBalance) . '</td>
+                                    <td>' . showWithCurrencySymbol($data[$i]->rest_balance) . '</td>
                                 </tr>';
         }
 
@@ -134,9 +149,9 @@ class Ledger_suppliers extends BaseController
                                     <th></th>
                                     <th></th>
                                     <th>Total</th>
-                                    <th>= ' . showWithCurrencySymbol($dr) . '</th>
-                                    <th>= ' . showWithCurrencySymbol($cr) . '</th>
-                                    <th>' . showWithCurrencySymbol($dr - $cr) . '</th>
+                                    <th>= ' . showWithCurrencySymbol(get_total('ledger_suppliers', 'amount', 'Dr.', 'supplier_id', $supplierId)) . '</th>
+                                    <th>= ' . showWithCurrencySymbol(get_total('ledger_suppliers', 'amount', 'Cr.', 'supplier_id', $supplierId)) . '</th>
+                                    <th>' . showWithCurrencySymbol($balance) . '</th>
                                 </tr>
                             </tfoot>
                         </table>
