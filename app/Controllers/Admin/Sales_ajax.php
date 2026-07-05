@@ -51,8 +51,8 @@ class Sales_ajax extends BaseController
             // Apply date filters only if they are present in the request
             if (!empty($st_date) && !empty($en_date)) {
                 // Assuming your database column name is 'date'
-                $table->where('createdDtm >=', $st_date . ' 00:00:00');
-                $table->where('createdDtm <=', $en_date . ' 23:59:59');
+                $table->where('sales.date >=', $st_date . ' 00:00:00');
+                $table->where('sales.date <=', $en_date . ' 23:59:59');
             }
             $data['sales'] = $table->get()->getResult();
 

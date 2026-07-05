@@ -153,6 +153,10 @@
             </div>
 
             <div class="col-md-4" style="background-color: #e8b96f;padding: 10px;">
+                <div class="col-xs-12" style="border:1px dashed #D0D3D8 ;padding-top: 10px;padding-bottom: 10px;">
+                    <label>Sale Date</label>
+                    <input type="date" class="form-control" name="date" value="<?= date('Y-m-d') ?>">
+                </div>
 
                 <div class="col-xs-12" style="border:1px dashed #D0D3D8 ;padding-top: 10px;">
                     <label>Customer</label>

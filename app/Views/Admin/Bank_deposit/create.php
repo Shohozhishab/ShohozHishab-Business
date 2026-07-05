@@ -29,6 +29,11 @@
                             <div class="col-lg-6" >
                                 <form id="geniusform" action="<?php echo $action; ?>" method="post">
                                     <div class="form-group">
+                                        <label for="int">Deposit Date</label>
+                                        <input type="date" class="form-control" name="date" value="<?= date('Y-m-d') ?>"/>
+
+                                    </div>
+                                    <div class="form-group">
                                         <label for="int">Bank</label>
                                         <select class="form-control" name="bank_id" id="bank_id"  required>
                                             <option value="">Please select</option>

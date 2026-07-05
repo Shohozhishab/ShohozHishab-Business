@@ -37,6 +37,27 @@ class Stock_report extends BaseController
             return redirect()->to(site_url('Admin/login'));
         } else {
 
+            $storeId = $this->request->getGet('store_id');
+            $shopId = $this->session->shopId;
+
+            $productsTb = DB()->table('products');
+            $productsTb->join('product_stock_relation relation', 'relation.product_id = products.prod_id');
+            $data['result'] = $productsTb->where('relation.store_id', $storeId)->where('products.sch_id', $shopId)->orderBy('prod_id', "DESC")->get()->getResult();
+
+            $data['quantity'] = '0';
+            if (!empty($data['result'])) {
+                foreach ($data['result'] as $result) {
+                    $data['quantity'] += $result->quantity;
+                }
+            }
+            $data['purchasePrice'] = 0;
+            foreach ($data['result'] as  $pur) {
+                $data['purchasePrice'] += $pur->quantity * $pur->purchase_price;
+            }
+
+            $data['name'] = get_data_by_id('name', 'stores', 'store_id', $storeId);
+            $data['store_id'] = $storeId;
+
 
             $data['menu'] = view('Admin/menu_report');
             // All Permissions

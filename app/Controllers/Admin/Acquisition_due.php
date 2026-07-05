@@ -44,7 +44,9 @@ class Acquisition_due extends BaseController
             $cusCash = $customersTab->selectSum('balance')->where('sch_id', $shopId)->get()->getRow();
             $customerCash = 0;
             if (!empty($cusCash)) {
-                $customerCash = $cusCash->balance;
+                if ($cusCash->balance > 0) {
+                    $customerCash = $cusCash->balance;
+                }
             }
 
             $custTab = DB()->table('customers');
@@ -57,7 +59,9 @@ class Acquisition_due extends BaseController
             $loanProCash = $loan_providerTab->selectSum('balance')->where('sch_id', $shopId)->get()->getRow();
             $loanCash = 0;
             if (!empty($loanProCash)) {
-                $loanCash = $loanProCash->balance;
+                if ($loanProCash->balance > 0) {
+                    $loanCash = $loanProCash->balance;
+                }
             }
 
             $loaTab = DB()->table('loan_provider');
@@ -70,7 +74,9 @@ class Acquisition_due extends BaseController
             $supCash = $suppliersTab->selectSum('balance')->where('sch_id', $shopId)->get()->getRow();
             $supplierCash = 0;
             if (!empty($supCash)) {
-                $supplierCash = $supCash->balance;
+                if ($supCash->balance > 0) {
+                    $supplierCash = $supCash->balance;
+                }
             }
 
             $suppTab = DB()->table('suppliers');

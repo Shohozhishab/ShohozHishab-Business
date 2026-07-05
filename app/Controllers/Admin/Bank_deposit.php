@@ -103,6 +103,7 @@ class Bank_deposit extends BaseController
         $shopId = $this->session->shopId;
         $userId = $this->session->userId;
 
+        $data['date'] = $this->request->getPost('date');
         $data['bank_id'] = $this->request->getPost('bank_id');
         $data['amount'] = $this->request->getPost('amount');
         $data['commont'] = $this->request->getPost('commont');
@@ -130,6 +131,7 @@ class Bank_deposit extends BaseController
                         $data = array(
                             'sch_id' => $shopId,
                             'bank_id' => $data['bank_id'],
+                            'date' => $data['date'],
                             'amount' => $data['amount'],
                             'commont' => $this->request->getPost('commont'),
                             'createdBy' => $userId,

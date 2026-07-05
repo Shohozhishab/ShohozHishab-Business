@@ -185,12 +185,14 @@
             </span>
                 </a>
                 <ul class="treeview-menu">
+                    <?php echo add_main_ajax_based_menu_with_permission('Report', '/Admin/Report', $role_id, 'fa fa-line-chart', '/Admin/Report_ajax','Report'); ?>
                     <?php echo add_main_ajax_based_menu_with_permission('Balance Report', '/Admin/Balance_report', $role_id, 'fa fa-line-chart', '/Admin/Balance_report_ajax','Balance_report'); ?>
                     <?php echo add_main_ajax_based_menu_with_permission('Stock Report', '/Admin/Stock_report', $role_id, 'fa fa-line-chart', '/Admin/Stock_report_ajax','Stock_report'); ?>
                     <?php echo add_main_ajax_based_menu_with_permission('Sale Report', '/Admin/Sales_report', $role_id, 'fa fa-line-chart', '/Admin/Sales_report_ajax','Sales_report'); ?>
                     <?php echo add_main_ajax_based_menu_with_permission('Purchase Report', '/Admin/Purchase_report', $role_id, 'fa fa-line-chart', '/Admin/Purchase_report_ajax','Purchase_report'); ?>
                     <?php echo add_main_ajax_based_menu_with_permission('Accounts Receivable', '/Admin/Acquisition_due', $role_id, 'fa fa-line-chart', '/Admin/Acquisition_due_ajax','Acquisition_due'); ?>
                     <?php echo add_main_ajax_based_menu_with_permission('Accounts Payable', '/Admin/Owe_amount', $role_id, 'fa fa-line-chart', '/Admin/Owe_amount_ajax','Owe_amount'); ?>
+
 
                 </ul>
             </li>

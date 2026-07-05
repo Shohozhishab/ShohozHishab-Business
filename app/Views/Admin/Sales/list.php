@@ -113,7 +113,9 @@
                                 <th>Invoice Id</th>
                                 <th>Total Amount</th>
                                 <th>Total Due</th>
+                                <?php if (isset($profit) && $profit == 1){ ?>
                                 <th>Profit</th>
+                                <?php } ?>
                                 <th>Action</th>
                             </tr>
                             </thead>
@@ -122,16 +124,18 @@
                             foreach ($sales as $val) {
                                 $cus_id = get_data_by_id('customer_id', 'invoice', 'invoice_id', $val->invoice_id);
                                 $cusName = !empty($cus_id) ? get_data_by_id('customer_name', 'customers', 'customer_id', $cus_id) : get_data_by_id('customer_name', 'invoice', 'invoice_id', $val->invoice_id);
-                                $profit = get_data_by_id('profit', 'invoice', 'invoice_id', $val->invoice_id);
+                                $profitData = get_data_by_id('profit', 'invoice', 'invoice_id', $val->invoice_id);
                                 ?>
                                 <tr>
                                     <td><?php echo $i++ ?></td>
-                                    <td><?php echo invoiceDateFormat($val->createdDtm) ?></td>
+                                    <td><?php echo invoiceDateFormat($val->date) ?></td>
                                     <td><?php echo $cusName ?></td>
                                     <td><?php echo $val->invoice_id ?></td>
                                     <td><?php echo showWithCurrencySymbol(get_data_by_id('amount', 'invoice', 'invoice_id', $val->invoice_id)) ?></td>
                                     <td><?php echo showWithCurrencySymbol(get_data_by_id('due', 'invoice', 'invoice_id', $val->invoice_id)) ?></td>
-                                    <td><?php echo showWithCurrencySymbol($profit) ?></td>
+                                    <?php if (isset($profit) && $profit == 1){ ?>
+                                    <td><?php echo showWithCurrencySymbol($profitData) ?></td>
+                                    <?php } ?>
                                     <td>
                                         <?php if (isset($transaction_flow) && $transaction_flow == 1){ ?>
                                         <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Sales_ajax/transaction_flow/' . $val->sales_id); ?>','<?php echo '/Admin/Sales/transaction_flow/' . $val->sales_id; ?>')" class="btn btn-success btn-xs">Transaction Flow </a>
@@ -196,7 +200,9 @@
                                         <th>Invoice Id</th>
                                         <th>Total Amount</th>
                                         <th>Total Due</th>
+                                        <?php if (isset($profit) && $profit == 1){ ?>
                                         <th>Profit</th>
+                                        <?php } ?>
                                     </tr>
                                     </thead>
                                     <tbody>
@@ -204,7 +210,7 @@
                                     foreach ($sales as $item) {
                                         $cus_id = get_data_by_id('customer_id', 'invoice', 'invoice_id', $item->invoice_id);
                                         $cusName = !empty($cus_id) ? get_data_by_id('customer_name', 'customers', 'customer_id', $cus_id) : get_data_by_id('customer_name', 'invoice', 'invoice_id', $item->invoice_id);
-                                        $profit = get_data_by_id('profit', 'invoice', 'invoice_id', $item->invoice_id);
+                                        $profitD = get_data_by_id('profit', 'invoice', 'invoice_id', $item->invoice_id);
                                         ?>
                                         <tr>
                                             <td><?php echo $j++ ?></td>
@@ -213,7 +219,9 @@
                                             <td><?php echo $item->invoice_id ?></td>
                                             <td><?php echo showWithCurrencySymbol(get_data_by_id('amount', 'invoice', 'invoice_id', $item->invoice_id)) ?></td>
                                             <td><?php echo showWithCurrencySymbol(get_data_by_id('due', 'invoice', 'invoice_id', $item->invoice_id)) ?></td>
-                                            <td><?php echo showWithCurrencySymbol($profit) ?></td>
+                                            <?php if (isset($profit) && $profit == 1){ ?>
+                                            <td><?php echo showWithCurrencySymbol($profitD) ?></td>
+                                            <?php } ?>
 
                                         </tr>
                                     <?php } ?>

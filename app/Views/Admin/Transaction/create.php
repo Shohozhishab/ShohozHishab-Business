@@ -62,6 +62,10 @@
                                                 <div class="col-md-4">
                                                     <form id="geniusform" action="<?php echo $action; ?>" method="post">
                                                         <div class="form-group">
+                                                            <label for="date">Transaction Date </label>
+                                                            <input type="date" class="form-control" name="date" value="<?= date('Y-m-d') ?>" >
+                                                        </div>
+                                                        <div class="form-group">
                                                             <label for="int">Customer </label>
                                                             <select class="form-control select2 select2-hidden-accessible input" id="cusData" onchange="custoTranDet(this.value)" style=" width: 100%;" tabindex="-1" aria-hidden="true" name="customer_id" required>
                                                                 <option value="">Please Select </option>
@@ -134,7 +138,10 @@
                                                 <div class="col-md-4">
                                                     <form id="geniusform" action="<?php echo $actionsuppl; ?>"
                                                           method="post">
-
+                                                        <div class="form-group">
+                                                            <label for="date">Transaction Date </label>
+                                                            <input type="date" class="form-control" name="date" value="<?= date('Y-m-d') ?>" >
+                                                        </div>
                                                         <div class="form-group">
                                                             <label for="int">Supplier</label>
                                                             <select class="form-control select2 select2-hidden-accessible input"
@@ -211,6 +218,10 @@
                                                 <div class="col-md-4">
                                                     <form id="geniusform" action="<?php echo $actionLoanPro; ?>"  method="post">
                                                         <div class="form-group">
+                                                            <label for="date">Transaction Date </label>
+                                                            <input type="date" class="form-control" name="date" value="<?= date('Y-m-d') ?>" >
+                                                        </div>
+                                                        <div class="form-group">
                                                             <label for="int">Account
                                                                 Head</label>
                                                             <select class="form-control select2 select2-hidden-accessible input" onchange="lonProvTransView(this.value)" style=" width: 100%;" tabindex="-1" id="loanData"  aria-hidden="true" name="loan_pro_id" required>
@@ -284,6 +295,10 @@
                                             <div class="col-md-4">
                                                 <form id="geniusform" action="<?php echo $actionBank; ?>" method="post">
                                                     <div class="form-group">
+                                                        <label for="date">Transaction Date </label>
+                                                        <input type="date" class="form-control" name="date" value="<?= date('Y-m-d') ?>" >
+                                                    </div>
+                                                    <div class="form-group">
                                                         <label for="int">Bank</label>
                                                         <select class="form-control input"
                                                                 onchange="bankTransView(this.value)" name="bank_id"
@@ -343,7 +358,10 @@
 <!--                                                            <input type="text" class="form-control input"-->
 <!--                                                                   name="memo_number" required>-->
 <!--                                                        </div>-->
-
+                                                        <div class="form-group">
+                                                            <label for="date">Transaction Date </label>
+                                                            <input type="date" class="form-control" name="date" value="<?= date('Y-m-d') ?>" >
+                                                        </div>
                                                         <div class="form-group">
                                                             <label for="int">Expenses</label>
                                                             <select class="form-control select2 select2-hidden-accessible input" style=" width: 100%;"  name="account_id">
@@ -402,6 +420,10 @@
                                                     <form id="geniusform" action="<?php echo $actionOtherSales; ?>"
                                                           method="post">
                                                         <div class="form-group">
+                                                            <label for="date">Transaction Date </label>
+                                                            <input type="date" class="form-control" name="date" value="<?= date('Y-m-d') ?>" >
+                                                        </div>
+                                                        <div class="form-group">
                                                             <label for="particulars">Particulars </label>
                                                             <textarea class="form-control" rows="3" name="particulars"
                                                                       id="particulars" placeholder="Particulars"
@@ -433,7 +455,10 @@
                                                 <div class="col-md-4">
                                                     <form id="geniusform" action="<?php echo $actionSalaryEmployee; ?>"
                                                           method="post">
-
+                                                        <div class="form-group">
+                                                            <label for="date">Transaction Date </label>
+                                                            <input type="date" class="form-control" name="date" value="<?= date('Y-m-d') ?>" >
+                                                        </div>
                                                         <div class="form-group">
                                                             <label for="int">Employee </label>
                                                             <select class="form-control select2 select2-hidden-accessible input"
@@ -503,7 +528,10 @@
 
                                                     <form id="geniusform" action="<?php echo $actionVatPay; ?>" method="post">
 
-
+                                                        <div class="form-group">
+                                                            <label for="date">Transaction Date </label>
+                                                            <input type="date" class="form-control" name="date" value="<?= date('Y-m-d') ?>" >
+                                                        </div>
                                                         <div class="form-group">
                                                             <label for="int">Vat
                                                                 Register</label>
@@ -567,7 +595,10 @@
 
                                                     <form id="geniusform" action="<?= $actionAssetsPay ?>" method="post">
 
-
+                                                        <div class="form-group">
+                                                            <label for="date">Transaction Date </label>
+                                                            <input type="date" class="form-control" name="date" value="<?= date('Y-m-d') ?>" >
+                                                        </div>
                                                         <div class="form-group">
                                                             <label for="int">Assets</label>
                                                             <select class="form-control select2 select2-hidden-accessible input" style=" width: 100%;"  name="account_id">

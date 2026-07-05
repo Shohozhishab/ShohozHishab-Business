@@ -81,6 +81,12 @@
                                                 </div>
                                                 <div class="col-xs-6">
                                                     <div class="col-xs-6">
+                                                        <label for="int">Purchase Date</label>
+                                                    </div>
+                                                    <div class="form-group col-xs-6">
+                                                        <input type="date" class="form-control" name="date" value="<?= date('Y-m-d') ?>">
+                                                    </div>
+                                                    <div class="col-xs-6">
                                                         <label for="int">Total Amount</label>
                                                     </div>
                                                     <div class="form-group col-xs-6">

@@ -40,21 +40,41 @@ class Daily_book extends BaseController
 
             //Show today all cash transaction list in ledger_nagodan table (start)
             $ledger_nagodanTab = DB()->table('ledger_nagodan');
-            $data['cashLedger'] = $ledger_nagodanTab->where('sch_id', $shopId)->like('createdDtm', date('Y-m-d'))->orderBy("createdDtm", "DESC")->get()->getResult();
+            $data['cashLedger'] = $ledger_nagodanTab->where('sch_id', $shopId)->like('DATE(createdDtm)', date('Y-m-d'))->orderBy("createdDtm", "DESC")->get()->getResult();
 
             $nagodTab = DB()->table('ledger_nagodan');
-            $rest = $nagodTab->where('sch_id', $shopId)->like('createdDtm', date('Y-m-d'))->orderBy("createdDtm", "DESC")->limit(1)->get()->getRow();
+            $rest = $nagodTab->where('sch_id', $shopId)->like('DATE(createdDtm)', date('Y-m-d'))->orderBy("createdDtm", "DESC")->limit(1)->get()->getRow();
             $data['cashrest_balance'] = empty($rest) ? 0 : $rest->rest_balance;
 
             //Show today all cash transaction list in ledger_nagodan table (end)
 
             $prevTab = DB()->table('ledger_nagodan');
-            $prevbalance = $prevTab->where("sch_id", $shopId)->where('createdDtm <', date('Y-m-d'))->limit(1)->orderBy("createdDtm", "DESC")->get()->getRow();
+            $prevbalance = $prevTab->where("sch_id", $shopId)->where('DATE(createdDtm) <', date('Y-m-d'))->limit(1)->orderBy("createdDtm", "DESC")->get()->getRow();
             $data['prev_balance'] = empty($prevbalance) ? 0 : $prevbalance->rest_balance;
 
 
             $bankTab = DB()->table('bank');
             $data['allBank'] = $bankTab->where("sch_id", $shopId)->get()->getResult();
+
+            $data['sales'] = DB()->table('sales')
+                ->where('sales.sch_id', $shopId)
+                ->where('DATE(date)', date('Y-m-d'))
+                ->get()->getResult();
+
+            $data['purchase_data'] = DB()->table('purchase')
+                ->where('sch_id', $shopId)
+                ->where('DATE(date)', date('Y-m-d'))
+                ->get()->getResult();
+
+            $data['capital'] = DB()->table('capital')
+                ->where('sch_id',$shopId)
+                ->where('DATE(createdDtm)', date('Y-m-d'))
+                ->get()->getResult();
+
+            $data['transaction'] = DB()->table('transaction')
+                ->where('sch_id',$shopId)
+                ->where('DATE(date)', date('Y-m-d'))
+                ->get()->getResult();
 
 
             // All Permissions
@@ -171,6 +191,26 @@ class Daily_book extends BaseController
             $bankTab = DB()->table('bank');
             $data['allBank'] = $bankTab->where("sch_id", $shopId)->get()->getResult();
 
+            $data['sales'] = DB()->table('sales')
+                ->where('sales.sch_id', $shopId)
+                ->where('DATE(date)', $date)
+                ->get()->getResult();
+
+            $data['purchase_data'] = DB()->table('purchase')
+                ->where('sch_id', $shopId)
+                ->where('DATE(date)', $date)
+                ->get()->getResult();
+
+            $data['capital'] = DB()->table('capital')
+                ->where('sch_id',$shopId)
+                ->where('DATE(createdDtm)', $date)
+                ->get()->getResult();
+
+            $data['transaction'] = DB()->table('transaction')
+                ->where('sch_id',$shopId)
+                ->where('DATE(date)', $date)
+                ->get()->getResult();
+
 
             // All Permissions
             //$perm = array('create','read','update','delete','mod_access');
@@ -201,24 +241,50 @@ class Daily_book extends BaseController
             return redirect()->to(site_url('Admin/login'));
         } else {
             $shopId = $this->session->shopId;
+            $date = $this->request->getGet('date');
+
+            $dateKey = !empty($date) ? $date: date('Y-m-d');
+
 
             $ledgerTab = DB()->table('ledger_nagodan');
-            $data['cashLedger'] = $ledgerTab->where("sch_id", $shopId)->like('createdDtm', date('Y-m-d'))->orderBy("createdDtm", "DESC")->get()->getResult();
+            $data['cashLedger'] = $ledgerTab->where("sch_id", $shopId)->like('createdDtm', $dateKey)->orderBy("createdDtm", "DESC")->get()->getResult();
 
 
             $ledger_nagTab = DB()->table('ledger_nagodan');
-            $balance = $ledger_nagTab->where("sch_id", $shopId)->like('createdDtm', date('Y-m-d'))->limit(1)->orderBy("createdDtm", "DESC")->get()->getRow();
+            $balance = $ledger_nagTab->where("sch_id", $shopId)->like('createdDtm', $dateKey)->limit(1)->orderBy("createdDtm", "DESC")->get()->getRow();
             $data['cashrest_balance'] = empty($balance) ? 0 : $balance->rest_balance;
 
 
             $ledger_nagodanTab = DB()->table('ledger_nagodan');
-            $prevbalance = $ledger_nagodanTab->where('createdDtm <', date('Y-m-d'))->where("sch_id", $shopId)->limit(1)->orderBy("createdDtm", "DESC")->get()->getRow();
+            $prevbalance = $ledger_nagodanTab->where('createdDtm <', $dateKey)->where("sch_id", $shopId)->limit(1)->orderBy("createdDtm", "DESC")->get()->getRow();
             $data['prevAll_balance'] = empty($prevbalance) ? 0 : $prevbalance->rest_balance;
 
 
             $bankTab = DB()->table('bank');
             $data['allBank'] = $bankTab->where("sch_id", $shopId)->get()->getResult();
 
+            $data['sales'] = DB()->table('sales')
+                ->where('sales.sch_id', $shopId)
+                ->where('DATE(date)', $dateKey)
+                ->get()->getResult();
+
+            $data['purchase_data'] = DB()->table('purchase')
+                ->where('sch_id', $shopId)
+                ->where('DATE(date)', $dateKey)
+                ->get()->getResult();
+
+            $data['capital'] = DB()->table('capital')
+                ->where('sch_id',$shopId)
+                ->where('DATE(createdDtm)', $dateKey)
+                ->get()->getResult();
+
+            $data['transaction'] = DB()->table('transaction')
+                ->where('sch_id',$shopId)
+                ->where('DATE(date)', $dateKey)
+                ->get()->getResult();
+
+            $data['searchDate'] = $dateKey;
+            $data['dateSelected'] = !empty($date) ? $date: '';
 
             // All Permissions
             //$perm = array('create','read','update','delete','mod_access');

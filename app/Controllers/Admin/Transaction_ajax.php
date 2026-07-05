@@ -44,10 +44,10 @@ class Transaction_ajax extends BaseController
             $category = $this->request->getGet('category');
 
             if ($start_date) {
-                $transactionTable->where('createdDtm >=', $start_date . ' 00:00:00');
+                $transactionTable->where('date >=', $start_date . ' 00:00:00');
             }
             if ($end_date) {
-                $transactionTable->where('createdDtm <=', $end_date . ' 23:59:59');
+                $transactionTable->where('date <=', $end_date . ' 23:59:59');
             }
 
             // Exclusive Entity Filters based on Category
