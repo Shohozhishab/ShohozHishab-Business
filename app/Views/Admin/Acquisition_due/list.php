@@ -10,11 +10,38 @@
 
     <!-- Main content -->
     <section class="content">
-        <!-- Small boxes (Stat box) -->
-        <div class="row">
-            <div class="col-xs-12" style="margin-bottom: 15px;">
-                <?php echo $menu;?>
+        <div class="col-xs-12" style="margin-bottom: 15px;">
+            <?php echo $menu;?>
+        </div>
+        <?php if (isDefaultRole() == true){ ?>
+            <div class="row" id="reloadRoleDiv">
+                <div class="col-lg-12" >
+                    <button class="btn btn-sm btn-info " style="float: right;" onclick="rollPermissionBtn()">Roll Permission</button>
+                </div>
+                <div class="col-lg-12" id="permissionDiv" style="display: none; margin-top: 20px">
+                    <form id="roleUpdateform" action="<?= base_url('Admin/Role/modulePermissionAction')?>" method="post">
+                        <div class="box box-primary">
+                            <div class="box-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <select class="form-control" onchange="rolePermission(this.value,'Acquisition_due')" name="role_id">
+                                            <option value="">Please Select</option>
+                                            <?php  foreach (userRole() as $val ){ ?>
+                                                <option value="<?= $val->role_id;?>"><?= $val->role;?></option>
+                                            <?php } ?>
+                                        </select>
+                                        <input type="hidden" name="moduleName" value="Acquisition_due">
+                                    </div>
+                                    <div class="col-md-12" id="rolView"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
             </div>
+        <?php } ?>
+        <div class="row" style="margin-top: 20px;">
+
             <div class="col-lg-12">
 
                 <div class="box">
@@ -57,9 +84,15 @@
                                 </tr>
                                 </tfoot>
                             </table>
+                            <?php if (isset($print) && $print == 1){ ?>
                             <button onclick="printDiv('aqu_customer')" class="btn btn-primary" style="float: right;">Print</button>
+                            <?php } ?>
+                            <?php if (isset($download_PDF) && $download_PDF == 1){ ?>
                             <button type="button" class="btn btn-info pull-right" style="margin-right: 10px;" onclick="downloadPDF('aqu_customer','aquCustomer')"><i class="fa fa-file-pdf-o "></i> Download PDF </button>
+                            <?php } ?>
+                            <?php if (isset($download_CSV) && $download_CSV == 1){ ?>
                             <button type="button" class="btn btn-success pull-right" style="margin-right: 10px;" onclick="downloadCSV('aqu_customer','aquCustomer')"><i class="fa fa-file-excel-o "></i> Download CSV</button>
+                            <?php } ?>
                         </div>
 
                         <div class="col-xs-12" style="display: none; text-transform: capitalize; "  id="aqu_customer" >
@@ -132,9 +165,15 @@
                                 </tr>
                                 </tfoot>
                             </table>
+                            <?php if (isset($print) && $print == 1){ ?>
                             <button onclick="printDiv('aqu_supplier')" class="btn btn-primary" style="float: right;">Print</button>
+                            <?php } ?>
+                            <?php if (isset($download_PDF) && $download_PDF == 1){ ?>
                             <button type="button" class="btn btn-info pull-right" style="margin-right: 10px;" onclick="downloadPDF('aqu_supplier','aquSupplier')"><i class="fa fa-file-pdf-o "></i> Download PDF </button>
+                            <?php } ?>
+                            <?php if (isset($download_CSV) && $download_CSV == 1){ ?>
                             <button type="button" class="btn btn-success pull-right" style="margin-right: 10px;" onclick="downloadCSV('aqu_supplier','aquSupplier')"><i class="fa fa-file-excel-o "></i> Download CSV</button>
+                            <?php } ?>
                         </div>
 
                         <div class="col-xs-12" style="display: none;"   id="aqu_supplier" >
@@ -214,9 +253,15 @@
                                 </tr>
                                 </tfoot>
                             </table>
+                            <?php if (isset($print) && $print == 1){ ?>
                             <button onclick="printDiv('aqu_lone')" class="btn btn-primary" style="float: right;">Print</button>
+                            <?php } ?>
+                            <?php if (isset($download_PDF) && $download_PDF == 1){ ?>
                             <button type="button" class="btn btn-info pull-right" style="margin-right: 10px;" onclick="downloadPDF('aqu_lone','aquLone')"><i class="fa fa-file-pdf-o "></i> Download PDF </button>
+                            <?php } ?>
+                            <?php if (isset($download_CSV) && $download_CSV == 1){ ?>
                             <button type="button" class="btn btn-success pull-right" style="margin-right: 10px;" onclick="downloadCSV('aqu_lone','aquLone')"><i class="fa fa-file-excel-o "></i> Download CSV</button>
+                            <?php } ?>
                         </div>
 
                         <div class="col-xs-12" style="display: none;"   id="aqu_lone" >

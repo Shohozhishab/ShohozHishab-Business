@@ -205,7 +205,7 @@
             <!-- /.col -->
         </div>
         <!-- /.row -->
-
+        <?php if (isset($print) && $print == 1){ ?>
         <!-- this row will not appear when printing -->
         <div class="row no-print">
             <div class="col-xs-12">
@@ -213,5 +213,6 @@
 
             </div>
         </div>
+        <?php } ?>
     </section>
 </div>

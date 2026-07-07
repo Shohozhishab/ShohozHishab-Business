@@ -48,6 +48,7 @@
                                 <li class="tab-pane "><a href="#employeeSalary" data-toggle="tab">Employee Salary</a>
                                 </li>
                                 <li class="tab-pane "><a href="#vatPay" data-toggle="tab">Vat Pay</a></li>
+                                <li class="tab-pane "><a href="#assets" data-toggle="tab">Assets</a></li>
                             </ul>
                             <div class="panel-body">
                                 <div class="tab-content">
@@ -335,12 +336,22 @@
                                                 <div class="col-md-4">
                                                     <form id="geniusform" action="<?php echo $actionExpense; ?>"
                                                           method="post">
-                                                        <div class="form-group">
-                                                            <label for="particulars">Memo
-                                                                Number </label>
+<!--                                                        <div class="form-group">-->
+<!--                                                            <label for="particulars">Memo-->
+<!--                                                                Number </label>-->
+<!---->
+<!--                                                            <input type="text" class="form-control input"-->
+<!--                                                                   name="memo_number" required>-->
+<!--                                                        </div>-->
 
-                                                            <input type="text" class="form-control input"
-                                                                   name="memo_number" required>
+                                                        <div class="form-group">
+                                                            <label for="int">Expenses</label>
+                                                            <select class="form-control select2 select2-hidden-accessible input" style=" width: 100%;"  name="account_id">
+                                                                <option selected="selected" value="">Please Select </option>
+                                                                <?php foreach ($expenses as $val){ ?>
+                                                                    <option value="<?= $val->account_id;?>"><?= $val->name;?> </option>
+                                                                <?php } ?>
+                                                            </select>
                                                         </div>
 
                                                         <div class="form-group">
@@ -526,6 +537,64 @@
                                                         </div>
 
                                                         <div class="form-group" id="vatpayId">
+                                                            <label for="int">Amount </label>
+                                                            <input type="number" step=any class="form-control input"
+                                                                   name="amount" oninput="minusValueCheck(this.value,this)" id="amount" placeholder="Amount"
+                                                                   required/>
+                                                        </div>
+                                                        <button type="submit"
+                                                                class="btn btn-primary geniusSubmit-btn"><?php echo $button ?></button>
+                                                        <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/'); ?>','<?php echo '/Admin/Transaction/'; ?>')"
+                                                           class="btn btn-default">Cancel</a>
+                                                    </form>
+                                                </div>
+
+                                                <div class="col-md-8">
+                                                    <div id="vatledger"></div>
+                                                </div>
+
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="tab-pane " id="assets">
+                                        <div class="box-header">
+                                            <h3 class="box-title">Assets</h3>
+                                        </div>
+                                        <div class="box-body">
+                                            <div class="row">
+                                                <div class="col-md-4">
+
+                                                    <form id="geniusform" action="<?= $actionAssetsPay ?>" method="post">
+
+
+                                                        <div class="form-group">
+                                                            <label for="int">Assets</label>
+                                                            <select class="form-control select2 select2-hidden-accessible input" style=" width: 100%;"  name="account_id">
+                                                                <option selected="selected" value="">Please Select </option>
+                                                                <?php foreach ($assets as $val){ ?>
+                                                                    <option value="<?= $val->account_id;?>"><?= $val->name;?> </option>
+                                                                <?php } ?>
+                                                            </select>
+                                                        </div>
+
+                                                        <div class="form-group">
+                                                            <label for="particulars">Particulars </label>
+                                                            <textarea class="form-control input" rows="3" name="particulars" id="particulars" placeholder="Particulars" required></textarea>
+                                                        </div>
+
+                                                        <div class="form-group">
+                                                            <label for="payment_type">Payment Type</label>
+                                                            <select class="form-control input"
+                                                                    onchange="checkBank(this.value)" name="payment_type"
+                                                                    required>
+                                                                <option value="">Please Select</option>
+                                                                <option value="1">Chaque/Bank</option>
+                                                                <option value="2" selected>Cash</option>
+                                                            </select>
+                                                        </div>
+
+                                                        <div class="form-group" id="assetsId">
                                                             <label for="int">Amount </label>
                                                             <input type="number" step=any class="form-control input"
                                                                    name="amount" oninput="minusValueCheck(this.value,this)" id="amount" placeholder="Amount"

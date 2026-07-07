@@ -83,6 +83,17 @@ class Balance_report extends BaseController
             }
             //total Lone provider balance calculet(end)
 
+            //total supplier  balance calculate (start)
+            $suppliersTab = DB()->table('suppliers');
+            $suppl = $suppliersTab->where('sch_id', $shopId)->get()->getResult();
+            $suppGetCash = 0;
+            foreach ($suppl as $result) {
+                if ($result->balance > 0) {
+                    $suppGetCash += $result->balance;
+                }
+            }
+            //total supplier  balance calculate (end)
+
 
             //total invoice profite calculet (start)
             $invoiceCash = 0;
@@ -92,14 +103,22 @@ class Balance_report extends BaseController
                 $invoiceCash += $row->profit;
             }
 
-            $productsTab = DB()->table('products');
-            $product = $productsTab->where('sch_id', $shopId)->get()->getResult();
+//            $productsTab = DB()->table('products');
+//            $product = $productsTab->where('sch_id', $shopId)->get()->getResult();
             $totalProdPrice = 0;
+//            foreach ($product as $row) {
+//                $totalProdPrice += $row->quantity * $row->purchase_price;
+//            }
+            //total invoice profite calculet (end)
+
+            $product = DB()->table('products')
+                ->join('product_stock_relation relation', 'relation.product_id = products.prod_id')
+                ->where('products.sch_id', $shopId)
+                ->get()->getResult();
+
             foreach ($product as $row) {
                 $totalProdPrice += $row->quantity * $row->purchase_price;
             }
-            //total invoice profite calculet (end)
-
 
             //total other sale amount calculet (start)
             $otherSaleCash = 0;
@@ -112,7 +131,7 @@ class Balance_report extends BaseController
 
 
             //Total balance calculet (start)
-            $totalGetCash = $customerCash + $loanProGetCash;
+            $totalGetCash = $customerCash + $loanProGetCash + $suppGetCash;
             $totalCash = $cash + $bankCash + $totalGetCash + $totalProdPrice;
             //Total balance calculet (end)
 

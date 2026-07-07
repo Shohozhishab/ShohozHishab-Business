@@ -84,5 +84,33 @@ class Bank_deposit_ajax extends BaseController
         }
     }
 
+    public function transaction_flow($dep_id){
+        $isLoggedIn = $this->session->isLoggedIn;
+        $role_id = $this->session->role;
+        if (!isset($isLoggedIn) || $isLoggedIn != TRUE) {
+            return redirect()->to(site_url('Admin/login'));
+        } else {
+            $shopId = $this->session->shopId;
+
+            $data['flow'] = DB()->table('transaction_entries')
+                ->where('dep_id',$dep_id)
+                ->get()
+                ->getResult();
+
+            $data['menu'] = view('Admin/menu_bank');
+            // All Permissions
+            //$perm = array('create','read','update','delete','mod_access');
+            $perm = $this->permission->module_permission_list($role_id, $this->module_name);
+            foreach ($perm as $key => $val) {
+                $data[$key] = $this->permission->have_access($role_id, $this->module_name, $key);
+            }
+            if (isset($data['mod_access']) and $data['mod_access'] == 1) {
+                echo view('Admin/Bank_deposit/transaction_flow', $data);
+            } else {
+                echo view('no_permission');
+            }
+        }
+    }
+
 
 }

@@ -27,42 +27,50 @@
                         <div class="row">
                             <div id="message"></div>
                             <?php if (session()->getFlashdata('message') !== NULL) : echo session()->getFlashdata('message'); endif; ?>
-                            <div class="col-lg-6" >
+                            <div class="col-lg-12" >
                                 <form id="geniusformUpdate" action="<?php echo $action; ?>" method="post">
 
-                                    <div class="form-group">
+                                    <div class="form-group col-md-6">
                                         <label for="varchar">Role Name</label>
                                         <input type="text" class="form-control" name="role" id="role" placeholder="Role" value="<?php echo $roles->role?>" >
                                         <input type="hidden" name="role_id" value="<?php echo $roles->role_id; ?>" />
                                     </div>
-                                    <div class="form-group" >
-                                        <label for="varchar">Permission</label>
+                                    <div class="form-group col-md-12" >
+                                        <label for="varchar">Permission</label> <button type="button" class="btn btn-xs btn-primary select-all-btn2" onclick="selectAll(this)" >Select All</button>
                                         <ol>
                                             <?php
                                             $myRole = json_decode($roles->permission);
                                             foreach ($permission as $key => $value) { ?>
-                                                <li><?php echo $key; ?>
-                                                    <?php foreach ($value as $k=>$v) {
-                                                        if(isset($myRole->$key->$k)) {
-                                                            $isChecked = ($myRole->$key->$k == 1) ? 'checked="checked"' : '';
-                                                        }else{
-                                                            $isChecked = '';
-                                                        }
-                                                    ?>
-                                                        <div class="checkbox">
-                                                            <label>
-                                                                <input type="checkbox" <?php echo $isChecked; ?> name="permission[<?php print $key; ?>][<?php print $k; ?>]" value="1" ><?php echo $k ?></label>
-                                                        </div>
+                                                <li><b><?php echo str_replace('_', ' ', $key); ?>
+                                                    <br><button type="button" class="btn btn-xs btn-success select-all-btn" onclick="checkedFunction('<?php print $key; ?>', this)">Checked</button>
+                                                    <div style="display: flex; column-gap: 15px;flex-wrap: wrap;" >
+                                                        <?php foreach ($value as $k=>$v) {
+                                                            if(isset($myRole->$key->$k)) {
+                                                                $isChecked = ($myRole->$key->$k == 1) ? 'checked="checked"' : '';
+                                                            }else{
+                                                                $isChecked = '';
+                                                            }
+                                                            $mName = str_replace('_', ' ', $k);
+                                                            $displayName = str_replace(['update', 'read', 'mod'], ['edit', 'view', 'Module'], $mName);
+                                                        ?>
+
+                                                            <div class="checkbox text-capitalize" style="margin-top: 5px;">
+                                                                <label>
+                                                                    <input type="checkbox" <?php echo $isChecked; ?> name="permission[<?php print $key; ?>][<?php print $k; ?>]" value="1" ><?= $displayName; ?></label>
+                                                            </div>
+
 
                                                     <?php } ?>
+                                                    </div>
                                                 </li>
                                             <?php } ?>
                                         </ol>
                                     </div>
 
-
+                                    <div class="col-md-12">
                                     <button type="submit" class="btn btn-primary geniusSubmit-btn">Update</button>
                                     <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Role_ajax/'); ?>','<?php echo '/Admin/Role/'; ?>')" class="btn btn-default">Cancel</a>
+                                    </div>
                                 </form>
                             </div>
                             <div class="col-lg-6"></div>
@@ -80,3 +88,4 @@
     </section>
     <!-- /.content -->
 </div>
+

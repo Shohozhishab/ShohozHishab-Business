@@ -42,8 +42,8 @@ class Transaction extends BaseController
             $transactionTable = DB()->table('transaction');
 
             // Date Filter
-            $start_date = $this->request->getGet('start_date');
-            $end_date = $this->request->getGet('end_date');
+            $start_date = $this->request->getGet('st_date');
+            $end_date = $this->request->getGet('en_date');
             $category = $this->request->getGet('category');
 
             if ($start_date) {
@@ -97,14 +97,11 @@ class Transaction extends BaseController
                     ->where('bank_id', NULL)
                     ->where('lc_id', NULL)
                     ->where('trangaction_type', 'Dr.');
-            } else {
-                $category = 'customer';
-                $transactionTable->where('customer_id !=', NULL);
             }
 
             $data['transaction_data'] = $transactionTable->where('sch_id', $shopId)->get()->getResult();
-            $data['st_date'] = isset($st_date) ? $st_date : '';
-            $data['en_date'] = isset($en_date) ? $en_date : '';
+            $data['st_date'] = isset($start_date)?$start_date:'';
+            $data['en_date'] = isset($end_date)?$end_date:'';
             $data['active_category'] = $category;
 
             $data['customer_id_filter'] = $customer_id;
@@ -136,6 +133,7 @@ class Transaction extends BaseController
             echo view('Admin/footer');
         }
     }
+
     /**
      * @description This method provides transaction create view
      * @return RedirectResponse|void
@@ -147,6 +145,7 @@ class Transaction extends BaseController
         if (!isset($isLoggedIn) || $isLoggedIn != TRUE) {
             return redirect()->to(site_url('Admin/login'));
         } else {
+            $shopId = $this->session->shopId;
 
             $data['button'] = 'Process';
             $data['action'] = base_url('Admin/Transaction/customer_transaction_action');
@@ -158,6 +157,24 @@ class Transaction extends BaseController
             $data['actionOtherSales'] = base_url('Admin/Transaction/otherSales_transaction_action');
             $data['actionSalaryEmployee'] = base_url('Admin/Transaction/salaryEmployee_transaction_action');
             $data['actionVatPay'] = base_url('Admin/Transaction/vat_pay_action');
+            $data['actionAssetsPay'] = base_url('Admin/Transaction/assets_pay_action');
+
+            $data['assets'] = DB()->table('accounts')
+                ->join('accounts_account_type_map', 'accounts_account_type_map.account_id = accounts.account_id')
+                ->join('account_type', 'account_type.account_type_id = accounts_account_type_map.account_type_id')
+                ->where('accounts.sch_id', $shopId)
+                ->where('account_type.type_key', 'assets')
+                ->get()
+                ->getResult();
+
+            $data['expenses'] = DB()->table('accounts')
+                ->join('accounts_account_type_map', 'accounts_account_type_map.account_id = accounts.account_id')
+                ->join('account_type', 'account_type.account_type_id = accounts_account_type_map.account_type_id')
+                ->where('accounts.sch_id', $shopId)
+                ->where('account_type.type_key', 'expenses')
+                ->get()
+                ->getResult();
+
 
 
             // All Permissions
@@ -284,6 +301,13 @@ class Transaction extends BaseController
                     $transId2 = DB()->insertID();
                     //insert Transaction in transaction table (end)
 
+                    // transaction events insert;
+                    DB()->table('transaction_events')->insert([
+                        'sch_id' => $shopId,
+                        'trans_id'         => $transId2,
+                        'createdDtm'       => date('Y-m-d H:i:s')
+                    ]);
+
                     //insert log (start)
                     $this->transactionLog->insert_log_data('transaction', $transId2, $transId2, $amount);
                     //insert log (end)
@@ -318,7 +342,9 @@ class Transaction extends BaseController
                     $ledgerTab = DB()->table('ledger');
                     $ledgerTab->insert($cusLedgdata2);
                     $ledg_id = DB()->insertID();
+
                     //insert transaction in ledger Transaction table (end)
+                    $this->transaction_entries($transId2, $ledg_id, 'ledger', 'Dr.');
 
                     //insert log (start)
                     $this->transactionLog->insert_log_data('ledger', $ledg_id, $transId2, $amount);
@@ -344,6 +370,9 @@ class Transaction extends BaseController
                         $ledger_nagodanTab = DB()->table('ledger_nagodan');
                         $ledger_nagodanTab->insert($shopedata2);
                         $ledg_nagodan_id = DB()->insertID();
+
+                        //insert transaction in ledger Transaction table (end)
+                        $this->transaction_entries($transId2, $ledg_nagodan_id, 'ledger_nagodan', 'Cr.');
 
                         //insert log (start)
                         $this->transactionLog->insert_log_data('ledger_nagodan', $ledg_nagodan_id, $transId2, $amount);
@@ -386,6 +415,9 @@ class Transaction extends BaseController
                         $ledger_bankTab->insert($lgBankData2);
                         $ledgBank_id = DB()->insertID();
 
+                        //insert transaction in ledger Transaction table (end)
+                        $this->transaction_entries($transId2, $ledgBank_id, 'ledger_bank', 'Cr.');
+
                         //insert log (start)
                         $this->transactionLog->insert_log_data('ledger_bank', $ledgBank_id, $transId2, $amount);
                         //insert log (end)
@@ -424,6 +456,8 @@ class Transaction extends BaseController
                 } else {
                     print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
                 }
+
+
             } else {
                 if ($chequeNo > 0) {
 
@@ -452,7 +486,7 @@ class Transaction extends BaseController
                         $bankRestBalan = $bankCash + $amount;
                     }
 
-                    //                    if ($custBalance >= $amount) {
+//                    if ($custBalance >= $amount) {
                     $custRestBalan = $custBalance - $amount;
                     $shopRestBalan = $shopsBalance + $amount;
 
@@ -476,6 +510,13 @@ class Transaction extends BaseController
                     //insert log (start)
                     $this->transactionLog->insert_log_data('transaction', $transId, $transId, $amount);
                     //insert log (end)
+
+                    // transaction events insert;
+                    DB()->table('transaction_events')->insert([
+                        'sch_id' => $shopId,
+                        'trans_id'         => $transId,
+                        'createdDtm'       => date('Y-m-d H:i:s')
+                    ]);
 
 
                     // transaction amount calculet to customer balance and update customer balance (start)
@@ -509,6 +550,9 @@ class Transaction extends BaseController
                     $ledg_id = DB()->insertID();
                     //insert transaction in ledger Transaction table (end)
 
+                    //insert transaction in ledger Transaction table (end)
+                    $this->transaction_entries($transId, $ledg_id, 'ledger', 'Cr.');
+
                     //insert log (start)
                     $this->transactionLog->insert_log_data('ledger', $ledg_id, $transId, $amount);
                     //insert log (end)
@@ -530,6 +574,9 @@ class Transaction extends BaseController
                         $ledger_nagodanTable = DB()->table('ledger_nagodan');
                         $ledger_nagodanTable->insert($shopedata);
                         $ledg_nagodan_id = DB()->insertID();
+
+                        //insert transaction in ledger Transaction table (end)
+                        $this->transaction_entries($transId, $ledg_nagodan_id, 'ledger_nagodan', 'Dr.');
 
                         //insert log (start)
                         $this->transactionLog->insert_log_data('ledger_nagodan', $ledg_nagodan_id, $transId, $amount);
@@ -568,6 +615,9 @@ class Transaction extends BaseController
                         $this->transactionLog->insert_log_data('ledger_bank', $ledgBank_id, $transId, $amount);
                         //insert log (end)
 
+                        //insert transaction in ledger Transaction table (end)
+                        $this->transaction_entries($transId, $ledgBank_id, 'ledger_bank', 'Dr.');
+
                         //update bank balance
                         $bankData = array(
                             'balance' => $bankRestBalan,
@@ -593,14 +643,14 @@ class Transaction extends BaseController
                     DB()->transComplete();
 
                     print '<div class="alert alert-success alert-dismissible" role="alert">Your transaction is successful<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
-                    //                    } else {
-                    //                        print '<div class="alert alert-danger alert-dismissible" role="alert">This customer could pay maximum<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
-                    //                    }
+
                 }
             }
         } else {
             print '<div class="alert alert-danger alert-dismissible" role="alert">Please input valid customer<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
+
+
     }
 
     /**
@@ -729,6 +779,13 @@ class Transaction extends BaseController
                     $this->transactionLog->insert_log_data('transaction', $ledgSupId, $ledgSupId, $amount);
                     //insert log (end)
 
+                    // transaction events insert;
+                    DB()->table('transaction_events')->insert([
+                        'sch_id' => $shopId,
+                        'trans_id'         => $ledgSupId,
+                        'createdDtm'       => date('Y-m-d H:i:s')
+                    ]);
+
 
                     //insert data
                     $data = array(
@@ -745,6 +802,9 @@ class Transaction extends BaseController
                     $ledger_suppliersTab = DB()->table('ledger_suppliers');
                     $ledger_suppliersTab->insert($data);
                     $ledg_sup_id = DB()->insertID();
+
+                    //insert transaction in ledger Transaction table (end)
+                    $this->transaction_entries($ledgSupId, $ledg_sup_id, 'ledger_suppliers', 'Dr.');
 
                     //insert log (start)
                     $this->transactionLog->insert_log_data('ledger_suppliers', $ledg_sup_id, $ledgSupId, $amount);
@@ -791,6 +851,9 @@ class Transaction extends BaseController
                         $ledger_nagodanTab->insert($lgNagData);
                         $ledg_nagodan_id = DB()->insertID();
 
+                        //insert transaction in ledger Transaction table (end)
+                        $this->transaction_entries($ledgSupId, $ledg_nagodan_id, 'ledger_nagodan', 'Cr.');
+
                         //insert log (start)
                         $this->transactionLog->insert_log_data('ledger_nagodan', $ledg_nagodan_id, $ledgSupId, $amount);
                         //insert log (end)
@@ -823,6 +886,9 @@ class Transaction extends BaseController
                         $ledger_bankTab->insert($lgBankData);
                         $ledgBank_id = DB()->insertID();
 
+                        //insert transaction in ledger Transaction table (end)
+                        $this->transaction_entries($ledgSupId, $ledgBank_id, 'ledger_bank', 'Cr.');
+
                         //insert log (start)
                         $this->transactionLog->insert_log_data('ledger_bank', $ledgBank_id, $ledgSupId, $amount);
                         //insert log (end)
@@ -833,6 +899,7 @@ class Transaction extends BaseController
                         );
                         $tranBank = DB()->table('transaction');
                         $tranBank->where('trans_id', $ledgSupId)->update($tranDataBank);
+
                     }
                 } else {
                     if ($chequeNo > 0) {
@@ -874,6 +941,12 @@ class Transaction extends BaseController
                         $this->transactionLog->insert_log_data('transaction', $ledgSupId2, $ledgSupId2, $amount);
                         //insert log (end)
 
+                        // transaction events insert;
+                        DB()->table('transaction_events')->insert([
+                            'sch_id' => $shopId,
+                            'trans_id'         => $ledgSupId2,
+                            'createdDtm'       => date('Y-m-d H:i:s')
+                        ]);
 
                         //insert data
                         $supplierBalance2 = get_data_by_id('balance', 'suppliers', 'supplier_id', $supplierId);
@@ -892,6 +965,9 @@ class Transaction extends BaseController
                         $ledger_suppliersTab = DB()->table('ledger_suppliers');
                         $ledger_suppliersTab->insert($data2);
                         $ledg_sup_id = DB()->insertID();
+
+                        //insert transaction in ledger Transaction table (end)
+                        $this->transaction_entries($ledgSupId2, $ledg_sup_id, 'ledger_suppliers', 'Cr.');
 
                         //insert log (start)
                         $this->transactionLog->insert_log_data('ledger_suppliers', $ledg_sup_id, $ledgSupId2, $amount);
@@ -941,6 +1017,10 @@ class Transaction extends BaseController
                             $ledger_nagodanTab->insert($lgNagData2);
                             $ledg_nagodan_id = DB()->insertID();
 
+
+                            //insert transaction in ledger Transaction table (end)
+                            $this->transaction_entries($ledgSupId2, $ledg_nagodan_id, 'ledger_nagodan', 'Dr.');
+
                             //insert log (start)
                             $this->transactionLog->insert_log_data('ledger_nagodan', $ledg_nagodan_id, $ledgSupId2, $amount);
                             //insert log (end)
@@ -978,6 +1058,9 @@ class Transaction extends BaseController
                             $ledger_bankTab->insert($lgBankData2);
                             $ledgBank_id = DB()->insertID();
 
+                            //insert transaction in ledger Transaction table (end)
+                            $this->transaction_entries($ledgSupId2, $ledgBank_id, 'ledger_bank', 'Dr.');
+
                             //insert log (start)
                             $this->transactionLog->insert_log_data('ledger_bank', $ledgBank_id, $ledgSupId2, $amount);
                             //insert log (end)
@@ -989,7 +1072,9 @@ class Transaction extends BaseController
                             );
                             $tranBank = DB()->table('transaction');
                             $tranBank->where('trans_id', $ledgSupId2)->update($tranDataBank);
+
                         }
+
                     }
                 }
 
@@ -1001,6 +1086,7 @@ class Transaction extends BaseController
                 }
 
                 print '<div class="alert alert-success alert-dismissible" role="alert">Your transaction is successful<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+
             } else {
 
                 print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
@@ -1008,6 +1094,7 @@ class Transaction extends BaseController
         } else {
             print '<div class="alert alert-danger alert-dismissible" role="alert">Please input valid supplier<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
+
     }
 
     /**
@@ -1173,6 +1260,13 @@ class Transaction extends BaseController
                     $this->transactionLog->insert_log_data('transaction', $transId, $transId, $amount);
                     //insert log (end)
 
+                    // transaction events insert;
+                    DB()->table('transaction_events')->insert([
+                        'sch_id' => $shopId,
+                        'trans_id'         => $transId,
+                        'createdDtm'       => date('Y-m-d H:i:s')
+                    ]);
+
                     //insert data
                     $data = array(
                         'sch_id' => $shopId,
@@ -1188,6 +1282,9 @@ class Transaction extends BaseController
                     $ledger_loanTab = DB()->table('ledger_loan');
                     $ledger_loanTab->insert($data);
                     $ledg_loan_id = DB()->insertID();
+
+                    //insert transaction in ledger Transaction table (end)
+                    $this->transaction_entries($transId, $ledg_loan_id, 'ledger_loan', 'Cr.');
 
                     //insert log (start)
                     $this->transactionLog->insert_log_data('ledger_loan', $ledg_loan_id, $transId, $amount);
@@ -1234,6 +1331,9 @@ class Transaction extends BaseController
                         $ledger_nagodanTab->insert($lgNagData);
                         $ledg_nagodan_id = DB()->insertID();
 
+                        //insert transaction in ledger Transaction table (end)
+                        $this->transaction_entries($transId, $ledg_nagodan_id, 'ledger_nagodan', 'Dr.');
+
                         //insert log (start)
                         $this->transactionLog->insert_log_data('ledger_nagodan', $ledg_nagodan_id, $transId, $amount);
                         //insert log (end)
@@ -1266,6 +1366,9 @@ class Transaction extends BaseController
                         $ledger_bankTab->insert($lgBankData);
                         $ledgBank_id = DB()->insertID();
 
+                        //insert transaction in ledger Transaction table (end)
+                        $this->transaction_entries($transId, $ledgBank_id, 'ledger_bank', 'Dr.');
+
                         //insert log (start)
                         $this->transactionLog->insert_log_data('ledger_bank', $ledgBank_id, $transId, $amount);
                         //insert log (end)
@@ -1276,6 +1379,7 @@ class Transaction extends BaseController
                         );
                         $tranBank = DB()->table('transaction');
                         $tranBank->where('trans_id', $transId)->update($tranDataBank);
+
                     }
                     DB()->transComplete();
                     if (!empty($sms)) {
@@ -1311,6 +1415,12 @@ class Transaction extends BaseController
                     $this->transactionLog->insert_log_data('transaction', $transId, $transId, $amount);
                     //insert log (end)
 
+                    // transaction events insert;
+                    DB()->table('transaction_events')->insert([
+                        'sch_id' => $shopId,
+                        'trans_id'     => $transId,
+                        'createdDtm'   => date('Y-m-d H:i:s')
+                    ]);
 
                     //insert data
                     $data = array(
@@ -1327,6 +1437,9 @@ class Transaction extends BaseController
                     $ledger_loanTab = DB()->table('ledger_loan');
                     $ledger_loanTab->insert($data);
                     $ledg_loan_id = DB()->insertID();
+
+                    //insert transaction in ledger Transaction table (end)
+                    $this->transaction_entries($transId, $ledg_loan_id, 'ledger_loan', 'Dr.');
 
                     //insert log (start)
                     $this->transactionLog->insert_log_data('ledger_loan', $ledg_loan_id, $transId, $amount);
@@ -1373,6 +1486,9 @@ class Transaction extends BaseController
                         $ledger_nagodanTab->insert($lgNagData);
                         $ledg_nagodan_id = DB()->insertID();
 
+                        //insert transaction in ledger Transaction table (end)
+                        $this->transaction_entries($transId, $ledg_nagodan_id, 'ledger_nagodan', 'Cr.');
+
                         //insert log (start)
                         $this->transactionLog->insert_log_data('ledger_nagodan', $ledg_nagodan_id, $transId, $amount);
                         //insert log (end)
@@ -1405,6 +1521,9 @@ class Transaction extends BaseController
                         $ledger_bankTab->insert($lgBankData);
                         $ledgBank_id = DB()->insertID();
 
+                        //insert transaction in ledger Transaction table (end)
+                        $this->transaction_entries($transId, $ledgBank_id, 'ledger_bank', 'Cr.');
+
                         //insert log (start)
                         $this->transactionLog->insert_log_data('ledger_bank', $ledgBank_id, $transId, $amount);
                         //insert log (end)
@@ -1415,10 +1534,12 @@ class Transaction extends BaseController
                         );
                         $tranBank = DB()->table('transaction');
                         $tranBank->where('trans_id', $transId)->update($tranDataBank);
+
                     }
                     DB()->transComplete();
 
                     print '<div class="alert alert-success alert-dismissible" role="alert">Your transaction is successful<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+
                 } else {
                     print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
                 }
@@ -1426,6 +1547,8 @@ class Transaction extends BaseController
         } else {
             print '<div class="alert alert-danger alert-dismissible" role="alert">Please input valid Account Head<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
+
+
     }
 
     /**
@@ -1541,6 +1664,12 @@ class Transaction extends BaseController
                 $this->transactionLog->insert_log_data('transaction', $transaction, $transaction, $amount);
                 //insert log (end)
 
+                // transaction events insert;
+                DB()->table('transaction_events')->insert([
+                    'sch_id' => $shopId,
+                    'trans_id'     => $transaction,
+                    'createdDtm'   => date('Y-m-d H:i:s')
+                ]);
 
                 //bank balance update  (start)
                 $firstBankData = array(
@@ -1571,6 +1700,9 @@ class Transaction extends BaseController
                 $ledger_bankTab->insert($firstLedgerData);
                 $ledgBank_id = DB()->insertID();
                 //Bank ledgher create (end)
+
+                //insert transaction in ledger Transaction table (end)
+                $this->transaction_entries($transaction, $ledgBank_id, 'ledger_bank', 'Cr.');
 
                 //insert log (start)
                 $this->transactionLog->insert_log_data('ledger_bank', $ledgBank_id, $transaction, $amount);
@@ -1610,6 +1742,9 @@ class Transaction extends BaseController
                 $ledgBank_id = DB()->insertID();
                 //Bank ledgher create (end)
 
+                //insert transaction in ledger Transaction table (end)
+                $this->transaction_entries($transaction, $ledgBank_id, 'ledger_bank', 'Dr.');
+
                 //insert log (start)
                 $this->transactionLog->insert_log_data('ledger_bank', $ledgBank_id, $transaction, $amount);
                 //insert log (end)
@@ -1617,12 +1752,15 @@ class Transaction extends BaseController
                 DB()->transComplete();
 
                 print '<div class="alert alert-success alert-dismissible" role="alert">Your transaction is successful<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+
             } else {
                 print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
             }
         } else {
             print '<div class="alert alert-danger alert-dismissible" role="alert">Please input valid Bank<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
+
+
     }
 
     /**
@@ -1699,6 +1837,7 @@ class Transaction extends BaseController
         } else {
             print '<span style="color:green">Balance is ok</span>';
         }
+
     }
 
     /**
@@ -1712,6 +1851,7 @@ class Transaction extends BaseController
 
         $amount = str_replace(',', '', $this->request->getPost('amount'));
         //Payment Type
+        $accountId = $this->request->getPost('account_id');
         $paymentType = $this->request->getPost('payment_type');
         //shop data
         $shopBalance = get_data_by_id('cash', 'shops', 'sch_id', $shopId);
@@ -1743,14 +1883,14 @@ class Transaction extends BaseController
         $exRestbalance = $exrest + $amount;
 
         if ($availableBalance == true) {
-
+            $db = DB();
             DB()->transStart();
             //insert Transaction table
             $transdata = array(
                 'sch_id' => $shopId,
+                'account_id'=> $accountId,
                 'title' => $this->request->getPost('particulars'),
-                'memo_number' => $this->request->getPost('memo_number'),
-                'trangaction_type' => 'Cr.',
+                'trangaction_type' => 'Dr.',
                 'amount' => $amount,
                 'createdBy' => $userId,
                 'createdDtm' => date('Y-m-d h:i:s')
@@ -1763,37 +1903,80 @@ class Transaction extends BaseController
             $this->transactionLog->insert_log_data('transaction', $ledgtranId, $ledgtranId, $amount);
             //insert log (end)
 
-            $exData = array(
-                'expense' => $exRestbalance,
+            // transaction events insert;
+            DB()->table('transaction_events')->insert([
+                'sch_id' => $shopId,
+                'trans_id'     => $ledgtranId,
+                'createdDtm'   => date('Y-m-d H:i:s')
+            ]);
+
+            $previousBalance = get_data_by_id('balance', 'accounts', 'account_id', $accountId);
+            $restBalance = $previousBalance + $amount;
+
+            //Accounts Balance Update
+            $datavatBlan = array(
+                'balance' => $restBalance,
                 'updatedBy' => $userId,
             );
-            $shopsTab = DB()->table('shops');
-            $shopsTab->where('sch_id', $shopId)->update($exData);
-
+            $db->table('accounts')->where('account_id', $accountId)->update($datavatBlan);
             //insert log (start)
-            $this->transactionLog->insert_log_data('shops', $shopId, $ledgtranId, $amount);
+            $this->transactionLog->insert_log_data('accounts', $accountId, $ledgtranId, $amount);
             //insert log (end)
 
-
-            //insert data
+            //insert data ledger accounts
             $data = array(
                 'sch_id' => $shopId,
-                'memo_number' => $this->request->getPost('memo_number'),
                 'trans_id' => $ledgtranId,
+                'account_id' => $accountId,
                 'particulars' => $this->request->getPost('particulars'),
                 'trangaction_type' => 'Dr.',
                 'amount' => $amount,
-                'rest_balance' => $exRestbalance,
+                'rest_balance' => $restBalance,
                 'createdBy' => $userId,
                 'createdDtm' => date('Y-m-d h:i:s')
             );
-            $ledger_expenseTab = DB()->table('ledger_expense');
-            $ledger_expenseTab->insert($data);
-            $ledg_exp_id = DB()->insertID();
-
+            $db->table('ledger_accounts')->insert($data);
+            $ledger_id = $db->insertID();
+            //insert transaction in ledger Transaction table (end)
+            $this->transaction_entries($ledgtranId, $ledger_id, 'ledger_accounts', 'Dr.');
             //insert log (start)
-            $this->transactionLog->insert_log_data('ledger_expense', $ledg_exp_id, $ledgtranId, $amount);
+            $this->transactionLog->insert_log_data('ledger_accounts', $ledger_id, $ledgtranId, $amount);
             //insert log (end)
+
+//            $exData = array(
+//                'expense' => $exRestbalance,
+//                'updatedBy' => $userId,
+//            );
+//            $shopsTab = DB()->table('shops');
+//            $shopsTab->where('sch_id', $shopId)->update($exData);
+//
+//            //insert log (start)
+//            $this->transactionLog->insert_log_data('shops', $shopId, $ledgtranId, $amount);
+//            //insert log (end)
+//
+//
+//            //insert data
+//            $data = array(
+//                'sch_id' => $shopId,
+//                'memo_number' => $this->request->getPost('memo_number'),
+//                'trans_id' => $ledgtranId,
+//                'particulars' => $this->request->getPost('particulars'),
+//                'trangaction_type' => 'Dr.',
+//                'amount' => $amount,
+//                'rest_balance' => $exRestbalance,
+//                'createdBy' => $userId,
+//                'createdDtm' => date('Y-m-d h:i:s')
+//            );
+//            $ledger_expenseTab = DB()->table('ledger_expense');
+//            $ledger_expenseTab->insert($data);
+//            $ledg_exp_id = DB()->insertID();
+//
+//            //insert transaction in ledger Transaction table (end)
+//            $this->transaction_entries($ledgtranId, $ledg_exp_id, 'ledger_expense', 'Dr.');
+//
+//            //insert log (start)
+//            $this->transactionLog->insert_log_data('ledger_expense', $ledg_exp_id, $ledgtranId, $amount);
+//            //insert log (end)
 
             //admin transaction
             if ($paymentType == 2) {
@@ -1823,6 +2006,9 @@ class Transaction extends BaseController
                 $ledger_nagodanTable = DB()->table('ledger_nagodan');
                 $ledger_nagodanTable->insert($lgNagData);
                 $ledg_nagodan_id = DB()->insertID();
+
+                //insert transaction in ledger Transaction table (end)
+                $this->transaction_entries($ledgtranId, $ledg_nagodan_id, 'ledger_nagodan', 'Cr.');
 
                 //insert log (start)
                 $this->transactionLog->insert_log_data('ledger_nagodan', $ledg_nagodan_id, $ledgtranId, $amount);
@@ -1856,6 +2042,9 @@ class Transaction extends BaseController
                 $ledger_bankTable->insert($lgBankData);
                 $ledgBank_id = DB()->insertID();
 
+                //insert transaction in ledger Transaction table (end)
+                $this->transaction_entries($ledgtranId, $ledgBank_id, 'ledger_bank', 'Cr.');
+
                 //insert log (start)
                 $this->transactionLog->insert_log_data('ledger_bank', $ledgBank_id, $ledgtranId, $amount);
                 //insert log (end)
@@ -1866,6 +2055,7 @@ class Transaction extends BaseController
                 );
                 $tranBank = DB()->table('transaction');
                 $tranBank->where('trans_id', $ledgtranId)->update($tranDataBank);
+
             }
 
             DB()->transComplete();
@@ -1875,6 +2065,7 @@ class Transaction extends BaseController
 
             print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
+
     }
 
     /**
@@ -1919,6 +2110,12 @@ class Transaction extends BaseController
         $this->transactionLog->insert_log_data('transaction', $ledgtranId, $ledgtranId, $amount);
         //insert log (end)
 
+        // transaction events insert;
+        DB()->table('transaction_events')->insert([
+            'sch_id' => $shopId,
+            'trans_id'     => $ledgtranId,
+            'createdDtm'   => date('Y-m-d H:i:s')
+        ]);
 
         //insert data
         $data = array(
@@ -1933,6 +2130,9 @@ class Transaction extends BaseController
         $ledger_other_salesTab = DB()->table('ledger_other_sales');
         $ledger_other_salesTab->insert($data);
         $ledg_oth_sales_id = DB()->insertID();
+
+        //insert transaction in ledger Transaction table (end)
+        $this->transaction_entries($ledgtranId, $ledg_oth_sales_id, 'ledger_other_sales', 'Dr.');
 
         //insert log (start)
         $this->transactionLog->insert_log_data('ledger_other_sales', $ledg_oth_sales_id, $ledgtranId, $amount);
@@ -1966,6 +2166,9 @@ class Transaction extends BaseController
         $ledger_nagodanTab->insert($lgNagData);
         $ledg_nagodan_id = DB()->insertID();
 
+        //insert transaction in ledger Transaction table (end)
+        $this->transaction_entries($ledgtranId, $ledg_nagodan_id, 'ledger_nagodan', 'Dr.');
+
         //insert log (start)
         $this->transactionLog->insert_log_data('ledger_nagodan', $ledg_nagodan_id, $ledgtranId, $amount);
         //insert log (end)
@@ -1974,6 +2177,7 @@ class Transaction extends BaseController
         DB()->transComplete();
 
         print '<div class="alert alert-success alert-dismissible" role="alert">Your transaction is successful<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+
     }
 
     /**
@@ -2043,6 +2247,12 @@ class Transaction extends BaseController
                 $this->transactionLog->insert_log_data('transaction', $ledgSupId, $ledgSupId, $amount);
                 //insert log (end)
 
+                // transaction events insert;
+                DB()->table('transaction_events')->insert([
+                    'sch_id' => $shopId,
+                    'trans_id'     => $ledgSupId,
+                    'createdDtm'   => date('Y-m-d H:i:s')
+                ]);
 
                 //insert data
                 $data = array(
@@ -2059,6 +2269,9 @@ class Transaction extends BaseController
                 $ledger_employeeTab = DB()->table('ledger_employee');
                 $ledger_employeeTab->insert($data);
                 $ledg_emp_id = DB()->insertID();
+
+                //insert transaction in ledger Transaction table (end)
+                $this->transaction_entries($ledgSupId, $ledg_emp_id, 'ledger_employee', 'Dr.');
 
                 //insert log (start)
                 $this->transactionLog->insert_log_data('ledger_employee', $ledg_emp_id, $ledgSupId, $amount);
@@ -2105,6 +2318,9 @@ class Transaction extends BaseController
                     $ledger_nagodanTab->insert($lgNagData);
                     $ledg_nagodan_id = DB()->insertID();
 
+                    //insert transaction in ledger Transaction table (end)
+                    $this->transaction_entries($ledgSupId, $ledg_nagodan_id, 'ledger_nagodan', 'Cr.');
+
                     //insert log (start)
                     $this->transactionLog->insert_log_data('ledger_nagodan', $ledg_nagodan_id, $ledgSupId, $amount);
                     //insert log (end)
@@ -2137,6 +2353,9 @@ class Transaction extends BaseController
                     $ledger_bankTab->insert($lgBankData);
                     $ledgBank_id = DB()->insertID();
 
+                    //insert transaction in ledger Transaction table (end)
+                    $this->transaction_entries($ledgSupId, $ledgBank_id, 'ledger_bank', 'Cr.');
+
                     //insert log (start)
                     $this->transactionLog->insert_log_data('ledger_bank', $ledgBank_id, $ledgSupId, $amount);
                     //insert log (end)
@@ -2147,17 +2366,21 @@ class Transaction extends BaseController
                     );
                     $tranBank = DB()->table('transaction');
                     $tranBank->where('trans_id', $ledgSupId)->update($tranDataBank);
+
                 }
 
                 DB()->transComplete();
 
                 print '<div class="alert alert-success alert-dismissible" role="alert">Your transaction is successful<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+
             } else {
                 print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
             }
         } else {
             print '<div class="alert alert-danger alert-dismissible" role="alert">Please input valid employee<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
+
+
     }
 
     /**
@@ -2249,6 +2472,12 @@ class Transaction extends BaseController
                     $this->transactionLog->insert_log_data('transaction', $ledgSupId, $ledgSupId, $amount);
                     //insert log (end)
 
+                    // transaction events insert;
+                    DB()->table('transaction_events')->insert([
+                        'sch_id' => $shopId,
+                        'trans_id'     => $ledgSupId,
+                        'createdDtm'   => date('Y-m-d H:i:s')
+                    ]);
 
                     //insert data ledger_vat
                     $data = array(
@@ -2265,6 +2494,9 @@ class Transaction extends BaseController
                     $ledger_vatTab = DB()->table('ledger_vat');
                     $ledger_vatTab->insert($data);
                     $ledg_vat_id = DB()->insertID();
+
+                    //insert transaction in ledger Transaction table (end)
+                    $this->transaction_entries($ledgSupId, $ledg_vat_id, 'ledger_vat', 'Dr.');
 
                     //insert log (start)
                     $this->transactionLog->insert_log_data('ledger_vat', $ledg_vat_id, $ledgSupId, $amount);
@@ -2312,6 +2544,9 @@ class Transaction extends BaseController
                         $ledger_nagodanTab->insert($lgNagData);
                         $ledg_nagodan_id = DB()->insertID();
 
+                        //insert transaction in ledger Transaction table (end)
+                        $this->transaction_entries($ledgSupId, $ledg_nagodan_id, 'ledger_nagodan', 'Cr.');
+
                         //insert log (start)
                         $this->transactionLog->insert_log_data('ledger_nagodan', $ledg_nagodan_id, $ledgSupId, $amount);
                         //insert log (end)
@@ -2345,6 +2580,9 @@ class Transaction extends BaseController
                         $ledger_bankTab->insert($lgBankData);
                         $ledgBank_id = DB()->insertID();
 
+                        //insert transaction in ledger Transaction table (end)
+                        $this->transaction_entries($ledgSupId, $ledgBank_id, 'ledger_bank', 'Cr.');
+
                         //insert log (start)
                         $this->transactionLog->insert_log_data('ledger_bank', $ledgBank_id, $ledgSupId, $amount);
                         //insert log (end)
@@ -2355,6 +2593,7 @@ class Transaction extends BaseController
                         );
                         $tranBank = DB()->table('transaction');
                         $tranBank->where('trans_id', $ledgSupId)->update($tranDataBank);
+
                     }
 
                     DB()->transComplete();
@@ -2363,12 +2602,194 @@ class Transaction extends BaseController
                 } else {
                     print '<div class="alert alert-danger alert-dismissible" role="alert">Vat amount to large<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
                 }
+
             } else {
                 print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
             }
         } else {
             print '<div class="alert alert-danger alert-dismissible" role="alert">Please input valid Vat id<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
+
+    }
+    public function assets_pay_action()
+    {
+        $shopId = $this->session->shopId;
+        $userId = $this->session->userId;
+
+        $amount = str_replace(',', '', $this->request->getPost('amount'));
+        $accountId = $this->request->getPost('account_id');
+        $paymentType = $this->request->getPost('payment_type');
+        $bankUpData = 0;
+        if ($paymentType == 1) {
+            $bankId = $this->request->getPost('bank_id');
+            if (empty($bankId)) {
+                print '<div class="alert alert-danger alert-dismissible" role="alert">Please select a bank <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+                die();
+            }
+
+            $bankCash = get_data_by_id('balance', 'bank', 'bank_id', $bankId);
+            $bankUpData = $bankCash - $amount;
+            $availableBalance = checkBankBalance($bankId, $amount);
+        }elseif($paymentType == 2) {
+            $availableBalance = checkNagadBalance($amount);
+        }
+
+
+        if ($amount < 0) {
+            print '<div class="alert alert-danger alert-dismissible" role="alert">Please enter valid amount<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+            die();
+        }
+
+
+        if ($availableBalance == true) {
+            $db = DB();
+            $db->transStart();
+
+            //insert Transaction table
+            $transdata = array(
+                'sch_id' => $shopId,
+                'account_id' => $accountId,
+                'title' => $this->request->getPost('particulars'),
+                'trangaction_type' => 'Dr.',
+                'amount' => $amount,
+                'createdBy' => $userId,
+                'createdDtm' => date('Y-m-d h:i:s')
+            );
+            $db->table('transaction')->insert($transdata);
+            $transactionId = $db->insertID();
+
+            //insert log (start)
+            $this->transactionLog->insert_log_data('transaction', $transactionId, $transactionId, $amount);
+            //insert log (end)
+
+            // transaction events insert;
+            $db->table('transaction_events')->insert([
+                'sch_id' => $shopId,
+                'trans_id'     => $transactionId,
+                'createdDtm'   => date('Y-m-d H:i:s')
+            ]);
+
+            //Vat Balance
+            $previousBalance = get_data_by_id('balance', 'accounts', 'account_id', $accountId);
+            $restBalance = $previousBalance + $amount;
+
+            //Accounts Balance Update
+            $datavatBlan = array(
+                'balance' => $restBalance,
+                'updatedBy' => $userId,
+            );
+            $db->table('accounts')->where('account_id', $accountId)->update($datavatBlan);
+            //insert log (start)
+            $this->transactionLog->insert_log_data('accounts', $accountId, $transactionId, $amount);
+            //insert log (end)
+
+            //insert data ledger accounts
+            $data = array(
+                'sch_id' => $shopId,
+                'trans_id' => $transactionId,
+                'account_id' => $accountId,
+                'particulars' => $this->request->getPost('particulars'),
+                'trangaction_type' => 'Dr.',
+                'amount' => $amount,
+                'rest_balance' => $restBalance,
+                'createdBy' => $userId,
+                'createdDtm' => date('Y-m-d h:i:s')
+            );
+            $db->table('ledger_accounts')->insert($data);
+            $ledger_id = $db->insertID();
+            //insert transaction in ledger Transaction table (end)
+            $this->transaction_entries($transactionId, $ledger_id, 'ledger_accounts', 'Dr.');
+            //insert log (start)
+            $this->transactionLog->insert_log_data('ledger_accounts', $ledger_id, $transactionId, $amount);
+            //insert log (end)
+
+            //admin transaction
+            if ($paymentType == 2) {
+                //shop data
+                $shopBalance = get_data_by_id('cash', 'shops', 'sch_id', $shopId);
+                $shopUpdateBalance = $shopBalance - $amount;
+
+                //shop balance update
+                $shopData = array(
+                    'cash' => $shopUpdateBalance,
+                    'updatedBy' => $userId,
+                );
+                $db->table('shops')->where('sch_id', $shopId)->update($shopData);
+
+                //insert log (start)
+                $this->transactionLog->insert_log_data('shops', $shopId, $transactionId, $amount);
+                //insert log (end)
+
+                //insert ledger_nagodan
+                $lgNagData = array(
+                    'sch_id' => $shopId,
+                    'trans_id' => $transactionId,
+                    'trangaction_type' => 'Cr.',
+                    'particulars' => $this->request->getPost('particulars'),
+                    'amount' => $amount,
+                    'rest_balance' => $shopUpdateBalance,
+                    'createdBy' => $userId,
+                    'createdDtm' => date('Y-m-d h:i:s')
+                );
+                $db->table('ledger_nagodan')->insert($lgNagData);
+                $ledg_nagodan_id = DB()->insertID();
+
+                //insert transaction in ledger Transaction table (end)
+                $this->transaction_entries($transactionId, $ledg_nagodan_id, 'ledger_nagodan', 'Cr.');
+
+                //insert log (start)
+                $this->transactionLog->insert_log_data('ledger_nagodan', $ledg_nagodan_id, $transactionId, $amount);
+                //insert log (end)
+
+            } else {
+
+                $bankData = array(
+                    'balance' => $bankUpData,
+                    'updatedBy' => $userId,
+                );
+                $db->table('bank')->where('bank_id', $bankId)->update($bankData);
+
+                //insert log (start)
+                $this->transactionLog->insert_log_data('bank', $bankId, $transactionId, $amount);
+                //insert log (end)
+
+                //insert ledger_bank
+                $lgBankData = array(
+                    'sch_id' => $shopId,
+                    'bank_id' => $bankId,
+                    'trans_id' => $transactionId,
+                    'trangaction_type' => 'Cr.',
+                    'particulars' => $this->request->getPost('particulars'),
+                    'amount' => $amount,
+                    'rest_balance' => $bankUpData,
+                    'createdBy' => $userId,
+                    'createdDtm' => date('Y-m-d h:i:s')
+                );
+                $db->table('ledger_bank')->insert($lgBankData);
+                $ledgBank_id = $db->insertID();
+
+                //insert transaction in ledger Transaction table (end)
+                $this->transaction_entries($transactionId, $ledgBank_id, 'ledger_bank', 'Cr.');
+
+                //insert log (start)
+                $this->transactionLog->insert_log_data('ledger_bank', $ledgBank_id, $transactionId, $amount);
+                //insert log (end)
+
+                //bank id update in transaction table
+                $tranDataBank = array(
+                    'bank_id' => $bankId,
+                );
+                $db->table('transaction')->where('trans_id', $transactionId)->update($tranDataBank);
+            }
+            $db->transComplete();
+
+            print '<div class="alert alert-success alert-dismissible" role="alert">Your transaction is successful<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+
+        } else {
+            print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+        }
+
+
     }
 
     /**
@@ -2604,6 +3025,7 @@ class Transaction extends BaseController
         $view .= '</form>';
 
         print $view;
+
     }
 
     /**
@@ -2657,7 +3079,8 @@ class Transaction extends BaseController
             $newLedgerType = 'Cr.';
             $paymentTransactionType = 'Dr.';
         }
-
+//        print $restbalLedger;
+//        die();
         if ($availableBalance == true) {
             DB()->transStart();
             //insert Transaction in transaction table (start)
@@ -2690,8 +3113,15 @@ class Transaction extends BaseController
             );
             $ledgerTab = DB()->table('ledger');
             $ledgerTab->where('ledg_id', $cusledgerInfo->id)->update($cusLedgerData);
+
             //all customer ledger rest balance update
 
+            if ($newLedgerType == 'Cr.') {
+                $this->customer_ledger_rest_balance_update($tanId, $transaction->customer_id, $amount, $ledgerType);
+            } else {
+                $this->customer_ledger_rest_balance_update_cr($tanId, $transaction->customer_id, $amount, $ledgerType);
+            }
+            //insert transaction in ledger Transaction table (end)
 
             //transaction payment amount payment cash or bank(start)
             if ($paymentTransactionType == 'Cr.') {
@@ -2710,6 +3140,7 @@ class Transaction extends BaseController
         } else {
             print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
+
     }
 
     /**
@@ -2743,6 +3174,9 @@ class Transaction extends BaseController
             $ledger_nagodanTab = DB()->table('ledger_nagodan');
             $ledger_nagodanTab->where('ledg_nagodan_id', $shopLedInfo->id)->update($shopedata);
 
+            //shop all ledger rest balance update
+            $this->shop_ledger_rest_balance_update_cr($tanId, $amount, $type);
+            //shop all ledger rest balance update
 
 
             //update shops balance
@@ -2778,6 +3212,10 @@ class Transaction extends BaseController
             );
             $ledger_bankTab = DB()->table('ledger_bank');
             $ledger_bankTab->where('ledgBank_id', $bankLedgInfo->id)->update($lgBankData);
+
+            //all bank ledger rest balance update
+            $this->bank_ledger_rest_balance_update_cr($tanId, $bank_id, $amount, $type);
+            //all bank ledger rest balance update
 
             //update bank balance
             $bankInfo = $this->transactionLog->get_table_name_by_row('bank', $tanId);
@@ -2826,6 +3264,10 @@ class Transaction extends BaseController
             $ledger_nagodanTable = DB()->table('ledger_nagodan');
             $ledger_nagodanTable->where('ledg_nagodan_id', $shopLedInfo->id)->update($shopedata);
 
+            //shop all ledger rest balance update
+            $this->shop_ledger_rest_balance_update($tanId, $amount, $type);
+            //shop all ledger rest balance update
+
 
             //update shops balance
             $shopInfo = $this->transactionLog->get_table_name_by_row('shops', $tanId);
@@ -2861,6 +3303,10 @@ class Transaction extends BaseController
             $ledger_bankTable = DB()->table('ledger_bank');
             $ledger_bankTable->where('ledgBank_id', $bankLedgInfo->id)->update($lgBankData);
 
+            //all bank ledger rest balance update
+            $this->bank_ledger_rest_balance_update($tanId, $bank_id, $amount);
+            //all bank ledger rest balance update
+
             //update bank balance
             $bankInfo = $this->transactionLog->get_table_name_by_row('bank', $tanId);
             $bankCash = get_data_by_id('balance', 'bank', 'bank_id', $bank_id);
@@ -2885,7 +3331,7 @@ class Transaction extends BaseController
      * @param float $amount
      * @return void
      */
-    private function customer_ledger_rest_balance_update($transactionId, $customer_id, $amount, $type)
+    private function customer_ledger_rest_balance_update($transactionId, $customer_id, $amount,$type)
     {
         // Get the specific ledger log entry using a helper function that returns table data by transaction ID
         $ledLog = $this->transactionLog->get_table_name_by_row('ledger', $transactionId);
@@ -2928,12 +3374,13 @@ class Transaction extends BaseController
                     array_push($arrayUpData, $data);
                 }
             }
+
         }
         if (!empty($arrayUpData)) {
             $table = DB()->table('ledger');
             $table->updateBatch($arrayUpData, 'ledg_id');
         }
-        //        return $arrayUpData;
+//        return $arrayUpData;
     }
 
     private function customer_ledger_rest_balance_update_cr($transactionId, $customer_id, $amount, $type)
@@ -2985,7 +3432,7 @@ class Transaction extends BaseController
             $table = DB()->table('ledger');
             $table->updateBatch($arrayUpData, 'ledg_id');
         }
-        //        return $arrayUpData;
+//        return $arrayUpData;
     }
 
     /**
@@ -3034,12 +3481,13 @@ class Transaction extends BaseController
                     array_push($arrayUpData, $data);
                 }
             }
+
         }
         if (!empty($arrayUpData)) {
             $table = DB()->table('ledger_nagodan');
             $table->updateBatch($arrayUpData, 'ledg_nagodan_id');
         }
-        //        return $arrayUpData;
+//        return $arrayUpData;
     }
 
     private function shop_ledger_rest_balance_update_cr($transactionId, $amount, $type)
@@ -3082,12 +3530,13 @@ class Transaction extends BaseController
                     array_push($arrayUpData, $data);
                 }
             }
+
         }
         if (!empty($arrayUpData)) {
             $table = DB()->table('ledger_nagodan');
             $table->updateBatch($arrayUpData, 'ledg_nagodan_id');
         }
-        //        return $arrayUpData;
+//        return $arrayUpData;
     }
 
     /**
@@ -3210,12 +3659,13 @@ class Transaction extends BaseController
                 $data['rest_balance'] = $val->rest_balance - ($preAmount - $amount);
                 array_push($arrayUpData, $data);
             }
+
         }
         if (!empty($arrayUpData)) {
             $table = DB()->table('ledger_bank');
             $table->updateBatch($arrayUpData, 'ledgBank_id');
         }
-        //        return $arrayUpData;
+//        return $arrayUpData;
     }
 
     /**
@@ -3357,6 +3807,14 @@ class Transaction extends BaseController
             $ledger_suppliersTab = DB()->table('ledger_suppliers');
             $ledger_suppliersTab->where('ledg_sup_id', $supplierLedgerInfo->id)->update($data);
 
+            //all ledger rest balance update
+
+            if ($newLedgerType == 'Cr.') {
+                $this->supplier_ledger_rest_balance_update($tanId, $transaction->supplier_id, $amount, $ledgerType);
+            } else {
+                $this->supplier_ledger_rest_balance_update_cr($tanId, $transaction->supplier_id, $amount, $ledgerType);
+            }
+            //insert transaction in ledger Transaction table (end)
 
             //Suppliers Balance Update
             $dataSuppBlan = array(
@@ -3382,6 +3840,7 @@ class Transaction extends BaseController
 
             print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
+
     }
 
     /**
@@ -3433,12 +3892,13 @@ class Transaction extends BaseController
                     array_push($arrayUpData, $data);
                 }
             }
+
         }
         if (!empty($arrayUpData)) {
             $table = DB()->table('ledger_suppliers');
             $table->updateBatch($arrayUpData, 'ledg_sup_id');
         }
-        //        return $arrayUpData;
+//        return $arrayUpData;
     }
 
     private function supplier_ledger_rest_balance_update_cr($transactionId, $supplier_id, $amount, $type)
@@ -3484,12 +3944,13 @@ class Transaction extends BaseController
                     array_push($arrayUpData, $data);
                 }
             }
+
         }
         if (!empty($arrayUpData)) {
             $table = DB()->table('ledger_suppliers');
             $table->updateBatch($arrayUpData, 'ledg_sup_id');
         }
-        //        return $arrayUpData;
+//        return $arrayUpData;
     }
 
     /**
@@ -3631,6 +4092,14 @@ class Transaction extends BaseController
             $ledger_accTab = DB()->table('ledger_loan');
             $ledger_accTab->where('ledg_loan_id', $accoLedgerInfo->id)->update($data);
 
+            //all ledger rest balance update
+            if ($newLedgerType == 'Cr.') {
+                $this->account_ledger_rest_balance_update($tanId, $transaction->loan_pro_id, $amount, $ledgerType);
+            } else {
+                $this->account_ledger_rest_balance_update_cr($tanId, $transaction->loan_pro_id, $amount, $ledgerType);
+            }
+            //insert transaction in ledger Transaction table (end)
+
             //Account Balance Update
             $dataAccBlan = array(
                 'balance' => $accountRestBalan,
@@ -3708,12 +4177,13 @@ class Transaction extends BaseController
                     array_push($arrayUpData, $data);
                 }
             }
+
         }
         if (!empty($arrayUpData)) {
             $table = DB()->table('ledger_loan');
             $table->updateBatch($arrayUpData, 'ledg_loan_id');
         }
-        //        return $arrayUpData;
+//        return $arrayUpData;
     }
 
     private function account_ledger_rest_balance_update_cr($transactionId, $loan_pro_id, $amount, $type)
@@ -3758,6 +4228,7 @@ class Transaction extends BaseController
                     array_push($arrayUpData, $data);
                 }
             }
+
         }
         if (!empty($arrayUpData)) {
             $table = DB()->table('ledger_loan');
@@ -3870,6 +4341,10 @@ class Transaction extends BaseController
             $ledger_bankTab->where('ledgBank_id', $bankledgerInfo->id)->update($firstLedgerData);
             //Bank ledgher create (end)
 
+            //all bank ledger reset balance update
+            $this->bank_ledger_rest_balance_update_fund($transaction->bank_id, $amount, $bankledgerInfo->id, $transaction->amount);
+            //all bank ledger reset balance update
+
 
             //2Nd bank balance update (Start)
             $tableB = DB()->table('transaction_log');
@@ -3898,6 +4373,9 @@ class Transaction extends BaseController
             $ledger_bankTable = DB()->table('ledger_bank');
             $ledger_bankTable->where('ledgBank_id', $resLed->id)->update($lastLedgerData);
             //Bank ledgher create (end)
+            //all bank ledger reset balance update
+            $this->bank_ledger_rest_balance_update_fund($transaction->bank_to_id, $amount, $resLed->id, $transaction->amount);
+            //all bank ledger reset balance update
 
             //update new balance transaction log
             $this->transactionLog->transaction_log_all_amount_update($tanId, $amount);
@@ -3905,6 +4383,7 @@ class Transaction extends BaseController
             DB()->transComplete();
 
             print '<div class="alert alert-success alert-dismissible" role="alert">Your transaction is successful<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+
         } else {
             print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
@@ -4023,6 +4502,10 @@ class Transaction extends BaseController
             $ledger_expenseTab = DB()->table('ledger_expense');
             $ledger_expenseTab->where('ledg_exp_id', $expLedInfo->id)->update($data);
 
+            //shop all ledger rest balance update
+            $this->expense_ledger_rest_balance_update($tanId, $amount);
+            //shop all ledger rest balance update
+
 
             //transaction payment amount payment cash or bank(start)
             if ($paymentType == 2) {
@@ -4037,6 +4520,10 @@ class Transaction extends BaseController
                 );
                 $ledger_nagodanTab = DB()->table('ledger_nagodan');
                 $ledger_nagodanTab->where('ledg_nagodan_id', $shopLedInfo->id)->update($shopedata);
+
+                //shop all ledger rest balance update
+                $this->shop_ledger_rest_balance_update($tanId, $amount, $ledgerType);
+                //shop all ledger rest balance update
 
                 //update shops balance
                 $shopLedInfo = $this->transactionLog->get_table_name_by_row('shops', $tanId);
@@ -4063,6 +4550,10 @@ class Transaction extends BaseController
                 $ledger_bankTab = DB()->table('ledger_bank');
                 $ledger_bankTab->where('ledgBank_id', $bankLedgInfo->id)->update($lgBankData);
 
+                //all bank ledger rest balance update
+                $this->bank_ledger_rest_balance_update($tanId, $transaction->bank_id, $amount, $ledgerType);
+                //all bank ledger rest balance update
+
                 //update bank balance
                 $bankInfo = $this->transactionLog->get_table_name_by_row('bank', $tanId);
                 $bankCash = get_data_by_id('balance', 'bank', 'bank_id', $transaction->bank_id);
@@ -4087,6 +4578,8 @@ class Transaction extends BaseController
 
             print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
+
+
     }
 
     /**
@@ -4121,12 +4614,13 @@ class Transaction extends BaseController
                 $data['rest_balance'] = $val->rest_balance - ($shopInfo->amount - $amount);
                 array_push($arrayUpData, $data);
             }
+
         }
         if (!empty($arrayUpData)) {
             $table = DB()->table('ledger_expense');
             $table->updateBatch($arrayUpData, 'ledg_exp_id');
         }
-        //        return $arrayUpData;
+//        return $arrayUpData;
     }
 
     /**
@@ -4239,6 +4733,10 @@ class Transaction extends BaseController
             $ledger_employeeTab = DB()->table('ledger_employee');
             $ledger_employeeTab->where('ledg_emp_id', $employledgerInfo->id)->update($data);
 
+            //all ledger rest balance update
+            $this->employee_ledger_rest_balance_update($tanId, $employledgerInfo->id, $amount);
+            //insert transaction in ledger Transaction table (end)
+
             //employee Balance Update
             $employeeInfo = $this->transactionLog->get_table_name_by_row('employee', $tanId);
             $employeeBalance = get_data_by_id('balance', 'employee', 'employee_id', $transaction->employee_id);
@@ -4265,6 +4763,10 @@ class Transaction extends BaseController
                 );
                 $ledger_nagodanTab = DB()->table('ledger_nagodan');
                 $ledger_nagodanTab->where('ledg_nagodan_id', $shopLedInfo->id)->update($shopedata);
+
+                //shop all ledger rest balance update
+                $this->shop_ledger_rest_balance_update($tanId, $amount, $ledgerType);
+                //shop all ledger rest balance update
 
                 //update shops balance
                 $shopLedInfo = $this->transactionLog->get_table_name_by_row('shops', $tanId);
@@ -4299,6 +4801,10 @@ class Transaction extends BaseController
                 $ledger_bankTab = DB()->table('ledger_bank');
                 $ledger_bankTab->where('ledgBank_id', $bankLedgInfo->id)->update($lgBankData);
 
+                //all bank ledger reset balance update
+                $this->bank_ledger_rest_balance_update($tanId, $transaction->bank_id, $amount, $ledgerType);
+                //all bank ledger reset balance update
+
                 //update bank balance
                 $bankInfo = $this->transactionLog->get_table_name_by_row('bank', $tanId);
                 $bankCash = get_data_by_id('balance', 'bank', 'bank_id', $transaction->bank_id);
@@ -4322,9 +4828,11 @@ class Transaction extends BaseController
             DB()->transComplete();
 
             print '<div class="alert alert-success alert-dismissible" role="alert">Your transaction is successful<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+
         } else {
             print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
+
     }
 
     /**
@@ -4364,12 +4872,13 @@ class Transaction extends BaseController
                 $data['rest_balance'] = $val->rest_balance - ($ledLog->amount - $amount);
                 array_push($arrayUpData, $data);
             }
+
         }
         if (!empty($arrayUpData)) {
             $table = DB()->table('ledger_employee');
             $table->updateBatch($arrayUpData, 'ledg_emp_id');
         }
-        //        return $arrayUpData;
+//        return $arrayUpData;
     }
 
     /**
@@ -4478,6 +4987,7 @@ class Transaction extends BaseController
         DB()->transComplete();
 
         print '<div class="alert alert-success alert-dismissible" role="alert">Your transaction is successful<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+
     }
 
     /**
@@ -4495,9 +5005,57 @@ class Transaction extends BaseController
         $view = '';
         $view .= '<form id="vatUpdateform" action="' . $formUrl . '" method="post">
                         <div class="form-group">
-                            <label for="int">Employee </label>
+                            <label for="int">Vat </label>
                             <select class="form-control "  aria-hidden="true" name="vat_id" required>
                                 <option selected="selected" value="' . $result->vat_id . '">' . $name . ' </option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="particulars">Particulars </label>
+                            <textarea class="form-control input" rows="3" name="particulars" id="particulars" placeholder="Particulars" required>' . $result->title . '</textarea>
+                        </div>
+                        
+                        <div class="form-group" id="paymentCus">
+                            <label for="payment_type">Payment
+                                Type </label>
+                            <select class="form-control input" name="payment_type" required>';
+        if ($result->bank_id != null) {
+            $view .= '<option value = "1"> Bank</option>';
+        } else {
+            $view .= '<option value = "2"> Cash</option>';
+        }
+        $view .= '</select>
+                        </div>
+                        <div class="form-group databank" id="chaque">
+                            <label for="int">Amount </label>
+                            <input type="hidden" name="trans_id" value="' . $tanId . '"  required/>
+                            <input type="number" step=any class="form-control input"
+                                   name="amount" oninput="minusValueCheck(this.value,this)" id="amount" value="' . $result->amount . '" placeholder="Amount"
+                                   required/>
+                        </div>';
+        $view .= '</div>
+                    <div class="modal-footer">
+                <button type="button" class="btn btn-default pull-left" data-dismiss="modal">Close</button>
+                <button type="submit" class="btn btn-primary geniusSubmit-btn"  >Save changes</button>';
+
+        $view .= '</form>';
+
+        print $view;
+    }
+    public function assetsDataEdit()
+    {
+        $tanId = $this->request->getPost('id');
+        $table = DB()->table('transaction');
+        $result = $table->where('trans_id', $tanId)->get()->getRow();
+        $formUrl = base_url('Admin/Transaction/assetsDataEditAction');
+        $name = get_data_by_id('name', 'accounts', 'account_id', $result->account_id);
+
+        $view = '';
+        $view .= '<form id="assetsUpdateform" action="' . $formUrl . '" method="post">
+                        <div class="form-group">
+                            <label for="int">Accounts</label>
+                            <select class="form-control "  aria-hidden="true" name="vat_id" required>
+                                <option selected="selected" value="' . $result->account_id . '">' . $name . ' </option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -4591,6 +5149,10 @@ class Transaction extends BaseController
                 $ledger_vatTab = DB()->table('ledger_vat');
                 $ledger_vatTab->where('ledg_vat_id', $ledVatInfo->id)->update($data);
 
+                //all ledger rest balance update
+                $this->vat_ledger_rest_balance_update($tanId, $transaction->vat_id, $amount);
+                //insert transaction in ledger Transaction table (end)
+
                 //vat register Balance Update
                 $vatInfo = $this->transactionLog->get_table_name_by_row('vat_register', $tanId);
                 $vatBalance = get_data_by_id('balance', 'vat_register', 'vat_id', $transaction->vat_id);
@@ -4613,6 +5175,10 @@ class Transaction extends BaseController
                     );
                     $ledger_nagodanTab = DB()->table('ledger_nagodan');
                     $ledger_nagodanTab->where('ledg_nagodan_id', $shopLedInfo->id)->update($shopedata);
+
+                    //shop all ledger rest balance update
+                    $this->shop_ledger_rest_balance_update($tanId, $amount ,'Cr.');
+                    //shop all ledger rest balance update
 
                     //update shops balance
                     $shopLedInfo = $this->transactionLog->get_table_name_by_row('shops', $tanId);
@@ -4638,6 +5204,10 @@ class Transaction extends BaseController
                     $ledger_bankTab = DB()->table('ledger_bank');
                     $ledger_bankTab->where('ledgBank_id', $bankLedgInfo->id)->update($lgBankData);
 
+                    //all bank ledger reset balance update
+                    $this->bank_ledger_rest_balance_update($tanId, $transaction->bank_id, $amount,'Cr.');
+                    //all bank ledger reset balance update
+
                     //update bank balance
                     $bankInfo = $this->transactionLog->get_table_name_by_row('bank', $tanId);
                     $bankCash = get_data_by_id('balance', 'bank', 'bank_id', $transaction->bank_id);
@@ -4661,9 +5231,145 @@ class Transaction extends BaseController
             } else {
                 print '<div class="alert alert-danger alert-dismissible" role="alert">Vat amount to large<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
             }
+
         } else {
             print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
+
+    }
+    public function assetsDataEditAction()
+    {
+        $tanId = $this->request->getPost('trans_id');
+        $particulars = $this->request->getPost('particulars');
+        $amount = $this->request->getPost('amount');
+        $paymentType = $this->request->getPost('payment_type');
+
+        $table = DB()->table('transaction');
+        $transaction = $table->where('trans_id', $tanId)->get()->getRow();
+
+        if ($paymentType == 1) {
+            $availableBalance = checkBankBalance($transaction->bank_id, $amount);
+        }
+
+        if ($paymentType == 2) {
+            $availableBalance = checkNagadBalance($amount);
+        }
+
+        if ($availableBalance == true) {
+
+                DB()->transStart();
+
+                //insert Transaction table
+                $transdata = array(
+                    'title' => $particulars,
+                    'trangaction_type' => 'Dr.',
+                    'amount' => $amount,
+                );
+                $transactionTab = DB()->table('transaction');
+                $transactionTab->where('trans_id', $tanId)->update($transdata);
+
+                //transaction edit log data insert
+                $this->transactionLog->transaction_edit_log_data_insert('transaction', '', $tanId, $this->session->userId, $transaction->amount, $amount);
+                //insert Transaction in transaction table (end)
+
+
+                //insert data ledger_vat
+                $ledgerInfo = $this->transactionLog->get_table_name_by_row('ledger_accounts', $tanId);
+                $ledVatBalance = get_data_by_id('rest_balance', 'ledger_accounts', 'ledg_account_id', $ledgerInfo->id);
+                $ledVatRestBalan = ($ledVatBalance - $ledgerInfo->amount) + $amount;
+                $data = array(
+                    'particulars' => $particulars,
+                    'amount' => $amount,
+                    'rest_balance' => $ledVatRestBalan,
+                );
+                $ledger_vatTab = DB()->table('ledger_accounts');
+                $ledger_vatTab->where('ledg_account_id', $ledgerInfo->id)->update($data);
+
+                //all ledger rest balance update
+                $this->assets_ledger_rest_balance_update($tanId, $transaction->account_id, $amount);
+                //insert transaction in ledger Transaction table (end)
+
+                //vat register Balance Update
+                $vatInfo = $this->transactionLog->get_table_name_by_row('accounts', $tanId);
+                $vatBalance = get_data_by_id('balance', 'accounts', 'account_id', $transaction->account_id);
+                $vatRestBalan = $vatBalance - ($vatInfo->amount - $amount);
+                $datavatBlan = array(
+                    'balance' => $vatRestBalan,
+                );
+                $vat_registerTab = DB()->table('accounts');
+                $vat_registerTab->where('account_id', $transaction->account_id)->update($datavatBlan);
+
+                if ($paymentType == 2) {
+                    //transaction cash payment calculate cash amount and update cash or create ledger (start)
+                    $shopLedInfo = $this->transactionLog->get_table_name_by_row('ledger_nagodan', $tanId);
+                    $shopLedBal = get_data_by_id('rest_balance', 'ledger_nagodan', 'ledg_nagodan_id', $shopLedInfo->id);
+                    $restShopLedgBal = $shopLedBal - ($shopLedInfo->amount - $amount);
+                    $shopedata = array(
+                        'particulars' => $particulars,
+                        'amount' => $amount,
+                        'rest_balance' => $restShopLedgBal,
+                    );
+                    $ledger_nagodanTab = DB()->table('ledger_nagodan');
+                    $ledger_nagodanTab->where('ledg_nagodan_id', $shopLedInfo->id)->update($shopedata);
+
+                    //shop all ledger rest balance update
+                    $this->shop_ledger_rest_balance_update($tanId, $amount ,'Cr.');
+                    //shop all ledger rest balance update
+
+                    //update shops balance
+                    $shopLedInfo = $this->transactionLog->get_table_name_by_row('shops', $tanId);
+                    $shopsBalance = get_data_by_id('cash', 'shops', 'sch_id', $this->session->shopId);
+                    $shopRestBalan = ($shopsBalance + $shopLedInfo->amount) - $amount;
+                    $shopeupdatedata = array(
+                        'cash' => $shopRestBalan,
+                    );
+                    $shopsTab = DB()->table('shops');
+                    $shopsTab->where('sch_id', $this->session->shopId)->update($shopeupdatedata);
+                    //transaction cash payment calculet cash amount and update cash or create ledger (end)
+
+                } else {
+                    //bank amount and update bank or create ledger bank (start)
+                    $bankLedgInfo = $this->transactionLog->get_table_name_by_row('ledger_bank', $tanId);
+                    $bankLedBal = get_data_by_id('rest_balance', 'ledger_bank', 'ledgBank_id', $bankLedgInfo->id);
+                    $restbankLedgBal = $bankLedBal - ($bankLedgInfo->amount - $amount);
+                    $lgBankData = array(
+                        'particulars' => $particulars,
+                        'amount' => $amount,
+                        'rest_balance' => $restbankLedgBal,
+                    );
+                    $ledger_bankTab = DB()->table('ledger_bank');
+                    $ledger_bankTab->where('ledgBank_id', $bankLedgInfo->id)->update($lgBankData);
+
+                    //all bank ledger reset balance update
+                    $this->bank_ledger_rest_balance_update($tanId, $transaction->bank_id, $amount,'Cr.');
+                    //all bank ledger reset balance update
+
+                    //update bank balance
+                    $bankInfo = $this->transactionLog->get_table_name_by_row('bank', $tanId);
+                    $bankCash = get_data_by_id('balance', 'bank', 'bank_id', $transaction->bank_id);
+                    $bankRestBalan = ($bankCash + $bankInfo->amount) - $amount;
+                    $bankData2 = array(
+                        'balance' => $bankRestBalan,
+                    );
+                    $bankTab = DB()->table('bank');
+                    $bankTab->where('bank_id', $transaction->bank_id)->update($bankData2);
+                    //transaction bank payment calculate bank amount and update bank or create ledger bank (end)
+
+                }
+
+                //transaction log all amount update
+                $this->transactionLog->transaction_log_all_amount_update($tanId, $amount);
+                //transaction log all amount update
+
+                DB()->transComplete();
+
+                print '<div class="alert alert-success alert-dismissible" role="alert">Your transaction is successful<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+
+
+        } else {
+            print '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+        }
+
     }
 
     /**
@@ -4703,11 +5409,97 @@ class Transaction extends BaseController
                 $data['rest_balance'] = $val->rest_balance + ($ledLog->amount - $amount);
                 array_push($arrayUpData, $data);
             }
+
         }
         if (!empty($arrayUpData)) {
             $table = DB()->table('ledger_vat');
             $table->updateBatch($arrayUpData, 'ledg_vat_id');
         }
-        //        return $arrayUpData;
+//        return $arrayUpData;
     }
+    private function assets_ledger_rest_balance_update($transactionId, $account_id, $amount)
+    {
+        // Get the specific ledger_suppliers log entry using a helper function that returns table data by transaction ID
+        $ledLog = $this->transactionLog->get_table_name_by_row('ledger_accounts', $transactionId);
+
+        // Get a reference to the 'ledger_employee' table using the query builder
+        $ledgerTable = DB()->table('ledger_accounts');
+
+        // Query all ledger_suppliers entries for the same customer where the ledger ID is greater than the current transaction's ID
+        $result = $ledgerTable->where('ledg_account_id >', $ledLog->id)->where('account_id', $account_id)->get()->getResult();
+
+        // Initialize an array to store updated ledger data
+        $arrayUpData = [];
+
+        foreach ($result as $val) {
+            if ($val->trangaction_type == 'Dr.') {
+                // For Debit transactions, calculate new balance by:
+                // Adding back the original transaction amount (undoing its effect)
+                // Then subtracting the new amount to reflect the update
+                $data['ledg_account_id'] = $val->ledg_account_id;
+                $data['rest_balance'] = ($val->rest_balance + $ledLog->amount) + $amount;
+                array_push($arrayUpData, $data);
+            } else {
+                // For Credit transactions, calculate new balance by:
+                // Subtracting the original amount (undoing its effect)
+                // Then adding the new amount to reflect the update
+                $data['ledg_account_id'] = $val->ledg_account_id;
+                $data['rest_balance'] = $val->rest_balance + ($ledLog->amount - $amount);
+                array_push($arrayUpData, $data);
+            }
+
+        }
+        if (!empty($arrayUpData)) {
+            $table = DB()->table('ledger_accounts');
+            $table->updateBatch($arrayUpData, 'ledg_account_id');
+        }
+//        return $arrayUpData;
+    }
+
+    private function transaction_entries($trans_id, $ledger_id, $table_name, $transaction_type) {
+        DB()->table('transaction_entries')->insert([
+            'trans_id'         => $trans_id,
+            'ledger_id'        => $ledger_id,
+            'table_name'       => $table_name,
+            'trangaction_type' => $transaction_type,
+            'createdDtm'       => date('Y-m-d H:i:s')
+        ]);
+    }
+
+    public function transaction_flow($trans_id){
+        $isLoggedIn = $this->session->isLoggedIn;
+        $role_id = $this->session->role;
+        if (!isset($isLoggedIn) || $isLoggedIn != TRUE) {
+            return redirect()->to(site_url('Admin/login'));
+        } else {
+            $shopId = $this->session->shopId;
+
+            $data['flow'] = DB()->table('transaction_entries')
+                ->where('trans_id',$trans_id)
+                ->get()
+                ->getResult();
+
+            $data['transaction'] = DB()->table('transaction')
+                ->where('trans_id',$trans_id)
+                ->get()
+                ->getRow();
+
+            // All Permissions
+            //$perm = array('create','read','update','delete','mod_access');
+            $perm = $this->permission->module_permission_list($role_id, $this->module_name);
+            foreach ($perm as $key => $val) {
+                $data[$key] = $this->permission->have_access($role_id, $this->module_name, $key);
+            }
+            echo view('Admin/header');
+            echo view('Admin/sidebar');
+            if (isset($data['mod_access']) and $data['mod_access'] == 1) {
+                echo view('Admin/Transaction/transaction_flow', $data);
+            } else {
+                echo view('no_permission');
+            }
+            echo view('Admin/footer');
+        }
+    }
+
+
 }

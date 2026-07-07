@@ -200,4 +200,37 @@ class Purchase_ajax extends BaseController
             }
         }
     }
+
+    public function transaction_flow($purchase_id){
+        $isLoggedIn = $this->session->isLoggedIn;
+        $role_id = $this->session->role;
+        if (!isset($isLoggedIn) || $isLoggedIn != TRUE) {
+            return redirect()->to(site_url('Admin/login'));
+        } else {
+            $shopId = $this->session->shopId;
+
+            $data['flow'] = DB()->table('transaction_entries')
+                ->where('purchase_id',$purchase_id)
+                ->get()
+                ->getResult();
+
+            $data['purchaseData'] = DB()->table('purchase')
+                ->join('suppliers', 'suppliers.supplier_id = purchase.supplier_id')
+                ->where('purchase.purchase_id', $purchase_id)
+                ->get()
+                ->getRow();
+
+            // All Permissions
+            //$perm = array('create','read','update','delete','mod_access');
+            $perm = $this->permission->module_permission_list($role_id, $this->module_name);
+            foreach ($perm as $key => $val) {
+                $data[$key] = $this->permission->have_access($role_id, $this->module_name, $key);
+            }
+            if (isset($data['mod_access']) and $data['mod_access'] == 1) {
+                echo view('Admin/Purchase/transaction_flow', $data);
+            } else {
+                echo view('no_permission');
+            }
+        }
+    }
 }

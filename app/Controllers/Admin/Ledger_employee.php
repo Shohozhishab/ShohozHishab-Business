@@ -36,7 +36,25 @@ class Ledger_employee extends BaseController
         if (!isset($isLoggedIn) || $isLoggedIn != TRUE) {
             return redirect()->to(site_url('Admin/login'));
         } else {
+            $employee_id = $this->request->getGet('employee_id');
+            $st_date = $this->request->getGet('st_date');
+            $en_date = $this->request->getGet('en_date');
+            $query = [];
+            if (!empty($employee_id)) {
+                $table = DB()->table('ledger_employee');
+                if (!empty($st_date) && !empty($en_date)) {
+                    // Assuming your database column name is 'date'
+                    $table->where('createdDtm >=', $st_date . ' 00:00:00');
+                    $table->where('createdDtm <=', $en_date . ' 23:59:59');
+                }
+                $table->where("employee_id", $employee_id);
+                $query = $table->get()->getResult();
+            }
+            $data['result'] = $query;
 
+            $data['st_date'] = isset($st_date)?$st_date:'';
+            $data['en_date'] = isset($en_date)?$en_date:'';
+            $data['employee_id'] = $employee_id;
 
             // All Permissions
             //$perm = array('create','read','update','delete','mod_access');
@@ -82,17 +100,11 @@ class Ledger_employee extends BaseController
                                 </tr>
                             </thead>
                             <tbody>';
-        $restBalance = 0;
         $i = '';
         foreach ($data as $row) {
             $particulars = ($row->particulars == NULL) ? "Transaction" : $row->particulars;
             $amountCr = ($row->trangaction_type != "Cr.") ? "---" : showWithCurrencySymbol($row->amount);
             $amountDr = ($row->trangaction_type != "Dr.") ? "---" : showWithCurrencySymbol($row->amount);
-            if ($row->trangaction_type == 'Dr.') {
-                $restBalance = $restBalance + $row->amount;
-            }else {
-                $restBalance = $restBalance - $row->amount;
-            }
             $view .= '<tr>
                                     <td>' . ++$i . '</td>
                                     <td>' . $row->createdDtm . '</td>
@@ -100,7 +112,7 @@ class Ledger_employee extends BaseController
                                     <td>' . $row->trans_id . '</td>
                                     <td>' . $amountDr . '</td>
                                     <td>' . $amountCr . '</td>
-                                    <td>' . $restBalance . '</td>
+                                    <td>' . $row->rest_balance . '</td>
                                 </tr>';
         }
 

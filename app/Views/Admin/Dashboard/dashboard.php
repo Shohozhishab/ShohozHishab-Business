@@ -15,8 +15,38 @@
         <!-- Main content -->
         <section class="content">
             <!-- Small boxes (Stat box) -->
-            <div class="row">
-
+            <?php if (isDefaultRole() == true){ ?>
+            <div class="row" id="reloadRoleDiv">
+                <div class="col-lg-12" >
+                    <button class="btn btn-sm btn-info " style="float: right;" onclick="rollPermissionBtn()">Roll Permission</button>
+                </div>
+                <div class="col-lg-12" id="permissionDiv" style="display: none; margin-top: 20px">
+                    <form id="roleUpdateform" action="<?= base_url('Admin/Role/modulePermissionAction')?>" method="post">
+                        <div class="box box-primary">
+                            <div class="box-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <select class="form-control" onchange="rolePermission(this.value,'Dashboard')" name="role_id">
+                                            <option value="">Please Select</option>
+                                            <?php  foreach (userRole() as $val ){ ?>
+                                                <option value="<?= $val->role_id;?>"><?= $val->role;?></option>
+                                            <?php } ?>
+                                        </select>
+                                        <input type="hidden" name="moduleName" value="Dashboard">
+                                    </div>
+                                    <div class="col-md-12" id="rolView"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <?php } ?>
+            <div class="row" >
+                <div class="col-lg-12" style="margin-top: 20px;">
+                    <div id="message"></div>
+                </div>
+                <?php if (isset($purchess) && $purchess == 1){ ?>
                 <div class="col-lg-3 col-xs-6" >
                     <!-- small box -->
                     <a href="<?php echo site_url('Admin/Purchase/create'); ?>" class="btn">
@@ -33,7 +63,8 @@
                         </div></a>
                 </div>
                 <!-- ./col -->
-
+                <?php } ?>
+                <?php if (isset($sale) && $sale == 1){ ?>
                 <div class="col-lg-3 col-xs-6">
                     <!-- small box -->
                     <a href="<?php echo site_url('/Admin/Sales/create'); ?>" class="btn ">
@@ -49,7 +80,8 @@
                         </div></a>
                 </div>
                 <!-- ./col -->
-
+                <?php } ?>
+                <?php if (isset($transaction) && $transaction == 1){ ?>
                 <div class="col-lg-3 col-xs-6">
                     <!-- small box -->
                     <a href="<?php echo site_url('Admin/Transaction/create'); ?>" class="btn">
@@ -65,6 +97,8 @@
                         </div></a>
                 </div>
                 <!-- ./col -->
+                <?php } ?>
+                <?php if (isset($cash_ledger) && $cash_ledger == 1){ ?>
                 <div class="col-lg-3 col-xs-6">
                     <!-- small box -->
                     <a href="<?php echo site_url('Admin/Ledger_nagodan'); ?>" class="btn">
@@ -80,9 +114,11 @@
                         </div></a>
                 </div>
                 <!-- ./col -->
+                <?php } ?>
             </div>
 
             <div class="row">
+                <?php if (isset($customer_ledger) && $customer_ledger == 1){ ?>
                 <div class="col-lg-3 col-xs-6">
                     <!-- small box -->
                     <a href="<?php echo site_url('Admin/Ledger'); ?>" class="btn">
@@ -98,6 +134,8 @@
                         </div></a>
                 </div>
                 <!-- ./col -->
+                <?php } ?>
+                <?php if (isset($supplier_ledger) && $supplier_ledger == 1){ ?>
                 <div class="col-lg-3 col-xs-6">
                     <!-- small box -->
                     <a href="<?php echo site_url('Admin/Ledger_suppliers'); ?>" class="btn">
@@ -113,6 +151,8 @@
                         </div></a>
                 </div>
                 <!-- ./col -->
+                <?php } ?>
+                <?php if (isset($bank_ledger) && $bank_ledger == 1){ ?>
                 <div class="col-lg-3 col-xs-6">
                     <!-- small box -->
                     <a href="<?php echo site_url('Admin/Ledger_bank'); ?>" class="btn">
@@ -128,6 +168,8 @@
                         </div></a>
                 </div>
                 <!-- ./col -->
+                <?php } ?>
+                <?php if (isset($account_head_ledger) && $account_head_ledger == 1){ ?>
                 <div class="col-lg-3 col-xs-6">
                     <!-- small box -->
                     <a href="<?php echo site_url('Admin/Ledger_loan'); ?>" class="btn">
@@ -143,6 +185,7 @@
                         </div></a>
                 </div>
                 <!-- ./col -->
+                <?php } ?>
             </div>
             <!-- /.row -->
             <!-- Main row -->
@@ -151,6 +194,7 @@
                 <section class="col-lg-12 connectedSortable">
                     <!-- Custom tabs (Charts with tabs)-->
                     <div class="row">
+                        <?php if (isset($bank_balance) && $bank_balance == 1){ ?>
                         <div class="col-md-4">
                             <div class="info-box">
                                 <span class="info-box-icon bg-yellow"><i class="fa fa-bar-chart"></i></span>
@@ -163,7 +207,8 @@
                             </div>
                             <!-- /.info-box -->
                         </div>
-                        <!-- /.col -->
+                        <?php } ?>
+                        <?php if (isset($cash) && $cash == 1){ ?>
                         <div class="col-md-4">
                             <div class="info-box">
                                 <span class="info-box-icon bg-yellow"><i class="fa fa-bar-chart"></i></span>
@@ -176,8 +221,8 @@
                             </div>
                             <!-- /.info-box -->
                         </div>
-                        <!-- /.col -->
-
+                        <?php } ?>
+                        <?php if (isset($due) && $due == 1){ ?>
                         <div class="col-md-4">
                             <div class="info-box">
                                 <span class="info-box-icon bg-aqua"><i class="fa fa-sort-amount-asc"></i></span>
@@ -190,7 +235,8 @@
                             </div>
                             <!-- /.info-box -->
                         </div>
-                        <!-- /.col -->
+                        <?php } ?>
+                        <?php if (isset($oweing) && $oweing == 1){ ?>
                         <div class="col-md-4">
                             <div class="info-box">
                                 <span class="info-box-icon bg-aqua"><i class="fa fa-sort-amount-desc"></i></span>
@@ -203,8 +249,8 @@
                             </div>
                             <!-- /.info-box -->
                         </div>
-                        <!-- /.col -->
-
+                        <?php } ?>
+                        <?php if (isset($products) && $products == 1){ ?>
                         <div class="col-md-4">
                             <div class="info-box">
                                 <span class="info-box-icon bg-green"><i class="fa fa-list"></i></span>
@@ -217,7 +263,8 @@
                             </div>
                             <!-- /.info-box -->
                         </div>
-                        <!-- /.col -->
+                        <?php } ?>
+                        <?php if (isset($customers) && $customers == 1){ ?>
                         <div class="col-md-4">
                             <div class="info-box">
                                 <span class="info-box-icon bg-green"><i class="ion ion-person-add"></i></span>
@@ -230,7 +277,7 @@
                             </div>
                             <!-- /.info-box -->
                         </div>
-                        <!-- /.col -->
+                        <?php } ?>
                     </div>
                     <!-- /.nav-tabs-custom -->
 

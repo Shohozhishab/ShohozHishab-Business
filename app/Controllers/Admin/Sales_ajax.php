@@ -106,5 +106,39 @@ class Sales_ajax extends BaseController
         }
     }
 
+    public function transaction_flow($sales_id){
+        $isLoggedIn = $this->session->isLoggedIn;
+        $role_id = $this->session->role;
+        if (!isset($isLoggedIn) || $isLoggedIn != TRUE) {
+            return redirect()->to(site_url('Admin/login'));
+        } else {
+            $shopId = $this->session->shopId;
 
+            $data['flow'] = DB()->table('transaction_entries')
+                ->where('sales_id',$sales_id)
+                ->get()
+                ->getResult();
+
+            $data['saleData'] = DB()->table('sales')
+                ->join('invoice', 'invoice.invoice_id = sales.invoice_id', 'left')
+                ->join('customers', 'customers.customer_id = invoice.customer_id', 'left')
+                ->where('sales.sales_id', $sales_id)
+                ->get()
+                ->getRow();
+
+
+            $data['menu'] = view('Admin/menu_sales', $data);
+            // All Permissions
+            //$perm = array('create','read','update','delete','mod_access');
+            $perm = $this->permission->module_permission_list($role_id, $this->module_name);
+            foreach ($perm as $key => $val) {
+                $data[$key] = $this->permission->have_access($role_id, $this->module_name, $key);
+            }
+            if (isset($data['mod_access']) and $data['mod_access'] == 1) {
+                echo view('Admin/Sales/transaction_flow', $data);
+            } else {
+                echo view('no_permission');
+            }
+        }
+    }
 }

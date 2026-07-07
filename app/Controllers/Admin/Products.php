@@ -100,14 +100,12 @@ class Products extends BaseController
         $userId = $this->session->userId;
 
         $data['prod_id'] = $this->request->getPost('prod_id');
-        $data['store_id'] = $this->request->getPost('store_id');
         $data['name'] = $this->request->getPost('name');
         $data['supplier_id'] = $this->request->getPost('supplier_id');
         $data['serial_number'] = empty($this->request->getPost('serial_number')) ? null : $this->request->getPost('serial_number');
         $data['updatedBy'] = $userId;
 
         $this->validation->setRules([
-            'store_id' => ['label' => 'store_id', 'rules' => 'required'],
             'name' => ['label' => 'name', 'rules' => 'required|only_numeric_not_allow'],
             'supplier_id' => ['label' => 'supplier_id', 'rules' => 'required'],
         ]);
@@ -258,7 +256,7 @@ class Products extends BaseController
         $data['unit'] = $this->request->getPost('unit');
         $data['purchase_price'] = $this->request->getPost('price');
         $data['selling_price'] = $this->request->getPost('selling_price');
-        $data['quantity'] = $this->request->getPost('qty');
+        $data2['quantity'] = $this->request->getPost('qty');
 
         $this->validation->setRules([
             'prod_cat_id' => ['label' => 'Category', 'rules' => 'required'],
@@ -266,73 +264,79 @@ class Products extends BaseController
             'unit' => ['label' => 'unit', 'rules' => 'required'],
             'purchase_price' => ['label' => 'price', 'rules' => 'required'],
             'selling_price' => ['label' => 'salePrice', 'rules' => 'required'],
-            'quantity' => ['label' => 'qty', 'rules' => 'required|is_natural_no_zero'],
         ]);
 
         if ($this->validation->run($data) == FALSE) {
             print '<div class="alert alert-danger alert-dismissible" role="alert">' . $this->validation->listErrors() . ' <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         } else {
             DB()->transStart();
-                $shopId = $this->session->shopId;
+            $shopId = $this->session->shopId;
 
-                //get default store
-                $storeTab = DB()->table('stores');
-                $store = $storeTab->where('sch_id', $shopId)->where('is_default', 1)->get()->getRow();
+            //get default store
+            $storeTab = DB()->table('stores');
+            $store = $storeTab->where('sch_id', $shopId)->where('is_default', 1)->get()->getRow();
 
-                //insert product
-                $data['store_id'] = $store->store_id;
-                $data['sch_id'] = $shopId;
-                $data['createdBy'] = $this->session->userId;
-                $data['createdDtm'] = date('Y-m-d H:i:s');
-                $productTable = DB()->table('products');
-                $productTable->insert($data);
+            //insert product
+            $data['sch_id'] = $shopId;
+            $data['createdBy'] = $this->session->userId;
+            $data['createdDtm'] = date('Y-m-d H:i:s');
+            $productTable = DB()->table('products');
+            $productTable->insert($data);
+            $prodId = DB()->insertID();
 
-                //total amount product
-                $totalAmountPro = $data['purchase_price'] * $data['quantity'];
+            //product stock relation insert
+            DB()->table('product_stock_relation')->insert([
+                'store_id' => $store->store_id,
+                'product_id' => $prodId,
+                'quantity' => $data2['quantity'],
+            ]);
 
-                //capital last balance
-                $oldCapital = get_data_by_id('capital', 'shops', 'sch_id', $shopId);
-                $newCapital = $oldCapital - $totalAmountPro;
+            //total amount product
+            $totalAmountPro = $data['purchase_price'] * $data2['quantity'];
 
-                // capital ledger data insert
-                $cpitalLedData = array(
-                    'sch_id' => $shopId,
-                    'particulars' => 'New Existing Products Add Amount',
-                    'trangaction_type' => 'Cr.',
-                    'amount' => $totalAmountPro,
-                    'rest_balance' => $newCapital,
-                    'createdBy' => $this->session->userId,
-                    'createdDtm' => date('Y-m-d h:i:s')
-                );
-                $ledger_capitalTable = DB()->table('ledger_capital');
-                $ledger_capitalTable->insert($cpitalLedData);
-                // capital ledger data insert
+            //capital last balance
+            $oldCapital = get_data_by_id('capital', 'shops', 'sch_id', $shopId);
+            $newCapital = $oldCapital - $totalAmountPro;
 
-
-                //stock last balance
-                $oldStock = get_data_by_id('stockAmount', 'shops', 'sch_id', $shopId);
-                $newStock = $oldStock + $totalAmountPro;
-
-                //Stock ledger data insert
-                $stockLedgData = array(
-                    'sch_id' => $shopId,
-                    'trangaction_type' => 'Dr.',
-                    'particulars' => 'New Existing Products Add Amount',
-                    'amount' => $totalAmountPro,
-                    'rest_balance' => $newStock,
-                    'createdBy' => $this->session->userId,
-                    'createdDtm' => date('Y-m-d h:i:s')
-                );
-                $tabledger_stock = DB()->table('ledger_stock');
-                $tabledger_stock->insert($stockLedgData);
-                //Stock ledger data insert
+            // capital ledger data insert
+            $cpitalLedData = array(
+                'sch_id' => $shopId,
+                'particulars' => 'New Existing Products Add Amount',
+                'trangaction_type' => 'Cr.',
+                'amount' => $totalAmountPro,
+                'rest_balance' => $newCapital,
+                'createdBy' => $this->session->userId,
+                'createdDtm' => date('Y-m-d h:i:s')
+            );
+            $ledger_capitalTable = DB()->table('ledger_capital');
+            $ledger_capitalTable->insert($cpitalLedData);
+            // capital ledger data insert
 
 
-                //update capital and stock
-                $dataCapital['stockAmount'] = $newStock;
-                $dataCapital['capital'] = $newCapital;
-                $tableCapital = DB()->table('shops');
-                $tableCapital->where('sch_id', $shopId)->update($dataCapital);
+            //stock last balance
+            $oldStock = get_data_by_id('stockAmount', 'shops', 'sch_id', $shopId);
+            $newStock = $oldStock + $totalAmountPro;
+
+            //Stock ledger data insert
+            $stockLedgData = array(
+                'sch_id' => $shopId,
+                'trangaction_type' => 'Dr.',
+                'particulars' => 'New Existing Products Add Amount',
+                'amount' => $totalAmountPro,
+                'rest_balance' => $newStock,
+                'createdBy' => $this->session->userId,
+                'createdDtm' => date('Y-m-d h:i:s')
+            );
+            $tabledger_stock = DB()->table('ledger_stock');
+            $tabledger_stock->insert($stockLedgData);
+            //Stock ledger data insert
+
+
+            //update capital and stock
+            $dataCapital['stockAmount'] = $newStock;
+            $dataCapital['capital'] = $newCapital;
+            $tableCapital = DB()->table('shops');
+            $tableCapital->where('sch_id', $shopId)->update($dataCapital);
             DB()->transComplete();
 
             print '<div class="alert alert-success alert-dismissible" role="alert"> Product added successfully  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';

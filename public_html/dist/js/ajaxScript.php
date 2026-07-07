@@ -9,6 +9,7 @@
     $('.othersales').DataTable()
     $('.employeeSalary').DataTable()
     $('.vatpay').DataTable()
+    $('.asstest').DataTable()
 
     var ladgerTable = $('#example1').DataTable({
       "pageLength": 10,
@@ -328,6 +329,7 @@
       $("#employee").html(view).show();
       $("#vatpayId").html(view).show();
       $("#vatpayId").html(view).show();
+      $("#assetsId").html(view).show();
     }
 
     if (id == 3) {
@@ -346,6 +348,7 @@
       $("#dataexpense").html(view3).show();
       $("#employee").html(view3).show();
       $("#vatpayId").html(view3).show();
+      $("#assetsId").html(view3).show();
 
     }
   }
@@ -2001,6 +2004,11 @@
           "order": [0, 'asc'],
           'ordering': true,
         });
+      $('#assets1').DataTable({
+          "pageLength": 10,
+          "order": [0, 'asc'],
+          'ordering': true,
+      });
 
         yearpicker();
         history.pushState({
@@ -3434,7 +3442,7 @@
 
   });
 
-  $(document).on('submit', '#vatUpdateform', function(e) {
+  $(document).on('submit', '#assetsUpdateform', function(e) {
     e.preventDefault();
 
     var fd = new FormData(this);
@@ -3456,9 +3464,10 @@
         $('#messageAcc').hide();
         $('#messageAcc').show();
         $('#messageAcc').html(data);
-        $('#vatUpdateform')[0].reset();
+        $('#assetsUpdateform')[0].reset();
         $('#reload').load(document.URL + ' #reload');
-        $('#vat2').load(document.URL + ' #vat2');
+        $('#assets1').load(document.URL + ' #assets1');
+        $('#expense2').load(document.URL + ' #expense2');
       }
 
     });
@@ -3697,4 +3706,126 @@
     downloadLink.click();
     document.body.removeChild(downloadLink);
   }
+  function formSubmit(){
+      $('form').submit();
+  }
+
+  $(document).on('submit', '#typeform', function(e) {
+      e.preventDefault();
+
+      var fd = new FormData(this);
+
+      var typeform = $(this);
+
+      $.ajax({
+          method: "POST",
+          url: $(this).prop('action'),
+          data: fd,
+          dataType: 'json',
+          contentType: false,
+          cache: false,
+          processData: false,
+          beforeSend: function() {
+              $("#loading-image").show();
+          },
+          success: function(data) {
+              $("#loading-image").hide();
+              $("#message").hide();
+              $('#message').html(data.message);
+
+              if (data.success == true) {
+                  $('#typeform')[0].reset();
+                  $('#sub_type').html(data.htmlData);
+                  $('#sub_type2').html(data.htmlData);
+                  setTimeout(function() {
+                      $('#message').fadeOut();
+                      $('#modal-create').modal('hide');
+                  }, 2000);
+
+              }
+          }
+      });
+
+  });
+
+  function checkedFunction(targetModule, button) {
+      // Find all checkboxes belonging to this module array group
+      const checkboxes = document.querySelectorAll(`input[type="checkbox"][name^="permission[${targetModule}]"]`);
+
+      // Check if they are already all checked
+      const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+
+      // If all are checked, uncheck them. Otherwise, check them all.
+      checkboxes.forEach(cb => {
+          cb.checked = !allChecked;
+      });
+
+      // Toggle button text visually using the passed button reference
+      button.textContent = allChecked ? 'Checked' : 'Unchecked';
+  }
+  function selectAll(button){
+      // Find all checkboxes belonging to this module array group
+      const checkboxes = document.querySelectorAll(`input[type="checkbox"]`);
+
+      // Check if they are already all checked
+      const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+
+      // If all are checked, uncheck them. Otherwise, check them all.
+      checkboxes.forEach(cb => {
+          cb.checked = !allChecked;
+      });
+
+      // Optional: Toggle button text visually
+      button.textContent = allChecked ? 'Select All' : 'Unselect All';
+  }
+
+  function rollPermissionBtn() {
+      $('#permissionDiv').fadeToggle(500);
+  }
+
+  function rolePermission(role_id,module){
+      $.ajax({
+          method: "POST",
+          url: '<?= base_url("Admin/Role/modulePermission")?>',
+          data: {role_id:role_id,module:module},
+          beforeSend: function() {
+              $("#loading-image").show();
+          },
+          success: function(data) {
+              $("#loading-image").hide();
+              $('#rolView').html(data);
+          }
+      });
+  }
+
+  $(document).on('submit', '#roleUpdateform', function(e) {
+      e.preventDefault();
+
+      $('#message').html("<div class='alert alert-secondary'>Loading..... please wait</div>");
+      var fd = new FormData(this);
+
+      var roleUpdateform = $(this);
+
+      $.ajax({
+          method: "POST",
+          url: $(this).prop('action'),
+          data: fd,
+          contentType: false,
+          cache: false,
+          processData: false,
+          beforeSend: function() {
+              $("#loading-image").show();
+          },
+          success: function(data) {
+              $("#loading-image").hide();
+              $('#message').hide();
+              $('#message').show();
+              $('#message').html(data);
+
+              $('#reloadRoleDiv').load(document.URL + ' #reloadRoleDiv');
+          }
+
+      });
+
+  });
 </script>

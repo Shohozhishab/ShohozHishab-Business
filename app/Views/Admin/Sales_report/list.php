@@ -10,11 +10,38 @@
 
     <!-- Main content -->
     <section class="content">
-        <!-- Small boxes (Stat box) -->
-        <div class="row">
-            <div class="col-xs-12" style="margin-bottom: 15px;">
-                <?php echo $menu;?>
+        <div class="col-xs-12" style="margin-bottom: 15px;">
+            <?php echo $menu;?>
+        </div>
+        <?php if (isDefaultRole() == true){ ?>
+            <div class="row" id="reloadRoleDiv">
+                <div class="col-lg-12" >
+                    <button class="btn btn-sm btn-info " style="float: right;" onclick="rollPermissionBtn()">Roll Permission</button>
+                </div>
+                <div class="col-lg-12" id="permissionDiv" style="display: none; margin-top: 20px">
+                    <form id="roleUpdateform" action="<?= base_url('Admin/Role/modulePermissionAction')?>" method="post">
+                        <div class="box box-primary">
+                            <div class="box-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <select class="form-control" onchange="rolePermission(this.value,'Sales_report')" name="role_id">
+                                            <option value="">Please Select</option>
+                                            <?php  foreach (userRole() as $val ){ ?>
+                                                <option value="<?= $val->role_id;?>"><?= $val->role;?></option>
+                                            <?php } ?>
+                                        </select>
+                                        <input type="hidden" name="moduleName" value="Sales_report">
+                                    </div>
+                                    <div class="col-md-12" id="rolView"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
             </div>
+        <?php } ?>
+        <div class="row" style="margin-top: 20px;">
+
             <div class="col-lg-8">
 
                 <div class="box">
@@ -24,6 +51,7 @@
                                 <h3 class="box-title">Sale Report List</h3>
                                 <span class="pull-right"><b>Total Profit: <?php echo showWithCurrencySymbol($saleprofit)?></b></span>
                             </div>
+                            <?php if (isset($filter) && $filter == 1){ ?>
                             <div class="col-lg-12" style="margin-top: 20px;">
                                 <form  action="<?php echo site_url('Admin/Sales_report/search'); ?>" method="post">
                                     <div class="input-group col-xs-12" style="padding: 20px;">
@@ -41,6 +69,7 @@
                                     </div>
                                 </form>
                             </div>
+                            <?php } ?>
                         </div>
                     </div>
                     <!-- /.box-header -->
@@ -82,9 +111,15 @@
                     <!-- /.box-body -->
                     <div class="row no-print" >
                         <div class="col-xs-12" style="margin-bottom: 20px;">
-                            <button onclick="printDiv('ledgPrint')"    class="print_line btn btn-primary pull-right" ><i class="fa fa-print "></i> Print Now</button>
+                            <?php if (isset($print) && $print == 1){ ?>
+                            <button onclick="printDiv('ledgPrint')" class="print_line btn btn-primary pull-right" ><i class="fa fa-print "></i> Print Now</button>
+                            <?php } ?>
+                            <?php if (isset($download_PDF) && $download_PDF == 1){ ?>
                             <button type="button" class="btn btn-info pull-right" style="margin-right: 10px;" onclick="downloadPDF('ledgPrint','salesReport')"><i class="fa fa-file-pdf-o "></i> Download PDF </button>
+                            <?php } ?>
+                            <?php if (isset($download_CSV) && $download_CSV == 1){ ?>
                             <button type="button" class="btn btn-success pull-right" style="margin-right: 10px;" onclick="downloadCSV('ledgPrint','salesReport')"><i class="fa fa-file-excel-o "></i> Download CSV</button>
+                            <?php } ?>
                         </div>
                     </div>
                 </div>

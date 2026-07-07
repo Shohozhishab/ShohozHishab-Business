@@ -37,6 +37,27 @@ class Ledger_loan extends BaseController
             return redirect()->to(site_url('Admin/login'));
         } else {
             $shopId = $this->session->shopId;
+
+            $loan_pro_id = $this->request->getGet('loan_pro_id');
+            $st_date = $this->request->getGet('st_date');
+            $en_date = $this->request->getGet('en_date');
+            $query = [];
+            if (!empty($loan_pro_id)) {
+                $table = DB()->table('ledger_loan');
+                if (!empty($st_date) && !empty($en_date)) {
+                    // Assuming your database column name is 'date'
+                    $table->where('createdDtm >=', $st_date . ' 00:00:00');
+                    $table->where('createdDtm <=', $en_date . ' 23:59:59');
+                }
+                $table->where("loan_pro_id", $loan_pro_id);
+                $query = $table->get()->getResult();
+            }
+            $data['result'] = $query;
+
+            $data['st_date'] = isset($st_date)?$st_date:'';
+            $data['en_date'] = isset($en_date)?$en_date:'';
+            $data['loan_pro_id'] = $loan_pro_id;
+
             $data['id'] = $shopId;
             $data['menu'] = view('Admin/menu_ledger');
             // All Permissions
@@ -69,8 +90,7 @@ class Ledger_loan extends BaseController
 
         $name = get_data_by_id('name', 'loan_provider', 'loan_pro_id', $lonproviId);
         $balance = get_data_by_id('balance', 'loan_provider', 'loan_pro_id', $lonproviId);
-        $dr = get_total('ledger_loan', 'amount', 'Dr.', 'loan_pro_id', $lonproviId);
-        $cr = get_total('ledger_loan', 'amount', 'Cr.', 'loan_pro_id', $lonproviId);
+
         $view = ' <div class="box" >
                         <div class="box-header">
                             <h3 class="box-title">Account Head: ' . $name . '</h3>
@@ -90,18 +110,13 @@ class Ledger_loan extends BaseController
                                 </tr>
                             </thead>
                             <tbody>';
-        $restBalance = 0;
         $totalRows = count($data) - 1;
         for ($i = $totalRows; $i >= 0; $i--) {
             $particulars = ($data[$i]->particulars == NULL) ? "Pay due" : $data[$i]->particulars;
             $amountCr = ($data[$i]->trangaction_type != "Cr.") ? "---" : showWithCurrencySymbol($data[$i]->amount);
             $amountDr = ($data[$i]->trangaction_type != "Dr.") ? "---" : showWithCurrencySymbol($data[$i]->amount);
             $trnUrl = (!empty($data[$i]->trans_id)) ? '<a href="' . site_url('Admin/Transaction/read/' . $data[$i]->trans_id) . '">TRNS_' . $data[$i]->trans_id . '</a>' : '--';
-            if ($data[$i]->trangaction_type == 'Dr.') {
-                $restBalance = $restBalance + $data[$i]->amount;
-            }else {
-                $restBalance = $restBalance - $data[$i]->amount;
-            }
+
             $view .= '<tr>
                                     <td>' . $data[$i]->ledg_loan_id . '</td>
                                     <td>' . $data[$i]->createdDtm . '</td>
@@ -109,7 +124,7 @@ class Ledger_loan extends BaseController
                                     <td>' . $trnUrl . '</td>
                                     <td>' . $amountDr . '</td>
                                     <td>' . $amountCr . '</td>
-                                    <td>' . showWithCurrencySymbol($restBalance) . '</td>
+                                    <td>' . showWithCurrencySymbol($data[$i]->rest_balance) . '</td>
                                 </tr>';
         }
 
@@ -129,9 +144,9 @@ class Ledger_loan extends BaseController
                                     <th></th>
                                     <th></th>
                                     <th>Total</th>
-                                    <th>= ' . showWithCurrencySymbol($dr) . '</th>
-                                    <th>= ' . showWithCurrencySymbol($cr) . '</th>
-                                    <th>= ' . showWithCurrencySymbol($dr - $cr) . '</th>
+                                    <th>= ' . showWithCurrencySymbol(get_total('ledger_loan', 'amount', 'Dr.', 'loan_pro_id', $lonproviId)) . '</th>
+                                    <th>= ' . showWithCurrencySymbol(get_total('ledger_loan', 'amount', 'Cr.', 'loan_pro_id', $lonproviId)) . '</th>
+                                    <th>= ' . showWithCurrencySymbol($balance) . '</th>
                                 </tr>
                             </tfoot>
                         </table>

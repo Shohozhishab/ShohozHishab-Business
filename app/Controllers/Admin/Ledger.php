@@ -37,6 +37,26 @@ class Ledger extends BaseController
             return redirect()->to(site_url('Admin/login'));
         } else {
             $shopId = $this->session->shopId;
+            $customer_id = $this->request->getGet('customer_id');
+            $st_date = $this->request->getGet('st_date');
+            $en_date = $this->request->getGet('en_date');
+            $query = [];
+            if (!empty($customer_id)) {
+                $table = DB()->table('ledger');
+                if (!empty($st_date) && !empty($en_date)) {
+                    // Assuming your database column name is 'date'
+                    $table->where('createdDtm >=', $st_date . ' 00:00:00');
+                    $table->where('createdDtm <=', $en_date . ' 23:59:59');
+                }
+                $table->where("customer_id", $customer_id);
+                $query = $table->get()->getResult();
+            }
+            $data['result'] = $query;
+
+            $data['st_date'] = isset($st_date)?$st_date:'';
+            $data['en_date'] = isset($en_date)?$en_date:'';
+            $data['customer_id'] = $customer_id;
+
             $data['id'] = $shopId;
             $data['menu'] = view('Admin/menu_ledger');
             // All Permissions
@@ -73,8 +93,8 @@ class Ledger extends BaseController
         $view = ' <div class="box" >
                         <div class="box-header">
                             <h3 class="box-title">Customer: ' . $name . '</h3>
-                            <span class="pull-right"><table class="table table-bordered table-striped" id="TFtable"><tr><td> Total Buy:</td><td>' . showWithCurrencySymbol(get_total('ledger', 'amount', 'Cr.', 'customer_id', $customerId)) . '</td></tr><tr><td>Total Pay:</td><td>' . showWithCurrencySymbol(get_total('ledger', 'amount', 'Dr.', 'customer_id', $customerId)) .
-            '</td></tr><tr><td>Due Balance:</td><td>' . showWithCurrencySymbol($balance) . '</td></tr></table></span>
+                            <span class="pull-right"><table class="table table-bordered table-striped" id="TFtable"><tr><td> Total Buy:</td><td>' . showWithCurrencySymbol(get_total('ledger', 'amount', 'Dr.', 'customer_id', $customerId)) . '</td></tr><tr><td>Total Pay:</td><td>' . showWithCurrencySymbol(get_total('ledger', 'amount', 'Cr.', 'customer_id', $customerId)) .
+            '</td></tr><tr><td>Last Balance:</td><td>' . showWithCurrencySymbol($balance) . '</td></tr></table></span>
                         </div>
                     <div class="box-body">
                         <table class="table table-bordered table-striped" id="example1">
@@ -90,9 +110,11 @@ class Ledger extends BaseController
                                 </tr>
                             </thead>
                             <tbody>';
-        $restBalance = 0;
-        $totalRows = count($data);
-        for ($i = 0; $i < $totalRows; $i++) {
+
+        $totalRows = count($data) - 1;
+        for ($i = $totalRows; $i >= 0; $i--) {
+            // foreach ($data as $row) {
+
             $particulars = ($data[$i]->particulars == NULL) ? "Pay due" : $data[$i]->particulars;
             $amountCr = ($data[$i]->trangaction_type != "Cr.") ? "---" : showWithCurrencySymbol($data[$i]->amount);
             $amountDr = ($data[$i]->trangaction_type != "Dr.") ? "---" : showWithCurrencySymbol($data[$i]->amount);
@@ -102,52 +124,43 @@ class Ledger extends BaseController
             } else {
                 $invoice_id = ($data[$i]->invoice_id == NULL) ? '<a href="' . site_url('Admin/Transaction/moneyReceipt/' . $data[$i]->trans_id) . '">TRNS_' . $data[$i]->trans_id . '</a>' : '<a href="' . site_url('Admin/Invoice/view/' . $data[$i]->invoice_id) . '">INV_' . $data[$i]->invoice_id . '</a>';
             }
-
-            if ($data[$i]->trangaction_type == 'Dr.'){
-                $restBalance = $restBalance + $data[$i]->amount;
-            }else{
-                $restBalance = $restBalance - $data[$i]->amount;
-            }
-
             $bankName = led_id_by_bank_name($data[$i]->invoice_id);
             $checkNumber = led_id_by_chaque_number($data[$i]->invoice_id);
-            $dr = get_total('ledger', 'amount', 'Dr.', 'customer_id', $customerId);
-            $cr = get_total('ledger', 'amount', 'Cr.', 'customer_id', $customerId);
             $view .= '<tr>
-                        <td>' . $data[$i]->ledg_id . '</td>
-                        <td>' . $data[$i]->createdDtm . '</td>
-                        <td>' . $particulars . '<br><small>'.$bankName. $checkNumber.'</small></td>
-                        <td>' . $invoice_id . '</td>
-                        <td>' . $amountDr . '</td>
-                        <td>' . $amountCr . '</td>
-                        <td>' . showWithCurrencySymbol($restBalance) . '</td>
-                    </tr>';
+                                    <td>' . $data[$i]->ledg_id . '</td>
+                                    <td>' . $data[$i]->createdDtm . '</td>
+                                    <td>' . $particulars . '<br><small>'.$bankName. $checkNumber.'</small></td>
+                                    <td>' . $invoice_id . '</td>
+                                    <td>' . $amountDr . '</td>
+                                    <td>' . $amountCr . '</td>
+                                    <td>' . showWithCurrencySymbol($data[$i]->rest_balance) . '</td>
+                                </tr>';
         }
 
         $view .= '</tbody>
-                        <tfoot>
-                            <tr>
-                            <th>Id</th>
-                                <th>Date</th>
-                                <th>Particulars</th>
-                                <th>Invoice Id/Memo</th>
-                                <th>Debit</th>
-                                <th>Credit</th>
-                                <th>Balance</th>
-                            </tr>
-                            <tr>
-                                <th></th>
-                                <th></th>
-                                <th></th>
-                                <th>Total</th>
-                                <th>= ' . showWithCurrencySymbol($dr) . '</th>
-                                <th>= ' . showWithCurrencySymbol($cr) . '</th>
-                                <th>= ' . showWithCurrencySymbol($dr - $cr) . '</th>
-                            </tr>
-                        </tfoot>
-                    </table>
-                    </div>
-                </div>';
+                            <tfoot>
+                                <tr>
+                                <th>Id</th>
+                                    <th>Date</th>
+                                    <th>Particulars</th>
+                                    <th>Invoice Id/Memo</th>
+                                    <th>Debit</th>
+                                    <th>Credit</th>
+                                    <th>Balance</th>
+                                </tr>
+                                <tr>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                    <th>Total</th>
+                                    <th>= ' . showWithCurrencySymbol(get_total('ledger', 'amount', 'Dr.', 'customer_id', $customerId)) . '</th>
+                                    <th>= ' . showWithCurrencySymbol(get_total('ledger', 'amount', 'Cr.', 'customer_id', $customerId)) . '</th>
+                                    <th>= ' . showWithCurrencySymbol($balance) . '</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                        </div>
+                    </div>';
 
         print $view;
     }
@@ -230,7 +243,7 @@ class Ledger extends BaseController
         $view = ' <div class="box" >
                         <div class="box-header">
                             <h3 class="box-title">Customer: ' . $name . '</h3>
-                            <span class="pull-right"><table class="table table-bordered table-striped" id="TFtable"><tr><td> Total Buy:</td><td>' . showWithCurrencySymbol(get_total('ledger', 'amount', 'Cr.', 'customer_id', $customerId, $st_date, $en_date)) . '</td></tr><tr><td>Total Pay:</td><td>' . showWithCurrencySymbol(get_total('ledger', 'amount', 'Dr.', 'customer_id', $customerId, $st_date, $en_date)) .
+                            <span class="pull-right"><table class="table table-bordered table-striped" id="TFtable"><tr><td> Total Buy:</td><td>' . showWithCurrencySymbol(get_total('ledger', 'amount', 'Dr.', 'customer_id', $customerId, $st_date, $en_date)) . '</td></tr><tr><td>Total Pay:</td><td>' . showWithCurrencySymbol(get_total('ledger', 'amount', 'Cr.', 'customer_id', $customerId, $st_date, $en_date)) .
             '</td></tr><tr><td>Due Balance:</td><td>' . showWithCurrencySymbol($balance) . '</td></tr></table></span>
                         </div>
                     <div class="box-body">

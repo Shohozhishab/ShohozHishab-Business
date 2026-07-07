@@ -37,6 +37,26 @@ class Ledger_ajax extends BaseController
             return redirect()->to(site_url('Admin/login'));
         } else {
             $shopId = $this->session->shopId;
+            $customer_id = $this->request->getGet('customer_id');
+            $st_date = $this->request->getGet('st_date');
+            $en_date = $this->request->getGet('en_date');
+            $query = [];
+            if (!empty($customer_id)) {
+                $table = DB()->table('ledger');
+                if (!empty($st_date) && !empty($en_date)) {
+                    // Assuming your database column name is 'date'
+                    $table->where('createdDtm >=', $st_date . ' 00:00:00');
+                    $table->where('createdDtm <=', $en_date . ' 23:59:59');
+                }
+                $table->where("customer_id", $customer_id);
+                $query = $table->get()->getResult();
+            }
+            $data['result'] = $query;
+
+            $data['st_date'] = isset($st_date)?$st_date:'';
+            $data['en_date'] = isset($en_date)?$en_date:'';
+            $data['customer_id'] = $customer_id;
+
             $data['id'] = $shopId;
             $data['menu'] = view('Admin/menu_ledger');
             // All Permissions

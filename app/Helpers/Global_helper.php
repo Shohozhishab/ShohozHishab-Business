@@ -1760,3 +1760,109 @@ function edit_expire_check($date){
 
     return ($interval->days <= $day)?true:false;
 }
+
+function tableNameArrayKeyByValue($index){
+    $array = [
+        'ledger_discount' => 'Discount',
+        'ledger_vat' => 'Vat',
+        'ledger_sales' => 'Sales',
+        'ledger_profit' => 'Profit',
+        'ledger_stock' => 'Stock',
+        'ledger' => 'Customer',
+        'ledger_nagodan' => 'Cash',
+        'ledger_bank' => 'Bank',
+        'ledger_suppliers' => 'Suppliers',
+        'ledger_purchase' => 'Purchase',
+        'ledger_employee' => 'Employee',
+        'ledger_expense' => 'Expense',
+        'ledger_loan' => 'Account Head',
+        'ledger_other_sales' => 'Other Sales',
+        'ledger_accounts' => 'Accounts',
+    ];
+
+    return $array[$index] ?? null;
+}
+
+function tableNameOrIdByAmount($table,$ledger_id){
+    $whereId = getPrimaryKeyByTable($table);
+    $result = DB()->table($table)->where($whereId,$ledger_id)->get()->getRow();
+    return !empty($result)?$result->amount:0;
+}
+
+function getPrimaryKeyByTable($tableName){
+    $db = DB();
+
+    $primaryKey = null;
+    // Check if the table actually exists in the database first
+    if (!$db->tableExists($tableName)) {
+        return $primaryKey;
+    }
+
+    $fields = $db->getFieldData($tableName);
+    foreach ($fields as $field) {
+        if (isset($field->primary_key) && $field->primary_key === 1) {
+            $primaryKey = $field->name;
+            break;
+        }
+    }
+
+    return $primaryKey;
+}
+function getTotalRow($table,$whereCol, $whereInfo){
+    return DB()->table($table)->where($whereCol,$whereInfo)->get()->getRow();
+}
+function productIdByQuantity($productId){
+    $totalQty = DB()->table('product_stock_relation')
+        ->selectSum('quantity')
+        ->where('product_id', $productId)
+        ->get()
+        ->getRow()
+        ->quantity;
+    return $totalQty;
+}
+function totalProductInStoreByProductIdOrStoreId($prod_id,$store_id){
+    $query = DB()->table('product_stock_relation')
+        ->where('store_id',$store_id)
+        ->where('product_id',$prod_id)
+        ->get()
+        ->getRow();
+
+    return !empty($query)?$query->quantity:0;
+}
+
+function get_stock_transfer_qty_by_id($stock_transfer_id){
+    return DB()->table('stock_transfer_item')
+        ->selectSum('quantity')
+        ->where('stock_transfer_id',$stock_transfer_id)
+        ->get()->getRow()->quantity;
+}
+
+function accountIdByType($account_id)
+{
+    return DB()->table('accounts_account_type_map aatm')
+        ->select('at.account_type_id, at.type_key, at.type_name')
+        ->join('account_type at', 'at.account_type_id = aatm.account_type_id')
+        ->where('aatm.account_id', $account_id)
+        ->where('at.parent_account_type_id IS NULL')
+        ->get()
+        ->getRow();
+}
+function userRole(){
+    return DB()->table('roles')
+        ->where('sch_id',$_SESSION['shopId'])
+        ->where('is_default','0')
+        ->get()
+        ->getResult();
+}
+
+function isDefaultRole() {
+    if (!isset($_SESSION['role'])) {
+        return false;
+    }
+
+    $query = DB()->table('roles')
+        ->where('role_id', $_SESSION['role'])
+        ->get()
+        ->getRow();
+    return (!empty($query) && $query->is_default == 1);
+}

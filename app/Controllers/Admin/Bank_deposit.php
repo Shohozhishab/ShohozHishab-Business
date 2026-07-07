@@ -140,6 +140,13 @@ class Bank_deposit extends BaseController
                         $dep_id = DB()->insertID();
                         //insert deposit amount in deposit table (end)
 
+                        // transaction events insert;
+                        DB()->table('transaction_events')->insert([
+                            'sch_id' => $shopId,
+                            'dep_id'         => $dep_id,
+                            'createdDtm'       => date('Y-m-d H:i:s')
+                        ]);
+
                         //insert log (start)
                         $this->transactionLog->insert_log_data('bank_deposit',$dep_id,null,$data['amount'],$dep_id);
                         //insert log (end)
@@ -170,6 +177,8 @@ class Bank_deposit extends BaseController
                         $ledger_nagodanTable = DB()->table('ledger_nagodan');
                         $ledger_nagodanTable->insert($lgNagData);
                         $ledg_nagodan_id = DB()->insertID();
+
+                        $this->bank_deposit_transaction_entries($dep_id, $ledg_nagodan_id, 'ledger_nagodan', 'Cr.');
 
                         //insert log (start)
                         $this->transactionLog->insert_log_data('ledger_nagodan',$ledg_nagodan_id,null,$data['amount'],$dep_id);
@@ -202,6 +211,8 @@ class Bank_deposit extends BaseController
                         $ledger_bankTable = DB()->table('ledger_bank');
                         $ledger_bankTable->insert($ledBankData);
                         $ledgBank_id = DB()->insertID();
+
+                        $this->bank_deposit_transaction_entries($dep_id, $ledgBank_id, 'ledger_bank', 'Dr.');
 
                         //insert log (start)
                         $this->transactionLog->insert_log_data('ledger_bank',$ledgBank_id,null,$data['amount'],$dep_id);
@@ -450,6 +461,47 @@ class Bank_deposit extends BaseController
         if (!empty($arrayUpData)) {
             $table = DB()->table('ledger_bank');
             $table->updateBatch($arrayUpData, 'ledgBank_id');
+        }
+    }
+
+    private function bank_deposit_transaction_entries($dep_id, $ledger_id, $table_name, $transaction_type) {
+        DB()->table('transaction_entries')->insert([
+            'dep_id'         => $dep_id,
+            'ledger_id'        => $ledger_id,
+            'table_name'       => $table_name,
+            'trangaction_type' => $transaction_type,
+            'createdDtm'       => date('Y-m-d H:i:s')
+        ]);
+    }
+
+    public function transaction_flow($dep_id){
+        $isLoggedIn = $this->session->isLoggedIn;
+        $role_id = $this->session->role;
+        if (!isset($isLoggedIn) || $isLoggedIn != TRUE) {
+            return redirect()->to(site_url('Admin/login'));
+        } else {
+            $shopId = $this->session->shopId;
+
+            $data['flow'] = DB()->table('transaction_entries')
+                ->where('dep_id',$dep_id)
+                ->get()
+                ->getResult();
+
+            $data['menu'] = view('Admin/menu_bank');
+            // All Permissions
+            //$perm = array('create','read','update','delete','mod_access');
+            $perm = $this->permission->module_permission_list($role_id, $this->module_name);
+            foreach ($perm as $key => $val) {
+                $data[$key] = $this->permission->have_access($role_id, $this->module_name, $key);
+            }
+            echo view('Admin/header');
+            echo view('Admin/sidebar');
+            if (isset($data['mod_access']) and $data['mod_access'] == 1) {
+                echo view('Admin/Bank_deposit/transaction_flow', $data);
+            } else {
+                echo view('no_permission');
+            }
+            echo view('Admin/footer');
         }
     }
 
