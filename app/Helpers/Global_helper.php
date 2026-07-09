@@ -676,7 +676,8 @@ function invoiceDateFormat($datetime = '0000-00-00 00:00:00') {
     if ($datetime == '0000-00-00 00:00:00' or $datetime == '0000-00-00' or $datetime == '') {
         return 'Unknown';
     }
-    return date('d M Y h:i A ', strtotime($datetime));
+//    return date('d M Y h:i A ', strtotime($datetime));
+    return date('d M Y', strtotime($datetime));
 }
 
 /**
@@ -1527,7 +1528,7 @@ function bank_ledger($bankId,$date){
     $searchDate = (empty($date))? date('Y-m-d') :$date;
 
     $ledger_bankTab = DB()->table('ledger_bank');
-    $data = $ledger_bankTab->where("bank_id",$bankId)->like('createdDtm',$searchDate)->limit(30)->orderBy("createdDtm","DESC")->get()->getResult();
+    $data = $ledger_bankTab->where("bank_id",$bankId)->like('DATE(createdDtm)',$searchDate)->limit(30)->orderBy("createdDtm","DESC")->get()->getResult();
 
     return $data;
 }
@@ -1865,4 +1866,21 @@ function isDefaultRole() {
         ->get()
         ->getRow();
     return (!empty($query) && $query->is_default == 1);
+}
+function storeIdByTotalProductPrice($storeId){
+    $productsTb = DB()->table('products');
+    $productsTb->join('product_stock_relation relation', 'relation.product_id = products.prod_id');
+    $query = $productsTb->where('relation.store_id', $storeId)->where('products.sch_id', $_SESSION['shopId'])->orderBy('prod_id', "DESC")->get()->getResult();
+
+    $purchasePrice = 0;
+    foreach ($query as  $pur) {
+        $purchasePrice += $pur->quantity * $pur->purchase_price;
+    }
+    return $purchasePrice;
+}
+
+function permission_check($module_name,$role_id,$key){
+    $permission = new Permission();
+    $access = $permission->have_access($role_id, $module_name, $key);
+    return empty($access)?false:true;
 }

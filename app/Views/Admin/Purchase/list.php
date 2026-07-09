@@ -106,7 +106,7 @@
                             foreach ($purchase_data as $purchase) { ?>
                                 <tr>
                                     <td><?php echo $i++ ?></td>
-                                    <td><?php echo invoiceDateFormat($purchase->createdDtm) ?></td>
+                                    <td><?php echo invoiceDateFormat($purchase->date) ?></td>
                                     <td><?php echo get_data_by_id('name', 'suppliers', 'supplier_id', $purchase->supplier_id); ?></td>
                                     <td><?php echo showWithCurrencySymbol(get_data_by_id('amount','purchase','purchase_id',$purchase->purchase_id)); ?></td>
                                     <td><?php echo showWithCurrencySymbol(get_data_by_id('due','purchase','purchase_id',$purchase->purchase_id)); ?></td>

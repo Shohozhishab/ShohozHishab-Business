@@ -59,12 +59,13 @@
                     <!-- /.box-header -->
                     <div class="box-body">
                         <div class="col-md-4" style="padding: 20px;">
+                            <form method="get" action="<?= base_url('Admin/Stock_report')?>" >
                             <label for="int">Store name</label>
-
-                            <select class="form-control select2 select2-hidden-accessible" onchange="storePro(this.value)" id="store_id" style=" width: 100%;" tabindex="-1" aria-hidden="true">
+                            <select class="form-control select2 select2-hidden-accessible" onchange="formSubmit(this)" name="store_id" id="store_id" style=" width: 100%;" tabindex="-1" aria-hidden="true">
                                 <option selected="selected"  value="">Please Select</option>
-                                <?php echo getAllListInOption('','store_id','name','stores'); ?>
+                                <?php echo getAllListInOption($store_id,'store_id','name','stores'); ?>
                             </select>
+                            </form>
 
                         </div>
                         <div class="col-md-8"></div>
@@ -76,7 +77,42 @@
 
             </div>
 
-            <div class="col-md-12" id="product"></div>
+            <div class="col-md-12" >
+
+                <div class="box">
+                    <div class="box-header">
+                        <h3 class="box-title" >Store Name: <b ><?= $name ?></b></h3>
+                        <span class="pull-right" style="margin-right:10px;" ><b>Storage Inventory Prices:</b> <?= showWithCurrencySymbol($purchasePrice) ?></span>
+                        <span class="pull-right" style="margin-right:40px;"> <b>Storage Inventory Quantity:</b> <?= $quantity ?></span>
+                    </div>
+                    <div class="box-body">
+                        <table class="table table-bordered table-striped" id="TFtable">
+                            <thead>
+                                <tr>
+                                    <th>No</th>
+                                    <th>Name</th>
+                                    <th>Product Category</th>
+                                    <th>Quantity</th>
+                                    <th>Purchase Price</th>
+                                    <th>Selling Price</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            <?php $i = ''; foreach ($result as $row) { ?>
+                                <tr>
+                                    <td><?= ++$i ?></td>
+                                    <td><?= $row->name ?></td>
+                                    <td><?= get_data_by_id('product_category', 'product_category', 'prod_cat_id', $row->prod_cat_id) ?></td>
+                                    <td><?= $row->quantity ?></td>
+                                    <td><?= showWithCurrencySymbol($row->purchase_price) ?></td>
+                                    <td><?= showWithCurrencySymbol($row->selling_price) ?></td>
+                                </tr>
+                            <?php } ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
 
             <div class="row no-print" >
                 <div class="col-xs-12">
@@ -105,7 +141,31 @@
                         <?php print address(); ?>
                     </div>
                 </div>
-                <div class="col-md-12" id="prentView">
+                <div class="col-md-12" >
+                    <table class="table table-bordered table-striped" >
+                        <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>Name</th>
+                            <th>Product Category</th>
+                            <th>Quantity</th>
+                            <th>Purchase Price</th>
+                            <th>Selling Price</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <?php $i = ''; foreach ($result as $row) { ?>
+                            <tr>
+                                <td><?= ++$i ?></td>
+                                <td><?= $row->name ?></td>
+                                <td><?= get_data_by_id('product_category', 'product_category', 'prod_cat_id', $row->prod_cat_id) ?></td>
+                                <td><?= $row->quantity ?></td>
+                                <td><?= showWithCurrencySymbol($row->purchase_price) ?></td>
+                                <td><?= showWithCurrencySymbol($row->selling_price) ?></td>
+                            </tr>
+                        <?php } ?>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 

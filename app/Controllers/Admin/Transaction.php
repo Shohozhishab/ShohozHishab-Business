@@ -47,10 +47,10 @@ class Transaction extends BaseController
             $category = $this->request->getGet('category');
 
             if ($start_date) {
-                $transactionTable->where('createdDtm >=', $start_date . ' 00:00:00');
+                $transactionTable->where('date >=', $start_date . ' 00:00:00');
             }
             if ($end_date) {
-                $transactionTable->where('createdDtm <=', $end_date . ' 23:59:59');
+                $transactionTable->where('date <=', $end_date . ' 23:59:59');
             }
 
             // Exclusive Entity Filters based on Category
@@ -203,6 +203,7 @@ class Transaction extends BaseController
         $shopId = $this->session->shopId;
         $userId = $this->session->userId;
 
+        $data['date'] = $this->request->getPost('date');
         $data['name'] = $this->request->getPost('name');
         $data['sch_id'] = $shopId;
         $data['createdBy'] = $userId;
@@ -291,6 +292,7 @@ class Transaction extends BaseController
                         'sch_id' => $shopId,
                         'customer_id' => $custId,
                         'title' => $this->request->getPost('particulars'),
+                        'date' => $this->request->getPost('date'),
                         'trangaction_type' => 'Cr.',
                         'amount' => $amount,
                         'createdBy' => $userId,
@@ -495,6 +497,7 @@ class Transaction extends BaseController
                     $transdata = array(
                         'sch_id' => $shopId,
                         'customer_id' => $custId,
+                        'date' => $this->request->getPost('date'),
                         'title' => $this->request->getPost('particulars'),
                         'trangaction_type' => 'Dr.',
                         'amount' => $amount,
@@ -764,6 +767,7 @@ class Transaction extends BaseController
                     //insert Transaction table
                     $transdata = array(
                         'sch_id' => $shopId,
+                        'date' => $this->request->getPost('date'),
                         'supplier_id' => $this->request->getPost('supplier_id'),
                         'title' => $this->request->getPost('particulars'),
                         'trangaction_type' => 'Cr.',
@@ -926,6 +930,7 @@ class Transaction extends BaseController
                         $transdata = array(
                             'sch_id' => $shopId,
                             'supplier_id' => $supplierId,
+                            'date' => $this->request->getPost('date'),
                             'title' => $this->request->getPost('particulars'),
                             'trangaction_type' => 'Dr.',
                             'amount' => $amount,
@@ -1246,6 +1251,7 @@ class Transaction extends BaseController
                     $transdata = array(
                         'sch_id' => $shopId,
                         'loan_pro_id' => $loanProId,
+                        'date' => $this->request->getPost('date'),
                         'title' => $this->request->getPost('particulars'),
                         'trangaction_type' => 'Dr.',
                         'amount' => $amount,
@@ -1401,6 +1407,7 @@ class Transaction extends BaseController
                     $transdata = array(
                         'sch_id' => $shopId,
                         'loan_pro_id' => $loanProId,
+                        'date' => $this->request->getPost('date'),
                         'title' => $this->request->getPost('particulars'),
                         'trangaction_type' => 'Cr.',
                         'amount' => $amount,
@@ -1649,6 +1656,7 @@ class Transaction extends BaseController
                 $transdata = array(
                     'sch_id' => $shopId,
                     'title' => 'Withdraw',
+                    'date' => $this->request->getPost('date'),
                     'bank_id' => $bank_id,
                     'bank_to_id' => $bank_id2,
                     'trangaction_type' => 'Cr.',
@@ -1889,6 +1897,7 @@ class Transaction extends BaseController
             $transdata = array(
                 'sch_id' => $shopId,
                 'account_id'=> $accountId,
+                'date' => $this->request->getPost('date'),
                 'title' => $this->request->getPost('particulars'),
                 'trangaction_type' => 'Dr.',
                 'amount' => $amount,
@@ -1942,41 +1951,6 @@ class Transaction extends BaseController
             //insert log (start)
             $this->transactionLog->insert_log_data('ledger_accounts', $ledger_id, $ledgtranId, $amount);
             //insert log (end)
-
-//            $exData = array(
-//                'expense' => $exRestbalance,
-//                'updatedBy' => $userId,
-//            );
-//            $shopsTab = DB()->table('shops');
-//            $shopsTab->where('sch_id', $shopId)->update($exData);
-//
-//            //insert log (start)
-//            $this->transactionLog->insert_log_data('shops', $shopId, $ledgtranId, $amount);
-//            //insert log (end)
-//
-//
-//            //insert data
-//            $data = array(
-//                'sch_id' => $shopId,
-//                'memo_number' => $this->request->getPost('memo_number'),
-//                'trans_id' => $ledgtranId,
-//                'particulars' => $this->request->getPost('particulars'),
-//                'trangaction_type' => 'Dr.',
-//                'amount' => $amount,
-//                'rest_balance' => $exRestbalance,
-//                'createdBy' => $userId,
-//                'createdDtm' => date('Y-m-d h:i:s')
-//            );
-//            $ledger_expenseTab = DB()->table('ledger_expense');
-//            $ledger_expenseTab->insert($data);
-//            $ledg_exp_id = DB()->insertID();
-//
-//            //insert transaction in ledger Transaction table (end)
-//            $this->transaction_entries($ledgtranId, $ledg_exp_id, 'ledger_expense', 'Dr.');
-//
-//            //insert log (start)
-//            $this->transactionLog->insert_log_data('ledger_expense', $ledg_exp_id, $ledgtranId, $amount);
-//            //insert log (end)
 
             //admin transaction
             if ($paymentType == 2) {
@@ -2096,6 +2070,7 @@ class Transaction extends BaseController
         //insert Transaction table
         $transdata = array(
             'sch_id' => $shopId,
+            'date' => $this->request->getPost('date'),
             'title' => $this->request->getPost('particulars'),
             'trangaction_type' => 'Dr.',
             'amount' => $amount,
@@ -2232,6 +2207,7 @@ class Transaction extends BaseController
                 //insert Transaction table
                 $transdata = array(
                     'sch_id' => $shopId,
+                    'date' => $this->request->getPost('date'),
                     'employee_id' => $this->request->getPost('employee_id'),
                     'title' => 'Salary',
                     'trangaction_type' => 'Cr.',
@@ -2457,6 +2433,7 @@ class Transaction extends BaseController
                     //insert Transaction table
                     $transdata = array(
                         'sch_id' => $shopId,
+                        'date' => $this->request->getPost('date'),
                         'vat_id' => $this->request->getPost('vat_id'),
                         'title' => $this->request->getPost('particulars'),
                         'trangaction_type' => 'Dr.',
@@ -2649,6 +2626,7 @@ class Transaction extends BaseController
             $transdata = array(
                 'sch_id' => $shopId,
                 'account_id' => $accountId,
+                'date' => $this->request->getPost('date'),
                 'title' => $this->request->getPost('particulars'),
                 'trangaction_type' => 'Dr.',
                 'amount' => $amount,

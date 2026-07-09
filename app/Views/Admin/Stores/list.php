@@ -69,6 +69,7 @@
                                 <th>No</th>
                                 <th>Name</th>
                                 <th>Description</th>
+                                <th>Total Products Prices</th>
                                 <th>Action</th>
                             </tr>
                             </thead>
@@ -76,8 +77,9 @@
                             <?php $i = 1; foreach ($stores as $val) { ?>
                                 <tr>
                                     <td><?php echo $i++ ?></td>
-                                    <td><?php echo $val->name ?></td>
+                                    <td><a href="<?= base_url('Admin/Stock_report?store_id='.$val->store_id)?>"><?php echo $val->name ?></a></td>
                                     <td><?php echo $val->description ?></td>
+                                    <td><?php echo showWithCurrencySymbol(storeIdByTotalProductPrice($val->store_id)); ?></td>
                                     <td>
                                         <?php if (isset($update) && $update == 1){ ?>
                                         <?php if (is_default($val->store_id,'store_id', 'stores') != 1) {?>
@@ -125,6 +127,7 @@
                                             <th>No</th>
                                             <th>Name</th>
                                             <th>Description</th>
+                                            <th>Total Products Prices</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -133,6 +136,7 @@
                                             <td><?php echo $i++ ?></td>
                                             <td><?php echo $item->name ?></td>
                                             <td><?php echo $item->description ?></td>
+                                            <td><?php echo showWithCurrencySymbol(storeIdByTotalProductPrice($item->store_id)); ?></td>
                                         </tr>
                                         <?php } ?>
 

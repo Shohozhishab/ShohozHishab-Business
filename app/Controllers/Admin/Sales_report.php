@@ -45,23 +45,45 @@ class Sales_report extends BaseController
 
 
             //All invoice item show list (start)
-            $invoice_itemTb = DB()->table('invoice_item');
-            $sale = $invoice_itemTb->where('sch_id', $shopId)->orderBy('inv_item', 'DESC')->get()->getResult();
+            $prod_id = $this->request->getGet('prod_id');
+            $customer_id = $this->request->getGet('customer_id');
+            $st_date = $this->request->getGet('st_date');
+            $en_date = $this->request->getGet('en_date');
+
+            $saleTable = DB()->table('invoice_item')
+                ->join('invoice', 'invoice.invoice_id = invoice_item.invoice_id')
+                ->where('invoice.sch_id', $shopId);
+                if (!empty($customer_id)){
+                    $saleTable->where('invoice.customer_id', $customer_id);
+                }
+                if (!empty($prod_id)){
+                    $saleTable->where('invoice_item.prod_id', $prod_id);
+                }
+                if (!empty($st_date) && !empty($en_date)) {
+                    // Assuming your database column name is 'date'
+                    $saleTable->where('invoice.createdDtm >=', $st_date . ' 00:00:00');
+                    $saleTable->where('invoice.createdDtm <=', $en_date . ' 23:59:59');
+                }
+
+            $sale = $saleTable->orderBy('invoice_item.inv_item', 'DESC')->get()->getResult();
             //All invoice item show list (start)
 
-
-            //All sale profite Show in invoice item table (atrat)
-            $invTb = DB()->table('invoice_item');
-            $saleprofit = $invTb->selectSum('profit')->where('sch_id', $shopId)->get()->getRow()->profit;
-            //All sale profite Show in invoice item table (end)
+            $profit = 0;
+            foreach ($sale as $item){
+                $profit += $item->profit;
+            }
 
 
             $data = array(
                 'customers' => $customers,
                 'sale' => $sale,
                 'sale2' => $sale,
-                'saleprofit' => $saleprofit,
+                'saleprofit' => $profit,
             );
+            $data['st_date'] = isset($st_date)?$st_date:'';
+            $data['en_date'] = isset($en_date)?$en_date:'';
+            $data['customer_id'] = isset($customer_id)?$customer_id:'';
+            $data['prod_id'] = isset($prod_id)?$prod_id:'';
 
             $data['menu'] = view('Admin/menu_report');
             // All Permissions

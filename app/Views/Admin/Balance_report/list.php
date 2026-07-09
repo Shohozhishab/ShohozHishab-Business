@@ -191,6 +191,14 @@
                 </div>
             </div>
 
+            <div class="col-md-12">
+                <div class="box">
+                    <div class="box-body">
+
+                    </div>
+                </div>
+            </div>
+
         </div>
         <!-- /.row -->
 

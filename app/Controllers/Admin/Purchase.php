@@ -50,8 +50,8 @@ class Purchase extends BaseController
             // Apply date filters only if they are present in the request
             if (!empty($st_date) && !empty($en_date)) {
                 // Assuming your database column name is 'date'
-                $table->where('createdDtm >=', $st_date . ' 00:00:00');
-                $table->where('createdDtm <=', $en_date . ' 23:59:59');
+                $table->where('date >=', $st_date . ' 00:00:00');
+                $table->where('date <=', $en_date . ' 23:59:59');
             }
             $data['purchase_data'] = $table->get()->getResult();
 
@@ -282,6 +282,8 @@ class Purchase extends BaseController
     {
         $shopId = $this->session->shopId;
         $userId = $this->session->userId;
+
+        $date = $this->request->getPost('date');
 
         $purchaseId = $this->request->getPost('purchase_id');
         $supplierId = $this->request->getPost('supplier_id');
@@ -575,6 +577,7 @@ class Purchase extends BaseController
                 'bank_paid' => $bankAmount,
                 'bank_id' => $bankId,
                 'due' => $dueAmount,
+                'date' => $date,
                 'updatedBy' => $userId,
             );
             $tabpurchase = DB()->table('purchase');
@@ -740,6 +743,7 @@ class Purchase extends BaseController
         $userId = $this->session->userId;
         $shopId = $this->session->shopId;
 
+        $date = $this->request->getPost('date');
         $purchaseId = $this->request->getPost('purchase_id');
         $supplierId = $this->request->getPost('supplier_id');
         $sms = $this->request->getPost('sms');
@@ -1121,6 +1125,7 @@ class Purchase extends BaseController
                 'bank_paid' => $bankAmount,
                 'bank_id' => $bankId,
                 'due' => $dueAmount,
+                'date' => $date,
                 'updatedBy' => $userId,
             );
             $purchaseTab = DB()->table('purchase');
