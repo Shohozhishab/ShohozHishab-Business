@@ -34,41 +34,45 @@
                         </div>
                         <!-- /.box-header -->
                         <div class="box-body">
-                            <div class="form-group col-xs-6">
+                            <div class="form-group col-xs-3">
                                 <label for="int">Category </label>
                                 <select class="form-control" onchange="showSubCategory(this.value)" name="category" id="category">
                                     <option value="">Please Select</option>
                                     <?php echo getCatListInOption('prod_cat_id', 'prod_cat_id', 'product_category', 'product_category'); ?>
                                 </select>
                             </div>
-                            <div class="form-group col-xs-6">
+                            <div class="form-group col-xs-3">
                                 <label for="int">Sub Category </label>
                                 <select class="form-control" name="sub_category" id="subCat">
                                     <option value="">Please Select</option>
                                 </select>
                             </div>
-                            <div class="form-group col-xs-6">
+                            <div class="form-group col-xs-3">
                                 <label for="varchar">Product Name </label> <span id="nameValid" style="color: red;"></span>
                                 <input type="text" class="form-control" name="name" id="name" placeholder="Name"/>
                             </div>
-                            <div class="form-group col-xs-6">
-                                <label for="int">Unit </label>
-                                <select class="form-control" name="unit">
-                                    <?php echo selectOptions($selected = 1, unitArray()); ?>
+                            <div class="form-group col-xs-3">
+                                <label for="int">Unit Set</label>
+                                <select class="form-control" name="categories_id" id="categories_id" onchange="unitShow(this.value)" >
+                                    <option value="">Please Select</option>
+                                    <?php foreach ($unit_set as $cat){ ?>
+                                        <option value="<?= $cat->unit_set_id;?>" <?= ($cat->default_set == '1')?'Selected':'';?> ><?= $cat->name;?></option>
+                                    <?php } ?>
                                 </select>
                             </div>
-                            <div class="form-group col-xs-6">
-                                <label for="int">Purchase Price</label>
-                                <input type="number" class="form-control purchase_price" oninput="minusValueCheck(this.value,this)" min="0" name="price" id="price" placeholder="Purchase Price"/>
-                            </div>
-                            <div class="form-group col-xs-6">
-                                <label for="int">Selling Price</label>
-                                <input type="number" class="form-control selling_price" oninput="minusValueCheck(this.value,this)" min="0" name="selling_price" id="selling_price" placeholder="Selling Price"/>
-                            </div>
-                            <div class="form-group col-xs-6">
-                                <label for="int">Quantity </label>
-                                <input type="number" class="form-control quantity" name="qty" min="0" placeholder="Quantity" value="1"/>
-                            </div>
+                            <div id="unitData"></div>
+<!--                            <div class="form-group col-xs-6">-->
+<!--                                <label for="int">Purchase Price</label>-->
+<!--                                <input type="number" class="form-control purchase_price" oninput="minusValueCheck(this.value,this)" min="0" name="price" id="price" placeholder="Purchase Price"/>-->
+<!--                            </div>-->
+<!--                            <div class="form-group col-xs-6">-->
+<!--                                <label for="int">Selling Price</label>-->
+<!--                                <input type="number" class="form-control selling_price" oninput="minusValueCheck(this.value,this)" min="0" name="selling_price" id="selling_price" placeholder="Selling Price"/>-->
+<!--                            </div>-->
+<!--                            <div class="form-group col-xs-6">-->
+<!--                                <label for="int">Quantity </label>-->
+<!--                                <input type="number" class="form-control quantity" name="qty" min="0" placeholder="Quantity" value="1"/>-->
+<!--                            </div>-->
                             <div class="form-group col-xs-12">
                                 <button type="submit" class="btn btn-primary ">Add</button>
                                 <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Products_ajax/'); ?>','<?php echo '/Admin/Products/'; ?>')" class="btn btn-danger">Back</a>

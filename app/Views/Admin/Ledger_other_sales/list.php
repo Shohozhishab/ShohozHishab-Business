@@ -1,10 +1,10 @@
 <div class="content-wrapper" id="viewpage">
     <!-- Content Header (Page header) -->
     <section class="content-header">
-        <h1> Ledger other sales  <small>Ledger other sales</small></h1>
+        <h1> Ledger other income  <small>Ledger other income</small></h1>
         <ol class="breadcrumb">
             <li><a href="#"><i class="fa fa-dashboard"></i> Home</a></li>
-            <li class="active">Ledger other sales</li>
+            <li class="active">Ledger other income</li>
         </ol>
     </section>
 

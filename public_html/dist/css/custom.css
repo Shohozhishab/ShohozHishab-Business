@@ -31,3 +31,8 @@
 .trail a:hover{
     color: #0b3e6f !important;
 }
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice{
+    background-color: #3c8dbc !important;
+    border-color: #367fa9 !important;
+}

@@ -194,6 +194,7 @@ class Purchase extends BaseController
         if (!isset($isLoggedIn) || $isLoggedIn != TRUE) {
             return redirect()->to(site_url('Admin/login'));
         } else {
+            $shopId = $this->session->shopId;
             $data['action'] = base_url('Admin/Purchase/product_create_action');
             if (empty($this->session->purchaseId)) {
                 return redirect()->to(site_url('Admin/Purchase/create'));
@@ -205,6 +206,9 @@ class Purchase extends BaseController
             }
             $table = DB()->table('suppliers');
             $data['supplier'] = $table->where('supplier_id',$this->session->supplierId)->get()->getRow();
+
+            $table = DB()->table('unit_set');
+            $data['unit_set'] = $table->where('sch_id',$shopId)->get()->getResult();
 
             $data['supplierId'] = $this->session->supplierId;
             $data['purchaseId'] = $this->session->purchaseId;
@@ -633,14 +637,20 @@ class Purchase extends BaseController
      */
     public function addCart()
     {
+        $categories_id = $this->request->getPost('categories_id');
 
-        $data['subCatId'] = $this->request->getPost('subCatId');
+        $data['subCatId'] = $this->request->getPost('sub_category');
         $data['category'] = $this->request->getPost('category');
         $data['name'] = $this->request->getPost('name');
-        $data['unit'] = $this->request->getPost('unit');
         $data['price'] = $this->request->getPost('price');
-        $data['salePrice'] = $this->request->getPost('salePrice');
-        $data['qty'] = $this->request->getPost('qty');
+        $data['salePrice'] = $this->request->getPost('selling_price');
+        $data['sale_unit'] = $this->request->getPost('sale_unit');
+        $data['unit'] = $categories_id;
+
+        $purchase_units_price = $this->request->getPost('purchase_units_price');
+        $sell_unit_price = $this->request->getPost('sell_unit_price');
+
+
 
         $this->validation->setRules([
             'subCatId' => ['label' => 'subCatId', 'rules' => 'required'],
@@ -649,25 +659,59 @@ class Purchase extends BaseController
             'unit' => ['label' => 'unit', 'rules' => 'required'],
             'price' => ['label' => 'price', 'rules' => 'required'],
             'salePrice' => ['label' => 'salePrice', 'rules' => 'required'],
-            'qty' => ['label' => 'qty', 'rules' => 'required|is_natural_no_zero'],
+            'sale_unit' => ['label' => 'Sale Unit', 'rules' => 'required'],
         ]);
 
         if ($this->validation->run($data) == FALSE) {
             print '<div class="alert alert-danger alert-dismissible" role="alert">' . $this->validation->listErrors() . ' <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         } else {
-            if ($data['qty'] > 0) {
+            $totalQty = 0;
+
+            if (!empty($categories_id)) {
+                $query = DB()->table('unit_set')->where('unit_set_id',$categories_id)->get()->getRow();
+                $units_id = json_decode($query->purchase_units);
+
+                $unit = array();
+                $units = DB()->table('units')->whereIn('units_id', $units_id)->orderBy('conversion_factor', 'DESC')->get()->getResult();
+                foreach ($units as $val) {
+                    $nameUnit = strtolower(str_replace(' ', '_', $val->name));
+                    $unit[$nameUnit] = $this->request->getPost($nameUnit);
+                    if (!empty($unit[$nameUnit])) {
+                        $totalQty += $val->conversion_factor * $unit[$nameUnit];
+                    }
+                }
+            }
+
+            //purchase price make
+            $basePurchasePrice = 0;
+            $unitsPur = DB()->table('units')->where('units_id', $purchase_units_price)->get()->getRow();
+            if (!empty($unitsPur)){
+                $basePurchasePrice = $data['price']/$unitsPur->conversion_factor;
+            }
+            $purchasePrice = $basePurchasePrice;
+
+            //sale price make
+            $baseSalePrice = 0;
+            $unitsSale = DB()->table('units')->where('units_id', $sell_unit_price)->get()->getRow();
+            if (!empty($unitsSale)){
+                $baseSalePrice = $data['salePrice']/$unitsSale->conversion_factor;
+            }
+            $salePrice = $baseSalePrice;
+
+            if ((!empty($totalQty)) && ($totalQty > 0)) {
                 $i = count($this->cart->contents());
-                $data2 = array(
+                $dataAdd = array(
                     'id' => ++$i,
                     'name' => $data['name'],
-                    'unit' => $data['unit'],
-                    'qty' => $data['qty'],
-                    'price' => $data['price'],
-                    'salePrice' => $data['salePrice'],
-                    'cat_id' => $data['subCatId']
+                    'unit' => $data['sale_unit'] ,
+                    'qty' => $totalQty,
+                    'price' => $purchasePrice,
+                    'salePrice' => $salePrice,
+                    'cat_id' => $data['subCatId'],
+                    'unit_set_id' => $categories_id,
                 );
 
-                $this->cart->insert($data2);
+                $this->cart->insert($dataAdd);
                 $this->session->set('cartType', 'purchase');
 
             } else {
@@ -677,6 +721,7 @@ class Purchase extends BaseController
         }
 
     }
+
 
     /**
      * @description This method remove cart
@@ -1064,13 +1109,13 @@ class Purchase extends BaseController
             $storeId = $store->store_id;
 
             for ($i = 0; $i < $number; $i++) {
+                $queryUnit = DB()->table('unit_set')->where('unit_set_id',$this->request->getPost('unit_set_id[]')[$i])->get()->getRow();
                 //insert purchase product
                 $data = array(
                     'sch_id' => $shopId,
                     'name' => $name[$i],
-                    'unit' => $this->request->getPost('unit[]')[$i],
-                    'purchase_price' => $this->request->getPost('purchase_price[]')[$i],
-                    'selling_price' => $this->request->getPost('selling_price[]')[$i],
+                    'purchase_units' => $queryUnit->purchase_units,
+                    'sale_units' => $queryUnit->sell_units,
                     'supplier_id' => $supplierId,
                     'prod_cat_id' => $this->request->getPost('prod_cat_id[]')[$i],
                     'createdBy' => $userId,
@@ -1080,7 +1125,7 @@ class Purchase extends BaseController
                 $proTable->insert($data);
                 $prodId = DB()->insertID();
                 //insert log (start)
-                $this->transactionLog->insert_log_data('products',$prodId,'',$data['purchase_price'],'','','',$purchaseId);
+                $this->transactionLog->insert_log_data('products',$prodId,'',$this->request->getPost('purchase_price[]')[$i],'','','',$purchaseId);
                 //insert log (end)
 
                 //insert data in table product_stock_relation
@@ -1088,13 +1133,16 @@ class Purchase extends BaseController
                     'store_id' => $storeId,
                     'product_id' => $prodId,
                     'quantity' => $this->request->getPost('quantity[]')[$i],
+                    'unit' => $this->request->getPost('unit[]')[$i],
+                    'purchase_price' => $this->request->getPost('purchase_price[]')[$i],
+                    'selling_price' => $this->request->getPost('selling_price[]')[$i],
                 );
                 $stockRelationTable = DB()->table('product_stock_relation');
                 $stockRelationTable->insert($dataQty);
                 //insert data in table product_stock_relation
 
                 //insetr purchase Item in purchase item table
-                $purchasePrice = get_data_by_id('purchase_price', 'products', 'prod_id', $prodId);
+                $purchasePrice = $this->request->getPost('purchase_price[]')[$i];
                 $quantity = $this->request->getPost('quantity[]')[$i];
 
                 $total_price = $quantity * $purchasePrice;
@@ -1622,16 +1670,21 @@ class Purchase extends BaseController
         }
 
 
+        $storeTab = DB()->table('stores');
+        $store = $storeTab->where('sch_id', $shopId)->where('is_default', 1)->get()->getRow();
+        $storeId = $store->store_id;
 
         $number = count($prod_id);
         for ($i = 0; $i < $number; $i++) {
-            //insert purchase product
-            $data = array(
+            //insert data in table product_stock_relation
+            $dataQty = array(
                 'quantity' => $qty[$i],
                 'purchase_price' => $price[$i],
             );
-            $proTable = DB()->table('products');
-            $proTable->where('prod_id',$prod_id[$i])->update($data);
+            $stockRelationTable = DB()->table('product_stock_relation');
+            $stockRelationTable->where('store_id',$storeId)->where('product_id',$prod_id[$i])->update($dataQty);
+            //insert data in table product_stock_relation
+
 
             //insetr purchase Item in purchase item table
             $purchaseData = array(
@@ -1781,7 +1834,6 @@ class Purchase extends BaseController
             $table->updateBatch($arrayUpData, 'stock_id');
         }
     }
-
     public function transaction_flow($purchase_id){
         $isLoggedIn = $this->session->isLoggedIn;
         $role_id = $this->session->role;
@@ -1816,6 +1868,22 @@ class Purchase extends BaseController
             }
             echo view('Admin/footer');
         }
+    }
+    public function unitShow(){
+        $unit_set_id = $this->request->getPost('unit_set_id');
+        $query = DB()->table('unit_set')->where('unit_set_id',$unit_set_id)->get()->getRow();
+
+        $units_id = json_decode($query->purchase_units);
+        $data['units'] = DB()->table('units')->whereIn('units_id',$units_id)->orderBy('conversion_factor', 'DESC')->get()->getResult();
+
+        $array = json_decode($query->sell_units);
+        $lastKey = array_key_last($array);
+        $data['saleUnit'] = DB()->table('units')->where('units_id',$array[$lastKey])->get()->getRow();
+        $data['unitsArray'] = DB()->table('units')->where('unit_categories_id',$query->unit_categories_id)->orderBy('conversion_factor', 'DESC')->get()->getResult();
+
+        $data['unitSet'] = $query;
+
+        echo view('Admin/Purchase/unitShow', $data);
     }
 
 

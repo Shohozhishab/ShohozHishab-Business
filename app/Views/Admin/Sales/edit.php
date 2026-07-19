@@ -30,7 +30,9 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                <?php $i=0; foreach ($invoiceItem as $item){ ?>
+                                <?php $i=0; foreach ($invoiceItem as $item){
+                                    $jsonArray = get_data_by_id('sale_units', 'products', 'prod_id', $item->prod_id);
+                                    ?>
                                     <tr>
                                         <td><?= ++$i;?></td>
                                         <td><?php
@@ -39,7 +41,7 @@
                                             $category = get_data_by_id('product_category','product_category','prod_cat_id',$parent_pro_cat);
                                             $subCategory = get_data_by_id('product_category','product_category','prod_cat_id',$catId);
                                             $productName =  get_data_by_id('name','products','prod_id',$item->prod_id);
-                                            $unit =  get_data_by_id('unit','products','prod_id',$item->prod_id);
+                                            $unit =  productIdByDefaultStoreUnit($item->prod_id);
 
                                             echo $productName.'<br> <small>('.$category.' > '.$subCategory .')</small>';
                                             ?></td>
@@ -47,15 +49,30 @@
                                             <input type="hidden" name="prod_id[]" value="<?= $item->prod_id;?>">
                                             <input type="hidden" name="inv_item[]" value="<?= $item->inv_item;?>">
                                             <input type="hidden" name="price[]" value="<?= $item->price;?>">
-                                            <?= showWithCurrencySymbol($item->price);?>
+                                            <label for="int" class="text-capitalize"><?= showUnitName($unit)?></label><?= showWithCurrencySymbol(unitOrBasePriceByUnitPrice($unit,$item->price));?>
                                         </td>
-                                        <td><input type="number" name="qty[]" value="<?= $item->quantity;?>" class="qty"></td>
+                                        <td>
+                                            <input type="hidden" name="qty[]" id="qtyUp_<?= $item->prod_id; ?>" value="<?= $item->quantity;?>" class="qty">
+                                            <div style="display: flex;">
+                                                <?php $unitsArray = convertRevertToArray($item->quantity,json_decode($jsonArray));
+                                                foreach ($unitsArray as $input){
+                                                    ?>
+                                                    <div style="margin-right: 5px;">
+                                                        <label for="int" class="text-capitalize"><?= $input['name'];?></label>
+                                                        <input type="text" oninput="qtyMakeBaseUnit('<?= $item->prod_id ?>')" data-factor="<?= $input['conversion_factor']?>"  style="width: 50px;" value="<?= $input['qty']; ?>">
+                                                    </div>
+                                                <?php } ?>
+                                            </div>
+
+
+
+                                        </td>
                                         <td>
                                             <input type="hidden" name="total[]" value="<?= $item->final_price;?>" class="totalVal">
-                                            <span ><?= showWithCurrencySymbol($item->price);?></span>
+                                            <span ><?= showWithCurrencySymbol($item->final_price);?></span>
                                         </td>
 
-                                        <td><input type="text" name="discount[]" value="<?= $item->discount;?>" class="discount"></td>
+                                        <td><input type="text" name="discount[]" style="width: 100px;" value="<?= $item->discount;?>" class="discount"></td>
                                         <td>
                                             <input type="hidden" name="subTotal[]" value="<?= $item->final_price;?>" class="subTotalVal">
                                             <span id="subTotal" class="subTotal"><?= showWithCurrencySymbol($item->final_price);?></span>
@@ -174,7 +191,7 @@
                                 </div>
                                 <div class="col-xs-12" style="padding:20px; ">
                                     <input type="hidden"  name="invoice_id"  value="<?= $invoice->invoice_id ?>">
-                                    <button style="float: right;" id="btn" type="submit"
+                                    <button style="float: right;" id="dueBtn" type="submit"
                                             class="btn btn-primary">Sale</button>
                                     <b id="mess"></b>
                                 </div>
@@ -195,203 +212,79 @@
 
 <script>
 
-    function calculateAll() {
+    function calculate() {
+        let grandTotal = 0;
 
-        let itemsTotal = 0;
+        $("tbody tr").each(function () {
 
-        /* =========================
-           1️⃣ ROW CALCULATION
-        ==========================*/
-        $('tbody tr').each(function () {
-            let row = $(this);
-
-            let price    = parseFloat(row.find('input[name="price[]"]').val()) || 0;
-            let qty      = parseFloat(row.find('.qty').val()) || 0;
-            let discount = parseFloat(row.find('.discount').val()) || 0;
+            let price = parseFloat($(this).find("input[name='price[]']").val()) || 0;
+            let qty = parseFloat($(this).find("input[name='qty[]']").val()) || 0;
+            let discount = parseFloat($(this).find("input[name='discount[]']").val()) || 0;
 
             let total = price * qty;
-            let subTotal = total - (total * discount / 100);
+            $(this).find("input[name='total[]']").val(total.toFixed(8));
 
-            row.find('.rowTotal').text('৳ ' + total.toFixed(2) + ' /-');
-            row.find('.totalVal').val(total.toFixed(2));
-            row.find('.subTotalVal').val(subTotal.toFixed(2));
-            row.find('.subTotal').text('৳ ' + subTotal.toFixed(2) + ' /-');
+            let subTotal = Math.max(total - discount, 0);
 
-            itemsTotal += subTotal;
+            $(this).find("input[name='subTotal[]']").val(subTotal.toFixed(8));
+            $(this).find(".subTotal").text("৳ " + subTotal.toFixed(8));
+
+            grandTotal += subTotal;
         });
 
-        /* =========================
-           2️⃣ SALE DISCOUNT
-        ==========================*/
-        let saleDisc = parseFloat($('#saleDisc').val()) || 0;
-        let saleDiscAmount = (itemsTotal * saleDisc) / 100;
-        let afterDiscount = itemsTotal - saleDiscAmount;
+        let saleDisc = parseFloat($("#saleDisc").val()) || 0;
+        let saleDiscAmount = grandTotal * saleDisc / 100;
 
-        $('#saleDiscshow').val(saleDiscAmount.toFixed(2));
-        $('#granddiscountlast').val(saleDiscAmount.toFixed(2));
+        $("#saleDiscshow").val(saleDiscAmount.toFixed(8));
 
-        /* =========================
-           3️⃣ VAT
-        ==========================*/
-        let vat = parseFloat($('#vat').val()) || 0;
-        let vatAmount = (afterDiscount * vat) / 100;
+        let afterDiscount = grandTotal - saleDiscAmount;
 
-        $('#vatAmount').val(vatAmount.toFixed(2));
-        $('#vatTotallast').val(vatAmount.toFixed(2));
+        let vat = parseFloat($("#vat").val()) || 0;
+        let vatAmount = afterDiscount * vat / 100;
 
-        /* =========================
-           4️⃣ GRAND TOTAL
-        ==========================*/
-        let grandTotal = afterDiscount + vatAmount;
+        $("#vatAmount").val(vatAmount.toFixed(8));
 
-        $('#grandtotal').val(grandTotal.toFixed(2));
-        $('#grandtotal2').val(itemsTotal.toFixed(2));
-        $('#grandtotallast').val(grandTotal.toFixed(2));
+        let finalTotal = afterDiscount + vatAmount;
 
-        /* =========================
-           5️⃣ PAYMENT & DUE
-        ==========================*/
-        let cash   = parseFloat($('#nagod').val()) || 0;
-        let bank   = parseFloat($('#bankAmount').val()) || 0;
-        let cheque = parseFloat($('#chequeAmount').val()) || 0;
+        $("#grandtotal").val(finalTotal.toFixed(8));
+        $("#grandtotal2").val(finalTotal.toFixed(8));
 
-        let paid = cash + bank + cheque;
-        let due = grandTotal - paid;
+        let paid =
+            (parseFloat($("#nagod").val()) || 0) +
+            (parseFloat($("#bankAmount").val()) || 0) +
+            (parseFloat($("#chequeAmount").val()) || 0);
 
-        $('#grandtotaldue').val(due.toFixed(2));
-
-        /* =========================
-           6️⃣ VALIDATION
-        ==========================*/
-        if (due < 0) {
-            $('#btn').prop('disabled', true);
-            $('#mess').text('Over payment not allowed').css('color', 'red');
+        if (finalTotal - paid < 0) {
+            $('#dueBtn').prop('disabled', true);
         } else {
-            $('#btn').prop('disabled', false);
-            $('#mess').text('');
+            $('#dueBtn').prop('disabled', false);
         }
+
+        $("#grandtotaldue").val((finalTotal - paid).toFixed(8));
     }
 
-    /* =========================
-       🔥 AUTO UPDATE EVENTS
-    ==========================*/
-    $(document).on('input change',
-        '.qty, .discount, #saleDisc, #vat, #nagod, #bankAmount, #chequeAmount',
-        function () {
-            calculateAll();
+    // Global function
+    window.qtyMakeBaseUnit = function (printId) {
+        let row = $("#qtyUp_" + printId).closest("td");
+        let total = 0;
+        row.find("input[data-factor]").each(function () {
+            let factor = parseFloat($(this).data("factor")) || 0;
+            let qty = parseFloat($(this).val()) || 0;
+            total += qty * factor;
         });
+        $("#qtyUp_" + printId).val(total.toFixed(8));
 
-    /* =========================
-       INITIAL LOAD
-    ==========================*/
-    $(document).ready(function () {
-        calculateAll();
+        calculate();
+    };
+
+    $(function () {
+        $(document).on(
+            "keyup change",
+            "input[name='qty[]'], input[name='discount[]'], #saleDisc, #vat, #nagod, #bankAmount, #chequeAmount",
+            calculate
+        );
+
+        calculate();
     });
 
-
-//     function calculateFinal() {
-//
-//         /* 1️⃣ Item Subtotal Sum */
-//         let itemTotal = 0;
-//         $('.subTotalVal').each(function () {
-//             itemTotal += parseFloat($(this).val()) || 0;
-//         });
-//
-//         /* 2️⃣ Sale Discount */
-//         let saleDisc = parseFloat($('#saleDisc').val()) || 0;
-//         let saleDiscAmount = (itemTotal * saleDisc) / 100;
-//         let afterDiscount = itemTotal - saleDiscAmount;
-//
-//         $('#saleDiscshow').val(saleDiscAmount.toFixed(2));
-//         $('#granddiscountlast').val(saleDiscAmount.toFixed(2));
-//
-//         /* 3️⃣ VAT */
-//         let vat = parseFloat($('#vat').val()) || 0;
-//         let vatAmount = (afterDiscount * vat) / 100;
-//
-//         $('#vatAmount').val(vatAmount.toFixed(2));
-//         $('#vatTotallast').val(vatAmount.toFixed(2));
-//
-//         /* 4️⃣ Grand Total */
-//         let grandTotal = afterDiscount + vatAmount;
-//
-//         $('#grandtotal').val(grandTotal.toFixed(2));
-//         $('#grandtotal2').val(grandTotal.toFixed(2));
-//         $('#grandtotallast').val(grandTotal.toFixed(2));
-//
-//         /* 5️⃣ Payments */
-//         let cash   = parseFloat($('#nagod').val()) || 0;
-//         let bank   = parseFloat($('#bankAmount').val()) || 0;
-//         let cheque = parseFloat($('#chequeAmount').val()) || 0;
-//
-//         let paidTotal = cash + bank + cheque;
-//
-//         /* 6️⃣ Due */
-//         let due = grandTotal - paidTotal;
-//         $('#grandtotaldue').val(due.toFixed(2));
-//
-//         /* Button disable if overpaid */
-//         if (due < 0) {
-//             $('#btn').prop('disabled', true);
-//             $('#mess').text('Over payment not allowed').css('color','red');
-//         } else {
-//             $('#btn').prop('disabled', false);
-//             $('#mess').text('');
-//         }
-//     }
-//
-//     /* 🔥 Trigger recalculation */
-//     $(document).on('input', `
-//     .qty, .discount,
-//     #saleDisc, #vat,
-//     #nagod, #bankAmount, #chequeAmount
-// `, function () {
-//         calculateFinal();
-//     });
-//
-//     /* Initial load */
-//     $(document).ready(function () {
-//         calculateFinal();
-//     });
-</script>
-
-<script>
-    // function updateRow(row) {
-    //     let price    = parseFloat(row.find('input[name="price[]"]').val()) || 0;
-    //     let qty      = parseFloat(row.find('.qty').val()) || 0;
-    //     let discount = parseFloat(row.find('.discount').val()) || 0;
-    //
-    //     let total = price * qty;
-    //     let subTotal = total - (total * discount / 100);
-    //
-    //     row.find('.rowTotal').text('৳ ' + total.toFixed(2) + ' /-');
-    //     row.find('.totalVal').text(total.toFixed(2));
-    //     row.find('.subTotalVal').val(subTotal.toFixed(2));
-    //     row.find('.subTotal').text('৳ ' + subTotal.toFixed(2) + ' /-');
-    // }
-    //
-    // function updateGrandTotal() {
-    //     let grandTotal = 0;
-    //
-    //     $('.subTotalVal').each(function () {
-    //         grandTotal += parseFloat($(this).val()) || 0;
-    //     });
-    //
-    //     $('#grandtotal').val(grandTotal.toFixed(2));
-    // }
-    //
-    // /* 🔥 Update on qty or discount */
-    // $(document).on('input', '.qty, .discount', function () {
-    //     let row = $(this).closest('tr');
-    //     updateRow(row);
-    //     updateGrandTotal();
-    // });
-    //
-    // /* Initial load */
-    // $(document).ready(function () {
-    //     $('tbody tr').each(function () {
-    //         updateRow($(this));
-    //     });
-    //     updateGrandTotal();
-    // });
 </script>

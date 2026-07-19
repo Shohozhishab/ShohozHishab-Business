@@ -88,7 +88,7 @@
                                     $l = 0;
                                     $m = 0;
                                     $n = 0;
-                                    foreach (Cart()->contents() as $row) { ?>
+                                    foreach (Cart()->contents() as $row) { $unitId = productIdByDefaultStoreUnit($row['id']); ?>
                                         <tr>
                                             <td><?php echo ++$i; ?></td>
                                             <td>
@@ -97,13 +97,18 @@
                                                        value="<?php echo $row['id']; ?>">
                                             </td>
                                             <td>
-                                                <?php echo $row['qty']; ?>
+                                                <?php echo unitOrQtyByUnitQty($unitId,$row['qty']); ?>/<?php echo showUnitName($unitId) ?>
                                                 <input type="hidden" class="form-control " name="qty[]"
                                                        value="<?php echo $row['qty']; ?>">
                                             </td>
                                             <td>
-                                                <input type="text" class="form-control upprice" name="price[]"
-                                                       value="<?php echo $row['price']; ?>">
+                                                <input type="hidden" class="form-control upprice" id="qtyUp_<?= $row['id']; ?>" name="price[]" value="<?php echo $row['price']; ?>">
+                                                <?php
+                                                    $uPrice = unitOrBasePriceByUnitPrice($unitId,$row['price']);
+                                                    $conversion_factor = get_data_by_id('conversion_factor', 'units', 'units_id', $unitId)
+                                                ?>
+                                                <input type="text" class="form-control" name="unitPrice[]" oninput="priceMakeBase(this.value,'<?= $conversion_factor;?>','<?= $row['id'];?>' )" value="<?= $uPrice ?>">
+
                                             </td>
                                             <?php if (isset($discount) AND ($discount == 1)) { ?>
                                                 <td><input type="number" step=any class="form-control disc" oninput="minusValueCheck(this.value,this),validationDiscount('disc_<?= $row['id']?>')" name="disc[]" id="disc_<?= $row['id']?>"></td>
@@ -116,10 +121,10 @@
                                                        id="subtl2_<?php print $k++; ?>"
                                                        value="<?php echo $row['subtotal']; ?>">
                                                 <span id="subtl_<?php print $l++; ?>">
-                                                <span id="subtl_<?php print $j++; ?>">
-                                                 <?php echo number_format($row['subtotal']); ?>
+                                                    <span id="subtl_<?php print $j++; ?>">
+                                                     <?php echo number_format($row['subtotal']); ?>
+                                                    </span>
                                                 </span>
-                                            </span>
 
                                             </td>
                                             <td width="120px">

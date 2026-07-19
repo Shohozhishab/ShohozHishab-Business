@@ -33,6 +33,8 @@
                                                                                role="tab" data-toggle="tab">General</a></li>
                                     <li role="presentation" ><a href="#profile" aria-controls="profile" role="tab"
                                                                 data-toggle="tab">Personal</a></li>
+                                    <li role="presentation" ><a href="#unit" aria-controls="unit" role="tab"
+                                                                data-toggle="tab">Unit Tab</a></li>
                                     <li role="presentation" ><a href="#messages" aria-controls="messages" role="tab"
                                                                 data-toggle="tab">Photo</a></li>
                                 </ul>
@@ -102,16 +104,47 @@
 
                                             </div>
                                             <div class="form-group">
-                                                <label for="int">Selling Price</label>
-                                                <input type="number" class="form-control" name="selling_price" id="selling_price" placeholder="Selling Price" value="<?php echo $product->selling_price; ?>" />
-                                            </div>
-                                            <div class="form-group">
                                                 <label for="varchar">Size</label>
                                                 <input type="text" class="form-control" name="size" id="size" placeholder="Size" value="<?php echo $product->size; ?>" />
                                             </div>
                                             <div class="form-group">
                                                 <label for="int">Warranty </label>
                                                 <input type="text" class="form-control" name="warranty" id="warranty" placeholder="Warranty " value="<?php echo $product->warranty; ?>" />
+                                            </div>
+
+                                            <input type="hidden" name="prod_id" value="<?php echo $product->prod_id; ?>" />
+                                            <button type="submit" class="btn btn-primary geniusSubmit-btn">Update</button>
+                                            <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Products_ajax/'); ?>','<?php echo '/Admin/Products/'; ?>')" class="btn btn-default">Cancel</a>
+                                        </form>
+                                    </div>
+                                    <div class="col-lg-6"></div>
+                                </div>
+                                <div role="tabpanel" class="tab-pane " id="unit">
+                                    <div class="col-lg-6">
+                                        <form id="geniusformUpdate" action="<?php echo base_url('Admin/Products/unit_update'); ?>" method="post">
+
+                                            <div class="form-group">
+                                                <label for="varchar">Sell Unit</label>
+                                                <div id="sell_units_container">
+                                                <?php
+                                                    $sale_units = json_decode($product->sale_units);
+                                                    foreach ($units as $item){
+                                                ?>
+                                                    <label style="margin-left: 10px;">
+                                                        <input type="checkbox" name="sell_units[]" <?php foreach ($sale_units as $value){ echo ($item->units_id == $value)?'checked':''; }?> value="<?= $item->units_id;?>"> <?= $item->name;?>
+                                                    </label>
+                                                <?php } ?>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="int">Unit</label>
+                                                <div id="sell_price_units_container">
+                                                    <?php foreach ($units as $item){?>
+                                                        <label style="margin-left: 10px;">
+                                                            <input type="radio" name="unit" <?= ($item->units_id == $showUnit)?'checked':'';?> value="<?= $item->units_id;?>"> <?= $item->name;?>
+                                                        </label>
+                                                    <?php } ?>
+                                                </div>
                                             </div>
 
                                             <input type="hidden" name="prod_id" value="<?php echo $product->prod_id; ?>" />

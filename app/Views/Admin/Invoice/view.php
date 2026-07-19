@@ -73,9 +73,6 @@
                     <tr>
                         <th>No</th>
                         <th>Product</th>
-                        <?php if ($warranty == 1) { ?>
-                            <th>Warranty</th>
-                        <?php } ?>
                         <th>Price</th>
                         <th>Qty</th>
                         <th>Total</th>
@@ -96,15 +93,12 @@
                                 $category = get_data_by_id('product_category','product_category','prod_cat_id',$parent_pro_cat);
                                 $subCategory = get_data_by_id('product_category','product_category','prod_cat_id',$catId);
                                 $productName =  get_data_by_id('name','products','prod_id',$row->prod_id);
-                                $unit =  get_data_by_id('unit','products','prod_id',$row->prod_id);
+                                $unit =  productIdByDefaultStoreUnit($row->prod_id);
 
                                 echo $productName.'<br> <small>('.$category.' > '.$subCategory .')</small>';
                                 ?></td>
-                            <?php if ($warranty == 1) { ?>
-                                <td><?php echo get_data_by_id('warranty','products','prod_id',$row->prod_id);?></td>
-                            <?php }?>
-                            <td><?php echo showWithCurrencySymbol($row->price);?></td>
-                            <td><?php echo $row->quantity;?>/<?php echo showUnitName($unit) ?></td>
+                            <td><?php echo showWithCurrencySymbol(unitOrBasePriceByUnitPrice($unit,$row->price));?></td>
+                            <td><?php echo unitOrQtyByUnitQty($unit,$row->quantity);?>/<?php echo showUnitName($unit) ?></td>
                             <td><?php echo showWithCurrencySymbol($row->total_price);?></td>
                             <?php if ($discount == 1) { ?>
                                 <td><?php echo $row->discount;?></td>

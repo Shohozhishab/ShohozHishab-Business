@@ -9,7 +9,7 @@ class TransactionLog{
      * @param float $amount
      * @return void
      */
-    public function insert_log_data($table,$id = null,$transactionId = null,$amount,$dep_id =null,$wthd_id =null,$invoiceId = null,$purchaseId=null,$columName = null)
+    public function insert_log_data($table,$id = null,$transactionId = null,$amount=null,$dep_id =null,$wthd_id =null,$invoiceId = null,$purchaseId=null,$columName = null)
     {
         $data = [
             'table_name'  => $table ?: null,

@@ -31,9 +31,9 @@
                                     <div class="form-group">
                                         <label for="int">Type </label>
                                         <select class="form-control" name="type_id" required >
-                                            <option value="" >Please select</option>
+<!--                                            <option value="" >Please select</option>-->
                                             <option value="1">New Item</option>
-                                            <option value="2">Existing Item</option>
+<!--                                            <option value="2">Existing Item</option>-->
                                         </select>
                                     </div>
                                     <div class="form-group">
