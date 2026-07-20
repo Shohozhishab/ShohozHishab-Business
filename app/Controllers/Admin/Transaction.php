@@ -5480,4 +5480,372 @@ class Transaction extends BaseController
     }
 
 
+
+    public function delete($trans_id){
+        $db = DB();
+        $transaction = $db->table('transaction')->where('trans_id',$trans_id)->get()->getRow();
+        if ($transaction->customer_id != NULL){
+            $this->customer_transaction_delete($transaction);
+        }elseif ($transaction->supplier_id != NULL){
+            $this->supplier_transaction_delete($transaction);
+        }elseif ($transaction->loan_pro_id != NULL){
+            $this->loan_provider_transaction_delete($transaction);
+        }elseif (($transaction->bank_to_id != NULL) && ($transaction->bank_id != NULL)){
+            $this->fund_transfer_transaction_delete($transaction);
+        }
+//        elseif ($transaction->loan_pro_id == NULL && $transaction->customer_id == NULL && $transaction->supplier_id == NULL && $transaction->bank_to_id == NULL && $transaction->lc_id == NULL && $transaction->employee_id == NULL && $transaction->trangaction_type == 'Cr.'){
+//            $this->expense_transaction_delete($transaction);
+//        }
+        elseif ($transaction->loan_pro_id == NULL && $transaction->customer_id == NULL && $transaction->supplier_id == NULL && $transaction->bank_id == NULL && $transaction->lc_id == NULL && $transaction->account_id == NULL && $transaction->trangaction_type == 'Dr.'){
+            $this->other_sales_transaction_delete($transaction);
+        }elseif ($transaction->employee_id != NULL){
+            $this->employee_salary_transaction_delete($transaction);
+        }elseif ($transaction->vat_id != NULL){
+            $this->vat_transaction_delete($transaction);
+        }elseif ($transaction->account_id != NULL){
+            $accountType = accountIdByType($transaction->account_id);
+            if (!empty($accountType)) {
+                if ($accountType->type_key == 'assets') {
+                    $this->assets_transaction_delete($transaction);
+                }
+                if ($accountType->type_key == 'expenses') {
+                    $this->expense_transaction_delete($transaction);
+                }
+            }
+
+        }
+
+        $this->session->setFlashdata('message', '<div class="alert alert-success alert-dismissible" role="alert">Delete Record Success<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+        return redirect()->to(site_url('Admin/Transaction'));
+    }
+    private function customer_transaction_delete($transactionRow)
+    {
+        $shopId = $this->session->shopId;
+        $db = DB();
+        $amount = $transactionRow->amount;
+        $customerId = $transactionRow->customer_id;
+        $transId = $transactionRow->trans_id;
+        $bankId = $transactionRow->bank_id;
+
+        // 1. Handle Debit (Dr.) validation check early
+        if ($transactionRow->trangaction_type === 'Dr.') {
+            $availableBalance = !empty($bankId) ? checkBankBalance($bankId, $amount) : checkNagadBalance($amount);
+
+            if (!$availableBalance) {
+                $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+                return false;
+            }
+        }
+
+        // 2. Execute DB Transactions
+        $db->transStart();
+
+        // Base deletions (Common to both Cr. and Dr.)
+        $db->table('transaction')->where('trans_id', $transId)->delete();
+        $db->table('ledger')->where('trans_id', $transId)->delete();
+
+        // Calculate customer balance adjustment based on type
+        $customerOldBalance = get_data_by_id('balance', 'customers', 'customer_id', $customerId);
+        $customerRestBalance = ($transactionRow->trangaction_type == 'Cr.') ? ($customerOldBalance - $amount) : ($customerOldBalance + $amount);
+        $db->table('customers')->where('customer_id', $customerId)->update(['balance' => $customerRestBalance]);
+
+        // Handle Bank vs Shop adjustments
+        if (!empty($bankId)) {
+            $bankOldBalance = get_data_by_id('balance', 'bank', 'bank_id', $bankId);
+            $bankBalance = ($transactionRow->trangaction_type == 'Cr.') ? ($bankOldBalance + $amount) : ($bankOldBalance - $amount);
+
+            $db->table('bank')->where('bank_id', $bankId)->update(['balance' => $bankBalance]);
+            $db->table('ledger_bank')->where('trans_id', $transId)->delete();
+        } else {
+            $shopsOldBalance = get_data_by_id('cash', 'shops', 'sch_id', $shopId);
+            $shopBalance = ($transactionRow->trangaction_type == 'Cr.') ? ($shopsOldBalance + $amount) : ($shopsOldBalance - $amount);
+
+            $db->table('shops')->where('sch_id', $shopId)->update(['cash' => $shopBalance]);
+            $db->table('ledger_nagodan')->where('trans_id', $transId)->delete();
+        }
+
+        $db->transComplete();
+
+        return $db->transStatus(); // Returns true if transaction succeeded, false otherwise
+    }
+    private function supplier_transaction_delete($transactionRow)
+    {
+        $shopId = $this->session->shopId;
+        $db = DB();
+        $amount = $transactionRow->amount;
+        $supplierId = $transactionRow->supplier_id;
+        $transId = $transactionRow->trans_id;
+        $bankId = $transactionRow->bank_id;
+
+        // 1. Handle Debit (Dr.) validation check early
+        if ($transactionRow->trangaction_type === 'Dr.') {
+            $availableBalance = !empty($bankId) ? checkBankBalance($bankId, $amount) : checkNagadBalance($amount);
+
+            if (!$availableBalance) {
+                $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+                return false;
+            }
+        }
+
+        // 2. Execute DB Transactions
+        $db->transStart();
+
+        // Core deletions (Common to both Cr. and Dr.)
+        $db->table('transaction')->where('trans_id', $transId)->delete();
+        $db->table('ledger_suppliers')->where('trans_id', $transId)->delete();
+
+        // Calculate supplier balance adjustment
+        $supplierOldBalance = get_data_by_id('balance', 'suppliers', 'supplier_id', $supplierId);
+        $supplierBalance = ($transactionRow->trangaction_type == 'Cr.') ? ($supplierOldBalance - $amount) : ($supplierOldBalance + $amount);
+
+        $db->table('suppliers')->where('supplier_id', $supplierId)->update(['balance' => $supplierBalance]);
+
+        // Handle Bank vs Shop cash adjustments
+        if (!empty($bankId)) {
+            $bankOldBalance = get_data_by_id('balance', 'bank', 'bank_id', $bankId);
+            $bankBalance = ($transactionRow->trangaction_type == 'Cr.') ? ($bankOldBalance + $amount) : ($bankOldBalance - $amount);
+
+            $db->table('bank')->where('bank_id', $bankId)->update(['balance' => $bankBalance]);
+            $db->table('ledger_bank')->where('trans_id', $transId)->delete();
+        } else {
+            $shopsOldBalance = get_data_by_id('cash', 'shops', 'sch_id', $shopId);
+            $shopBalance = ($transactionRow->trangaction_type == 'Cr.') ? ($shopsOldBalance + $amount) : ($shopsOldBalance - $amount);
+
+            $db->table('shops')->where('sch_id', $shopId)->update(['cash' => $shopBalance]);
+            $db->table('ledger_nagodan')->where('trans_id', $transId)->delete();
+        }
+
+        $db->transComplete();
+
+        return $db->transStatus(); // Returns true on success, false on failure
+    }
+    private function loan_provider_transaction_delete($transactionRow)
+    {
+        $shopId = $this->session->shopId;
+        $db = DB();
+        $amount = $transactionRow->amount;
+        $loanProId = $transactionRow->loan_pro_id;
+        $transId = $transactionRow->trans_id;
+        $bankId = $transactionRow->bank_id;
+
+        // 1. Handle Debit (Dr.) validation check early
+        if ($transactionRow->trangaction_type === 'Dr.') {
+            $availableBalance = !empty($bankId) ? checkBankBalance($bankId, $amount) : checkNagadBalance($amount);
+            if (!$availableBalance) {
+                $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">Not Enough Balance<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+                return false; // Return false so your controller handles the redirect cleanly
+            }
+        }
+
+        // 2. Execute DB Transactions
+        $db->transStart();
+
+        // Core deletions (Common to both Cr. and Dr.)
+        $db->table('transaction')->where('trans_id', $transId)->delete();
+        $db->table('ledger_loan')->where('trans_id', $transId)->delete();
+
+        // Calculate loan provider balance adjustment
+        $loanProviderOldBalance = get_data_by_id('balance', 'loan_provider', 'loan_pro_id', $loanProId);
+        $loanProviderBalance = ($transactionRow->trangaction_type == 'Cr.') ? ($loanProviderOldBalance - $amount) : ($loanProviderOldBalance + $amount);
+
+        $db->table('loan_provider')->where('loan_pro_id', $loanProId)->update(['balance' => $loanProviderBalance]);
+
+        // Handle Bank vs Shop cash adjustments
+        if (!empty($bankId)) {
+            $bankOldBalance = get_data_by_id('balance', 'bank', 'bank_id', $bankId);
+            $bankBalance = ($transactionRow->trangaction_type == 'Cr.') ? ($bankOldBalance + $amount) : ($bankOldBalance - $amount);
+
+            $db->table('bank')->where('bank_id', $bankId)->update(['balance' => $bankBalance]);
+            $db->table('ledger_bank')->where('trans_id', $transId)->delete();
+        } else {
+            $shopsOldBalance = get_data_by_id('cash', 'shops', 'sch_id', $shopId);
+            $shopBalance = ($transactionRow->trangaction_type == 'Cr.') ? ($shopsOldBalance + $amount) : ($shopsOldBalance - $amount);
+
+            $db->table('shops')->where('sch_id', $shopId)->update(['cash' => $shopBalance]);
+            $db->table('ledger_nagodan')->where('trans_id', $transId)->delete();
+        }
+
+        $db->transComplete();
+
+        return $db->transStatus(); // Returns true on success, false on database failure
+    }
+    private function fund_transfer_transaction_delete($transactionRow){
+        $shopId = $this->session->shopId;
+        $db = DB();
+        $bankOldBalance = get_data_by_id('balance', 'bank', 'bank_id', $transactionRow->bank_to_id);
+        if ($bankOldBalance > $transactionRow->amount) {
+            $db->transStart();
+
+            $db->table('transaction')->where('trans_id', $transactionRow->trans_id)->delete();
+
+            //1st bank balance update (Start)
+            $bankForm = get_data_by_id('balance', 'bank', 'bank_id', $transactionRow->bank_id);
+            $bankBalance = $bankForm + $transactionRow->amount;
+            $db->table('bank')->where('bank_id', $transactionRow->bank_id)->update(['balance'=>$bankBalance]);
+            //ledger delete
+            $db->table('ledger_bank')->where('trans_id', $transactionRow->trans_id)->delete();
+
+
+            //2Nd bank balance update (Start)
+            $bankOldBalanceTo = get_data_by_id('balance', 'bank', 'bank_id', $transactionRow->bank_to_id);
+            $lastBankBalance = $bankOldBalanceTo - $transactionRow->amount;
+            $db->table('bank')->where('bank_id', $transactionRow->bank_to_id)->update(['balance'=>$lastBankBalance]);
+            // ledger delete
+            $db->table('ledger_bank')->where('trans_id', $transactionRow->trans_id)->delete();
+            $db->transComplete();
+        }
+        return $db->transStatus();
+    }
+    private function expense_transaction_delete($transactionRow){
+        $shopId = $this->session->shopId;
+        $db = DB();
+        $amount = $transactionRow->amount;
+        $accountId = $transactionRow->account_id;
+        $bankId = $transactionRow->bank_id;
+
+        $db->transStart();
+        $db->table('transaction')->where('trans_id', $transactionRow->trans_id)->delete();
+
+        $previousBalance = get_data_by_id('balance', 'accounts', 'account_id', $accountId);
+        $restBalance = $previousBalance - $amount;
+        $db->table('accounts')->where('account_id', $accountId)->update(['balance' => $restBalance]);
+
+        $db->table('ledger_accounts')->where('trans_id', $transactionRow->trans_id)->delete();
+
+        if (!empty($bankId)) {
+            $bankCash = get_data_by_id('balance', 'bank', 'bank_id', $bankId);
+            $bankUpData = $bankCash + $amount;
+            $db->table('bank')->where('bank_id', $bankId)->update(['balance' => $bankUpData]);
+            $db->table('ledger_bank')->where('trans_id', $transactionRow->trans_id)->delete();
+
+        }else {
+            $shopBalance = get_data_by_id('cash', 'shops', 'sch_id', $shopId);
+            $shopUpdateBalance = $shopBalance + $amount;
+            $db->table('shops')->where('sch_id', $shopId)->update(['cash' => $shopUpdateBalance]);
+            $db->table('ledger_nagodan')->where('trans_id', $transactionRow->trans_id)->delete();
+        }
+        $db->transComplete();
+
+        return $db->transStatus(); // Returns true on success, false on failure
+    }
+    private function other_sales_transaction_delete($transactionRow){
+        $shopId = $this->session->shopId;
+        $db = DB();
+
+        $db->transStart();
+        $db->table('transaction')->where('trans_id', $transactionRow->trans_id)->delete();
+
+        $db->table('ledger_other_sales')->where('trans_id', $transactionRow->trans_id)->delete();
+
+        $shopBalance = get_data_by_id('cash', 'shops', 'sch_id', $shopId);
+        $oldProfit = get_data_by_id('profit', 'shops', 'sch_id', $shopId);
+        $shopUpdateBalance = $shopBalance - $transactionRow->amount;
+        $newProfit = $oldProfit + $transactionRow->amount;
+        $db->table('shops')->where('sch_id', $shopId)->update(['cash'=>$shopUpdateBalance,'profit'=>$newProfit]);
+
+        $db->table('ledger_nagodan')->where('trans_id', $transactionRow->trans_id)->delete();
+
+        $db->transComplete();
+    }
+    private function employee_salary_transaction_delete($transactionRow){
+        $shopId = $this->session->shopId;
+        $db = DB();
+
+        $db->transStart();
+        $db->table('transaction')->where('trans_id', $transactionRow->trans_id)->delete();
+
+        $employeeBalance = get_data_by_id('balance', 'employee', 'employee_id', $transactionRow->employee_id);
+        $restBalance = $employeeBalance - $transactionRow->amount;
+        $db->table('employee')->where('employee_id', $transactionRow->employee_id)->update(['balance'=>$restBalance]);
+
+        $db->table('ledger_employee')->where('trans_id', $transactionRow->trans_id)->delete();
+
+        if (!empty($transactionRow->bank_id)) {
+            $bankOldBalance = get_data_by_id('balance', 'bank', 'bank_id', $transactionRow->bank_id);
+            $bankBalance = $bankOldBalance + $transactionRow->amount;
+            //Bank balance update
+            $db->table('bank')->where('bank_id', $transactionRow->bank_id)->update(['balance' => $bankBalance]);
+            //Delete bank ledger
+            $db->table('ledger_bank')->where('trans_id', $transactionRow->trans_id)->delete();
+        } else {
+            $shopsOldBalance = get_data_by_id('cash', 'shops', 'sch_id', $shopId);
+            $shopBalance = $shopsOldBalance + $transactionRow->amount;
+            //Shop balance update
+            $db->table('shops')->where('sch_id', $shopId)->update(['cash' => $shopBalance]);
+            //Delete Shop ledger
+            $db->table('ledger_nagodan')->where('trans_id', $transactionRow->trans_id)->delete();
+        }
+        $db->transComplete();
+
+
+    }
+    private function vat_transaction_delete($transactionRow){
+        $shopId = $this->session->shopId;
+        $db = DB();
+
+        $db->transStart();
+        $db->table('transaction')->where('trans_id', $transactionRow->trans_id)->delete();
+
+        $previousVat = get_data_by_id('balance', 'vat_register', 'vat_id', $transactionRow->vat_id);
+        $restBalance = $previousVat - $transactionRow->amount;
+        $db->table('vat_register')->where('vat_id', $transactionRow->vat_id)->update(['balance' => $restBalance]);
+
+        $db->table('ledger_vat')->where('trans_id', $transactionRow->trans_id)->delete();
+
+        if (!empty($transactionRow->bank_id)) {
+            $bankOldBalance = get_data_by_id('balance', 'bank', 'bank_id', $transactionRow->bank_id);
+            $bankBalance = $bankOldBalance + $transactionRow->amount;
+            //Bank balance update
+            $db->table('bank')->where('bank_id', $transactionRow->bank_id)->update(['balance' => $bankBalance]);
+            //Delete bank ledger
+            $db->table('ledger_bank')->where('trans_id', $transactionRow->trans_id)->delete();
+        } else {
+            $shopsOldBalance = get_data_by_id('cash', 'shops', 'sch_id', $shopId);
+            $shopBalance = $shopsOldBalance + $transactionRow->amount;
+            //Shop balance update
+            $db->table('shops')->where('sch_id', $shopId)->update(['cash' => $shopBalance]);
+            //Delete Shop ledger
+            $db->table('ledger_nagodan')->where('trans_id', $transactionRow->trans_id)->delete();
+        }
+        $db->transComplete();
+
+
+    }
+    private function assets_transaction_delete($transactionRow){
+        $shopId = $this->session->shopId;
+        $db = DB();
+
+        $amount = $transactionRow->amount;
+        $accountId = $transactionRow->account_id;
+        $bankId = $transactionRow->bank_id;
+
+        $db->transStart();
+        $db->table('transaction')->where('trans_id', $transactionRow->trans_id)->delete();
+
+        $previousBalance = get_data_by_id('balance', 'accounts', 'account_id', $accountId);
+        $restBalance = $previousBalance - $amount;
+        $db->table('accounts')->where('account_id', $accountId)->update(['balance' => $restBalance]);
+        $db->table('ledger_accounts')->where('trans_id', $transactionRow->trans_id)->delete();
+
+        if (!empty($bankId)){
+            $bankCash = get_data_by_id('balance', 'bank', 'bank_id', $bankId);
+            $bankUpData = $bankCash + $amount;
+            $bankTable = $db->table('bank')->where('bank_id', $bankId)->update(['balance' => $bankUpData]);
+            $db->table('ledger_bank')->where('trans_id', $transactionRow->trans_id)->delete();
+        }else{
+            $shopBalance = get_data_by_id('cash', 'shops', 'sch_id', $shopId);
+            $shopUpdateBalance = $shopBalance + $amount;
+            $db->table('shops')->where('sch_id', $shopId)->update(['cash' => $shopUpdateBalance]);
+            $db->table('ledger_nagodan')->where('trans_id', $transactionRow->trans_id)->delete();
+        }
+
+        $db->transComplete();
+
+        return $db->transStatus(); // Returns true on success, false on failure
+
+    }
+
+
+
+
 }
