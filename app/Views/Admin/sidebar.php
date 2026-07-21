@@ -152,11 +152,11 @@
                     <?php echo add_main_ajax_based_menu_with_permission('Purchase Ledger', '/Admin/Ledger_purchase', $role_id, 'fa fa-book', '/Admin/Ledger_purchase_ajax','Ledger_purchase'); ?>
                     <?php echo add_main_ajax_based_menu_with_permission('Sale Ledger', '/Admin/Ledger_sales', $role_id, 'fa fa-book', '/Admin/Ledger_sales_ajax','Ledger_sales'); ?>
                     <?php echo add_main_ajax_based_menu_with_permission('Ledger Stock', '/Admin/Ledger_stock', $role_id, 'fa fa-book', '/Admin/Ledger_stock_ajax','Ledger_stock'); ?>
-                    <?php echo add_main_ajax_based_menu_with_permission('Ledger Expense', '/Admin/Ledger_expense', $role_id, 'fa fa-book', '/Admin/Ledger_expense_ajax','Ledger_expense'); ?>
+                    <?php //echo add_main_ajax_based_menu_with_permission('Ledger Expense', '/Admin/Ledger_expense', $role_id, 'fa fa-book', '/Admin/Ledger_expense_ajax','Ledger_expense'); ?>
                     <?php echo add_main_ajax_based_menu_with_permission('Ledger Profit', '/Admin/Ledger_profit', $role_id, 'fa fa-book', '/Admin/Ledger_profit_ajax','Ledger_profit'); ?>
                     <?php echo add_main_ajax_based_menu_with_permission('Ledger Capital', '/Admin/Ledger_capital', $role_id, 'fa fa-book', '/Admin/Ledger_capital_ajax','Ledger_capital'); ?>
                     <?php echo add_main_ajax_based_menu_with_permission('Ledger Vat', '/Admin/Ledger_vat', $role_id, 'fa fa-book', '/Admin/Ledger_vat_ajax','Ledger_vat'); ?>
-                    <?php echo add_main_ajax_based_menu_with_permission('Ledger other sales', '/Admin/Ledger_other_sales', $role_id, 'fa fa-book', '/Admin/Ledger_other_sales_ajax','Ledger_other_sales'); ?>
+                    <?php echo add_main_ajax_based_menu_with_permission('Ledger Other Income', '/Admin/Ledger_other_sales', $role_id, 'fa fa-book', '/Admin/Ledger_other_sales_ajax','Ledger_other_sales'); ?>
                     <?php echo add_main_ajax_based_menu_with_permission('Ledger Service Charge', '/Admin/Ledger_service_charge', $role_id, 'fa fa-book', '/Admin/Ledger_service_charge_ajax','Ledger_service_charge'); ?>
                     <?php echo add_main_ajax_based_menu_with_permission('Discount Ledger', '/Admin/Ledger_discount', $role_id, 'fa fa-book', '/Admin/Ledger_discount_ajax','Ledger_discount'); ?>
                     <?php echo add_main_ajax_based_menu_with_permission('Accounts Ledger', '/Admin/Ledger_accounts', $role_id, 'fa fa-book', '/Admin/Ledger_accounts_ajax','Ledger_accounts'); ?>
@@ -311,7 +311,29 @@
             <?php } ?>
             <?php echo add_main_ajax_based_menu_with_permission('Capital List', '/Admin/Capital/list', $role_id, 'fa fa-book', '/Admin/Capital_ajax/list','Capital'); ?>
 
-            <?php echo add_main_ajax_based_menu_with_permission('Settings', '/Admin/Settings', $role_id, 'fa fa-hospital-o', '/Admin/Settings_ajax','Settings'); ?>
+
+            <?php
+            $modArrayEmp = ['Settings','Unit_categories','Unit'];
+            $menuAccessEmp = all_menu_permission_check($modArrayEmp,$role_id);
+            if ($menuAccessEmp == true){
+                ?>
+                <li class="treeview">
+                    <a href="#" >
+                        <i class="fa fa-gear"></i>
+                        <span>Settings</span>
+                        <span class="pull-right-container">
+              <i class="fa fa-angle-left pull-right"></i>
+            </span>
+                    </a>
+                    <ul class="treeview-menu">
+                        <?php echo add_main_ajax_based_menu_with_permission('Settings', '/Admin/Settings', $role_id, 'fa fa-gear', '/Admin/Settings_ajax','Settings'); ?>
+                        <?php echo add_main_ajax_based_menu_with_permission('Unit Categories', '/Admin/Unit_categories', $role_id, 'fa fa-balance-scale', '/Admin/Unit_categories_ajax','Unit_categories'); ?>
+                        <?php echo add_main_ajax_based_menu_with_permission('Unit', '/Admin/Unit', $role_id, 'fa fa-balance-scale', '/Admin/Unit_ajax','Unit'); ?>
+                        <?php echo add_main_ajax_based_menu_with_permission('Unit Set', '/Admin/Unit_set', $role_id, 'fa fa-gear', '/Admin/Unit_set_ajax','Unit_set'); ?>
+                    </ul>
+                </li>
+            <?php } ?>
+
 
 
             <?php echo add_main_ajax_based_menu_with_permission('Previous Data Show', '/Admin/Previous_data_show', $role_id, 'fa fa-exchange', '/Admin/Previous_data_show_ajax','Previous_data_show'); ?>

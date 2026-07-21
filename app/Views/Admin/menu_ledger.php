@@ -14,14 +14,14 @@
 
 
 <a href="#" onclick="showData('<?php echo site_url('/Admin/Ledger_stock_ajax'); ?>','<?php echo '/Admin/Ledger_stock';?>')"  class="btn btn-default" style="margin-bottom: 5px;">Ledger Stock</a>
-<a href="#" onclick="showData('<?php echo site_url('/Admin/Ledger_expense_ajax'); ?>','<?php echo '/Admin/Ledger_expense';?>')"  class="btn btn-default" style="margin-bottom: 5px;">Ledger Expense</a>
+
 <a href="#" onclick="showData('<?php echo site_url('/Admin/Ledger_profit_ajax'); ?>','<?php echo '/Admin/Ledger_profit';?>')"  class="btn btn-default" style="margin-bottom: 5px;">Ledger Profit</a>
 <a href="#" onclick="showData('<?php echo site_url('/Admin/Ledger_capital_ajax'); ?>','<?php echo '/Admin/Ledger_capital';?>')"  class="btn btn-default" style="margin-bottom: 5px;">Ledger Capital</a>
 
 <a href="#" onclick="showData('<?php echo site_url('/Admin/Ledger_vat_ajax'); ?>','<?php echo '/Admin/Ledger_vat';?>')"  class="btn btn-default" style="margin-bottom: 5px;">Ledger Vat</a>
 
-<a href="#" onclick="showData('<?php echo site_url('/Admin/Ledger_other_sales_ajax'); ?>','<?php echo '/Admin/Ledger_other_sales';?>')"  class="btn btn-default" style="margin-bottom: 5px;">Ledger other sales</a>
+<a href="#" onclick="showData('<?php echo site_url('/Admin/Ledger_other_sales_ajax'); ?>','<?php echo '/Admin/Ledger_other_sales';?>')"  class="btn btn-default" style="margin-bottom: 5px;">Ledger Other Income</a>
 
-<a href="#" onclick="showData('<?php echo site_url('/Admin/Ledger_discount_ajax'); ?>','<?php echo '/Admin/Ledger_discount';?>')"  class="btn btn-default" style="margin-bottom: 5px;">Ledger discount</a>
+<a href="#" onclick="showData('<?php echo site_url('/Admin/Ledger_discount_ajax'); ?>','<?php echo '/Admin/Ledger_discount';?>')"  class="btn btn-default" style="margin-bottom: 5px;">Ledger Discount</a>
 <a href="#" onclick="showData('<?php echo site_url('/Admin/Ledger_service_charge_ajax'); ?>','<?php echo '/Admin/Ledger_service_charge';?>')"  class="btn btn-default" style="margin-bottom: 5px;">Ledger Service Charge</a>
 

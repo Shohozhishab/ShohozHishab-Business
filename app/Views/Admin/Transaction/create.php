@@ -44,7 +44,7 @@
                                 <li class="tab-pane "><a href="#loanProvider" data-toggle="tab">Account Head</a></li>
                                 <li class="tab-pane "><a href="#bank" data-toggle="tab">Fund Transfer</a></li>
                                 <li class="tab-pane "><a href="#expense" data-toggle="tab">Expense</a></li>
-                                <li class="tab-pane "><a href="#othersales" data-toggle="tab">Other Sales</a></li>
+                                <li class="tab-pane "><a href="#othersales" data-toggle="tab">Other Income</a></li>
                                 <li class="tab-pane "><a href="#employeeSalary" data-toggle="tab">Employee Salary</a>
                                 </li>
                                 <li class="tab-pane "><a href="#vatPay" data-toggle="tab">Vat Pay</a></li>
@@ -412,7 +412,7 @@
 
                                     <div class="tab-pane " id="othersales">
                                         <div class="box-header">
-                                            <h3 class="box-title">Other Sales Transaction</h3>
+                                            <h3 class="box-title">Other Income Transaction</h3>
                                         </div>
                                         <div class="box-body">
                                             <div class="row">

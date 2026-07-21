@@ -126,6 +126,7 @@ class Sales extends BaseController
         $shopId = $this->session->shopId;
 
         $keyWord = $this->request->getPost("keyWord");
+//        $keyWord = 'b';
 
         $storeTab = DB()->table('stores');
         $store = $storeTab->where('sch_id', $shopId)->where('is_default', 1)->get()->getRow();
@@ -135,7 +136,6 @@ class Sales extends BaseController
         $proTable = DB()->table('products');
 
         $data = $proTable
-            ->select('products.*')
             ->join('product_stock_relation', 'product_stock_relation.product_id = products.prod_id')
             ->where('products.sch_id', $shopId)
             ->where('product_stock_relation.store_id', $store->store_id)
@@ -151,24 +151,37 @@ class Sales extends BaseController
         $view = '';
         foreach ($data as $sval) {
             $image = ($sval->picture == NULL) ? 'no_image.jpg' : $sval->picture;
-            $unit = get_data_by_id('unit', 'products', 'prod_id', $sval->prod_id);
+            $unit = $sval->unit;
             $qty = totalProductInStoreByProductIdOrStoreId($sval->prod_id,$store->store_id);
 
-            $view = $view . '<li>
-                            <form action="' . site_url('Admin/Sales/add_cart') . '" method="post">
-                                <div class="col-xs-12" style="padding:15px; border-bottom: 1px solid;color: #d2d6de;" ><a>
-                                <div class="col-xs-2">
-                                    <img class="img-circle" src="' . base_url() . '/uploads/product_image/' . $image . '" width="60" height="60">
-                                </div>
-                                <div class="col-xs-4"><label for="usr">Product Name /Price:</label><h4 style="color:black;">' . $sval->name . '/' . $sval->selling_price . 'Tk.</h4><p>Available Quantity: '.$qty.'</p><input class="form-control" type="hidden" readonly id="name" name="name" value="' . $sval->name . '"><input class="form-control" type="hidden" readonly id="price" name="price" value="' . $sval->selling_price . '"><input class="form-control" type="hidden" readonly id="prod_id" name="prod_id" value="' . $sval->prod_id . '"></div>
-                                <div class="col-xs-2"><span for="usr">Product Category:</span><br><h4 style="color:black;">' . get_data_by_id('product_category', 'product_category', 'prod_cat_id', $sval->prod_cat_id) . '</h4>
-                                </div>
-                                <div class="col-xs-2"><span>Quantity:</span><input class="form-control" type="number" name="quantity" id="quantity" min="1" max="'.$qty.'" value="1"><br><span>' . showUnitName($unit) . '</span></div>
-                                <div class="col-xs-2" style="padding-top:28px; ">
-                                    <button  type="subbmit" class="add_cart btn btn-success btn-xs" >Add To Cart</button>
-                                </div></a></div>
-                                </form>
-                                </li>';
+            $availQty = unitOrQtyByUnitQty($unit,$qty);
+            $SalePrice = unitOrBasePriceByUnitPrice($unit,$sval->selling_price);
+
+            $units_id = json_decode($sval->sale_units);
+            $unitsArray = DB()->table('units')->whereIn('units_id',$units_id)->orderBy('conversion_factor', 'DESC')->get()->getResult();
+
+            $view .= '<li>
+                        <form action="' . site_url('Admin/Sales/add_cart') . '" method="post">
+                            <div class="col-xs-12" style="padding:15px; border-bottom: 1px solid;color: #d2d6de;" ><a>
+                            <div class="col-xs-2">
+                                <img class="img-circle" src="' . base_url() . '/uploads/product_image/' . $image . '" width="60" height="60">
+                            </div>
+                            <div class="col-xs-4"><label for="usr">Name /Price:</label><h4 style="color:black;">' . $sval->name . '/' . showWithCurrencySymbol($SalePrice) . 'Tk.</h4><p>Available Quantity: '.$availQty.'/'.showUnitName($unit).'</p><input class="form-control" type="hidden" readonly id="name" name="name" value="' . $sval->name . '"><input class="form-control" type="hidden" readonly id="price" name="price" value="' . $sval->selling_price . '"><input class="form-control" type="hidden" readonly id="prod_id" name="prod_id" value="' . $sval->prod_id . '"></div>
+                            <div class="col-md-5 row">';
+                 foreach ($unitsArray as $val){
+                     $view .='<div class="form-group col-xs-6">
+                        <label for="int" class="text-capitalize">'. $val->name.' </label>
+                        <input type="text" class="form-control" name="'. strtolower(str_replace(' ', '_', $val->name)).'" placeholder="'. $val->name.'" value="" >
+                     </div>';
+                 }
+            $view .='</div>';
+
+            $view .='<div class="col-xs-1" >
+                        <span for="usr">Category:</span><br><h4 style="color:black;">' . get_data_by_id('product_category', 'product_category', 'prod_cat_id', $sval->prod_cat_id) . '</h4>
+                                <button  type="subbmit" class="add_cart btn btn-success btn-xs" >Add</button>
+                            </div></a></div>
+                        </form>
+                     </li>';
 
         }
         echo $view;
@@ -187,7 +200,7 @@ class Sales extends BaseController
         $proId = $this->request->getPost('prod_id');
         $proName = $this->request->getPost('name');
         $proPrice = $this->request->getPost('price');
-        $quantity = $this->request->getPost('quantity');
+//        $quantity = $this->request->getPost('quantity');
 
         $storeTab = DB()->table('stores');
         $store = $storeTab->where('sch_id', $shopId)->where('is_default', 1)->get()->getRow();
@@ -201,14 +214,34 @@ class Sales extends BaseController
                 $qty = $row['qty'];
             }
         }
-        $totalquantity = $quantity + $qty;
 
+        //unit qty
+        $unitIdJson = get_data_by_id('sale_units', 'products', 'prod_id', $proId);
+        $units_id = json_decode($unitIdJson);
+        $unitQty = 0;
+        $unit = array();
+        $units = DB()->table('units')->whereIn('units_id', $units_id)->orderBy('conversion_factor', 'DESC')->get()->getResult();
+        foreach ($units as $val) {
+            $nameUnit = strtolower(str_replace(' ', '_', $val->name));
+            $unit[$nameUnit] = $this->request->getPost($nameUnit);
+            if (!empty($unit[$nameUnit])) {
+                $unitQty += $val->conversion_factor * $unit[$nameUnit];
+            }
+        }
+//        $unitId = get_data_by_id('unit', 'products', 'prod_id', $proId);
+//        $query = DB()->table('units')->where('units_id',$unitId)->get()->getRow();
+//        $unitQty = $quantity;
+//        if (!empty($query)){
+//            $unitQty = $query->conversion_factor * $quantity;
+//        }
+
+        $totalquantity = $unitQty + $qty;
         if ($productQnt >= $totalquantity) {
-            if ($quantity > 0) {
+            if ($totalquantity > 0) {
                 $data = array(
                     'id' => $proId,
                     'name' => strval($proName),
-                    'qty' => $quantity,
+                    'qty' => $totalquantity,
                     'price' => $proPrice
                 );
                 $this->cart->insert($data);
@@ -508,7 +541,8 @@ class Sales extends BaseController
 
 
             //calculating profit for individual item and updating the profit column (start)
-            $productPurPrice = get_data_by_id('purchase_price', 'products', 'prod_id', $proId[$i]);
+            $productData = productIdByDefaultStoreDataRow($proId[$i]);
+            $productPurPrice = $productData->purchase_price;
             $purPrice = $productPurPrice * $quantity[$i];
             $totalpurPrice += $productPurPrice * $quantity[$i];
             $profit = $prosubTo[$i] - $purPrice;
@@ -1242,7 +1276,8 @@ class Sales extends BaseController
 
 
             //calculating profit for individual item and updating the profit column (start)
-            $productPurPrice = get_data_by_id('purchase_price', 'products', 'prod_id', $proId[$i]);
+            $rowUnit = productIdByDefaultStoreDataRow($proId[$i]);
+            $productPurPrice = $rowUnit->purchase_price;
             $purPrice = $productPurPrice * $quantity[$i];
             $totalpurPrice += $productPurPrice * $quantity[$i];
             $profit = $subTotal[$i] - $purPrice;
@@ -1257,15 +1292,19 @@ class Sales extends BaseController
 
 
             //product Qnt Update in product table (start)
+            $storeTab = DB()->table('stores');
+            $store = $storeTab->where('sch_id', $shopId)->where('is_default', 1)->get()->getRow();
+            $storeId = $store->store_id;
             foreach ($proQty as $pro) {
                 if ($pro->id == $proId[$i]) {
-                    $productQnt = get_data_by_id('quantity', 'products', 'prod_id', $proId[$i]);
-                    $qnt = ($productQnt + $pro->amount) - $quantity[$i];
+                    $relRow = productIdByDefaultStoreDataRow($proId[$i]);
+                    $productQnt = $relRow->quantity;
+                    $qnt = $productQnt - $quantity[$i];
                     $qntProData = array(
                         'quantity' => $qnt,
                     );
-                    $productsTable = DB()->table('products');
-                    $productsTable->where('prod_id', $proId[$i])->update($qntProData);
+                    $productsTable = DB()->table('product_stock_relation');
+                    $productsTable->where('store_id',$storeId)->where('product_id', $proId[$i])->update($qntProData);
                 }
             }
             //product Qnt Update in product table (end)

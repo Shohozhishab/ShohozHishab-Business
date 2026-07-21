@@ -21,7 +21,7 @@
                         <?php if (session()->getFlashdata('message') !== NULL) : echo session()->getFlashdata('message'); endif; ?>
                     </div>
                     <div class="col-lg-12">
-                        <form action="<?php echo $action; ?>" method="post">
+
                             <div class="col-lg-12">
                                 <div class="box">
                                     <div class="box-header">
@@ -29,69 +29,50 @@
                                         <p style="float: right;">Supplier: <?= $supplier->name;?>. Balance: <?= showWithCurrencySymbol($supplier->balance);?></p>
                                     </div>
                                     <div class="box-body ">
-                                        <input type="hidden" class="form-control" name="purchase_id"
-                                               value="<?php echo $purchaseId; ?>">
-                                        <input type="hidden" class="form-control" name="supplier_id"
-                                               value="<?php echo $supplierId; ?>">
+                                        <form id="adtoCartform" action="<?= site_url('Admin/Purchase/addCart') ?>" method="post">
+                                            <div class="form-group col-xs-3">
+                                                <label for="int">Category </label>
+                                                <select class="form-control" onchange="showSubCategory(this.value)"
+                                                        name="category" id="category">
+                                                    <option value="">Please Select</option>
+                                                    <?php echo getCatListInOption('prod_cat_id', 'prod_cat_id', 'product_category', 'product_category'); ?>
+                                                </select>
+                                            </div>
+                                            <div class="form-group col-xs-3">
+                                                <label for="int">Sub Category </label>
+                                                <select class="form-control" name="sub_category" id="subCat">
+                                                    <option value="">Please Select</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group col-xs-3">
+                                                <label for="varchar">Product Name </label> <span id="nameValid"
+                                                                                                 style="color: red;"></span>
+                                                <input type="text" class="form-control" name="name" id="name"
+                                                       placeholder="Name"/>
+                                            </div>
+                                            <div class="form-group col-xs-3">
+                                                <label for="int">Unit Set</label>
+                                                <select class="form-control" name="categories_id" id="categories_id" onchange="unitShow(this.value)" >
+                                                    <option value="">Please Select</option>
+                                                    <?php foreach ($unit_set as $cat){ ?>
+                                                    <option value="<?= $cat->unit_set_id;?>" <?= ($cat->default_set == '1')?'Selected':'';?> ><?= $cat->name;?></option>
+                                                    <?php } ?>
+                                                </select>
+                                            </div>
+                                            <div id="unitData"></div>
 
-                                        <div class="form-group col-xs-3">
-                                            <label for="int">Category </label>
-                                            <select class="form-control" onchange="showSubCategory(this.value)"
-                                                    name="category" id="category">
-                                                <option value="">Please Select</option>
-                                                <?php echo getCatListInOption('prod_cat_id', 'prod_cat_id', 'product_category', 'product_category'); ?>
-                                            </select>
-                                        </div>
-                                        <div class="form-group col-xs-3">
-                                            <label for="int">Sub Category </label>
-                                            <select class="form-control" name="sub_category" id="subCat">
-                                                <option value="">Please Select</option>
-                                            </select>
-                                        </div>
-                                        <div class="form-group col-xs-3">
-                                            <label for="varchar">Product Name </label> <span id="nameValid"
-                                                                                             style="color: red;"></span>
-                                            <input type="text" class="form-control" name="name" id="name"
-                                                   placeholder="Name"/>
-                                        </div>
+                                            <div class="form-group col-xs-3 " style="margin-top: 25px;">
+                                                <button type="submit" class="form-control btn btn-info btn-xs geniusSubmit-btn">Add Cart </button>
+                                            </div>
+                                        </form>
 
-
-                                        <div class="form-group col-xs-3">
-                                            <label for="int">Unit </label>
-                                            <select class="form-control" name="unit">
-                                                <?php echo selectOptions($selected = 1, unitArray()); ?>
-                                            </select>
-                                        </div>
-
-                                        <div class="form-group col-xs-3">
-                                            <label for="int">Purchase Price</label>
-                                            <input type="number" class="form-control purchase_price"
-                                                   oninput="minusValueCheck(this.value,this)" name="price"
-                                                   id="price"
-                                                   placeholder="Purchase Price"/>
-                                        </div>
-                                        <div class="form-group col-xs-3">
-                                            <label for="int">Selling Price</label>
-                                            <input type="number" class="form-control selling_price"
-                                                   oninput="minusValueCheck(this.value,this)"
-                                                   name="selling_price" id="selling_price"
-                                                   placeholder="Selling Price"/>
-                                        </div>
-                                        <div class="form-group col-xs-3">
-                                            <label for="int">Quantity </label>
-                                            <input type="number" class="form-control quantity" name="qty"
-                                                   placeholder="Quantity" value="1"/>
-                                        </div>
-                                        <div class="form-group col-xs-3 " style="margin-top: 30px;">
-                                            <button onclick="addCart()" type="button"
-                                                    class="form-control btn btn-info btn-xs">Add Cart
-                                            </button>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-
+                        <form action="<?php echo $action; ?>" method="post">
+                            <input type="hidden" class="form-control" name="purchase_id" value="<?php echo $purchaseId; ?>">
+                            <input type="hidden" class="form-control" name="supplier_id" value="<?php echo $supplierId; ?>">
                             <div class="col-lg-12">
                                 <div class="box">
                                     <div class="box-header">
@@ -127,19 +108,21 @@
                                                     <td><input type="hidden" class="form-control" name="unit[]"
                                                                id="unit"
                                                                value="<?php echo $row['unit']; ?>"/><?php echo showUnitName($row['unit']); ?>
+                                                        <input type="hidden" name="unit_set_id[]" value="<?php echo $row['unit_set_id']; ?>">
                                                     </td>
                                                     <td><input type="hidden" class="form-control purchase_price"
                                                                name="purchase_price[]" id="purchase_price"
-                                                               value="<?php echo $row['price']; ?>"/><?php echo showWithCurrencySymbol($row['price']); ?>
+                                                               value="<?php echo $row['price']; ?>"/><?php echo showWithCurrencySymbol(unitOrBasePriceByUnitPrice($row['unit'],$row['price'])); ?>
                                                     </td>
                                                     <td><input type="hidden" class="form-control selling_price"
                                                                name="selling_price[]" id="selling_price"
-                                                               value="<?php echo $row['salePrice']; ?>"/><?php echo showWithCurrencySymbol($row['salePrice']); ?>
+                                                               value="<?php echo $row['salePrice']; ?>"/><?php echo showWithCurrencySymbol(unitOrBasePriceByUnitPrice($row['unit'],$row['salePrice'])); ?>
                                                     </td>
                                                     <td><input type="hidden" class="form-control quantity"
                                                                name="quantity[]"
                                                                placeholder="Quantity"
-                                                               value="<?php echo $row['qty']; ?>"/><?php echo $row['qty']; ?>
+                                                               value="<?php echo $row['qty']; ?>"/>
+                                                        <?php echo unitOrQtyByUnitQty($row['unit'],$row['qty']); ?>/<?php echo showUnitName($row['unit']); ?>
                                                     </td>
                                                     <td><input type="hidden" class="form-control"
                                                                name="total_price[]"
@@ -208,7 +191,7 @@
                                                     </div>
                                                     <div class="form-group col-xs-6">
                                                         <input type="number" class="form-control" name="totalPrice"
-                                                               id="totalPrice" value="<?php echo Cart()->total() ?>"
+                                                               id="totalPrice" value="<?php echo round(Cart()->total(),2) ?>"
                                                                readonly>
                                                     </div>
                                                     <div class="col-xs-6">
@@ -241,7 +224,7 @@
                                                     <div class="form-group col-xs-6">
                                                         <input type="number" class="form-control" name="due"
                                                                id="totaldue"
-                                                               readonly value="<?php echo Cart()->total() ?>">
+                                                               readonly value="<?php echo round(Cart()->total(),2) ?>">
                                                     </div>
                                                 </div>
 

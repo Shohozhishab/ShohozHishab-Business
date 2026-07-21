@@ -44,12 +44,12 @@
                     </tr>
                     </thead>
                     <tbody><?php $start= 0;
-                    foreach ($purchaseItame as $purchase){ ?>
+                    foreach ($purchaseItame as $purchase){ $unit = productIdByDefaultStoreUnit($purchase->prod_id) ?>
                         <tr>
                             <td width="80px"><?php echo ++$start ?></td>
                             <td><?php echo get_data_by_id('name','products','prod_id',$purchase->prod_id); ?></td>
-                            <td><?php echo $purchase->quantity; ?></td>
-                            <td><?php echo showWithCurrencySymbol($purchase->purchase_price); ?></td>
+                            <td><?php echo unitOrQtyByUnitQty($unit,$purchase->quantity); ?>/<?php echo showUnitName($unit) ?></td>
+                            <td><?php echo showWithCurrencySymbol(unitOrBasePriceByUnitPrice($unit,$purchase->purchase_price)); ?></td>
                         </tr>
                     <?php  } ?>
                     </tbody>

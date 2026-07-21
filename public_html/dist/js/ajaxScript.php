@@ -956,6 +956,12 @@
   });
   //salse price new input calculet (end)
 
+  function priceMakeBase(val,key,printId){
+      var total = val/key;
+      $("#qtyUp_"+printId).val(total);
+      priceUpCalculate();
+  }
+
 
   function checkDueAmount() {
     var duetotal = $("#grandtotaldue").val();
@@ -3828,4 +3834,206 @@
       });
 
   });
+
+  function unitCategoryValidat() {
+      var name = $('#name').val();
+
+      if (required(name) == false) {
+          $('#name').parent().find('.error').html('<div style="color:red;" id="mesWrong">This field cannot be empty</div>');
+      } else if (numericOrStringCheck(name) == false) {
+          $('#name').parent().find('.error').html('<div style="color:red;" id="mesWrong">Only numeric not allow!</div>');
+      } else if (lengthValidation(name) == false) {
+          $('#name').parent().find('.error').html('<div style="color:red;" id="mesWrong">maximum length of 32 characters</div>');
+      } else {
+          // $('#name').parent().find('.error').html('<div style="color:green;" id="mesWrong">Success</div>');
+          var name_validation = true;
+      }
+
+
+      if (name_validation == true) {
+          $('#geniusform').submit();
+      }
+  }
+
+  function unitValidat() {
+      var name = $('#name').val();
+      var symbol = $('#symbol').val();
+      var unit_categories_id = $('#unit_categories_id').val();
+      var conversion_factor = $('#conversion_factor').val();
+      var decimal_places = $('#decimal_places').val();
+
+      if (required(name) == false) {
+          $('#name').parent().find('.error').html('<div style="color:red;" id="mesWrong">This field cannot be empty</div>');
+      } else if (numericOrStringCheck(name) == false) {
+          $('#name').parent().find('.error').html('<div style="color:red;" id="mesWrong">Only numeric not allow!</div>');
+      } else if (lengthValidation(name) == false) {
+          $('#name').parent().find('.error').html('<div style="color:red;" id="mesWrong">maximum length of 32 characters</div>');
+      } else {
+          // $('#name').parent().find('.error').html('<div style="color:green;" id="mesWrong">Success</div>');
+          var name_validation = true;
+      }
+
+      if (required(symbol) == false) {
+          $('#symbol').parent().find('.error').html('<div style="color:red;" id="mesWrong">This field cannot be empty</div>');
+      }else {
+          var symbol_validation = true;
+      }
+      if (required(unit_categories_id) == false || unit_categories_id == "") {
+          $('#unit_categories_id').parent().find('.error').html('<div style="color:red;" id="mesWrong">This field cannot be empty</div>');
+      } else {
+          var unit_categories_id_validation = true;
+      }
+      if (required(conversion_factor) == false) {
+          $('#conversion_factor').parent().find('.error').html('<div style="color:red;" id="mesWrong">This field cannot be empty</div>');
+      }else {
+          var conversion_factor_validation = true;
+      }
+      if (required(decimal_places) == false) {
+          $('#decimal_places').parent().find('.error').html('<div style="color:red;" id="mesWrong">This field cannot be empty</div>');
+      }else {
+          var decimal_places_validation = true;
+      }
+
+
+      if ((name_validation == true) && (symbol_validation == true) && (unit_categories_id_validation == true) && (conversion_factor_validation == true) && (decimal_places_validation == true)) {
+          $('#geniusform').submit();
+      }
+  }
+  function unitShow(categories_id){
+      $.ajax({
+          method: "POST",
+          url: '<?= base_url("Admin/Purchase/unitShow")?>',
+          data: {unit_set_id:categories_id},
+          beforeSend: function() {
+              $("#loading-image").show();
+          },
+          success: function(data) {
+              $("#loading-image").hide();
+              // alert(data);
+              $('#unitData').html(data);
+          }
+
+      });
+  }
+
+  $(function() {
+      var categories_id = $('#categories_id').val();
+      if (categories_id !== undefined) {
+          $.ajax({
+              method: "POST",
+              url: '<?= base_url("Admin/Purchase/unitShow")?>',
+              data: {unit_set_id: categories_id},
+              beforeSend: function () {
+                  $("#loading-image").show();
+              },
+              success: function (data) {
+                  $("#loading-image").hide();
+                  // alert(data);
+                  $('#unitData').html(data);
+              }
+
+          });
+      }
+  });
+
+  $(document).on('submit', '#adtoCartform', function(e) {
+      e.preventDefault();
+
+      $('#message').html("<div class='alert alert-secondary'>Loading..... please wait</div>");
+      var fd = new FormData(this);
+
+      var geniusform = $(this);
+      $('button.geniusSubmit-btn').prop('disabled', true);
+      $.ajax({
+          method: "POST",
+          url: $(this).prop('action'),
+          data: fd,
+          contentType: false,
+          cache: false,
+          processData: false,
+          beforeSend: function() {
+              $("#loading-image").show();
+          },
+          success: function(data) {
+              $("#loading-image").hide();
+              $('#message').hide();
+              $('#message').show();
+              $('#message').html(data);
+              $('#adtoCartform')[0].reset();
+              location.reload();
+          }
+
+      });
+
+  });
+
+  function unitSetValidat() {
+      var name = $('#name').val();
+      var unit_categories_id = $('#unit_categories_id').val();
+
+      if (required(name) == false) {
+          $('#name').parent().find('.error').html('<div style="color:red;" id="mesWrong">This field cannot be empty</div>');
+      } else if (numericOrStringCheck(name) == false) {
+          $('#name').parent().find('.error').html('<div style="color:red;" id="mesWrong">Only numeric not allow!</div>');
+      } else if (lengthValidation(name) == false) {
+          $('#name').parent().find('.error').html('<div style="color:red;" id="mesWrong">maximum length of 32 characters</div>');
+      } else {
+          var name_validation = true;
+      }
+      if (required(unit_categories_id) == false || unit_categories_id == "") {
+          $('#unit_categories_id').parent().find('.error').html('<div style="color:red;" id="mesWrong">This field cannot be empty</div>');
+      } else {
+          var unit_categories_id_validation = true;
+      }
+
+
+      if ((name_validation == true) && (unit_categories_id_validation == true)) {
+          $('#geniusform').submit();
+      }
+  }
+
+  function unitShowInOption(categories_id) {
+
+      $.ajax({
+          method: "POST",
+          url: '<?= base_url("Admin/Unit_set/unitShowInOption")?>',
+          data: { unit_categories_id: categories_id },
+          dataType: 'json',
+          success: function(data) {
+              var purchaseCheckboxes = '';
+              var purchasePriceCheckboxes = '';
+              var sellCheckboxes = '';
+              var sellPriceCheckboxes = '';
+
+              if (data && data.length > 0) {
+                  $.each(data, function(index, unit) {
+                      // Build checkbox markup for Purchase Units
+                      purchaseCheckboxes += '  <label style="margin-left: 10px;"><input type="checkbox" name="purchase_units[]" value="' + unit.units_id + '"> ' + unit.name + '</label>';
+                      // Build checkbox markup for Purchase price Units
+                      purchasePriceCheckboxes += '  <label style="margin-left: 10px;"><input type="radio" name="purchase_price" value="' + unit.units_id + '"> ' + unit.name + '</label>';
+                      // Build checkbox markup for Sale Units
+                      sellCheckboxes += '  <label style="margin-left: 10px;"><input type="checkbox" name="sell_units[]" value="' + unit.units_id + '"> ' + unit.name + '</label>';
+                      // Build checkbox markup for Sale price Units
+                      sellPriceCheckboxes += '  <label style="margin-left: 10px;"><input type="radio" name="sell_price" value="' + unit.units_id + '"> ' + unit.name + '</label>';
+                  });
+              } else {
+                  purchaseCheckboxes = '<p class="text-muted">No units found for this category.</p>';
+                  purchasePriceCheckboxes = '<p class="text-muted">No units found for this category.</p>';
+                  sellCheckboxes = '<p class="text-muted">No units found for this category.</p>';
+                  sellPriceCheckboxes = '<p class="text-muted">No units found for this category.</p>';
+              }
+
+              // Inject the generated checkboxes into their respective container DIVs
+              $('#purchase_units_container').html(purchaseCheckboxes);
+              $('#purchase_price_units_container').html(purchasePriceCheckboxes);
+              $('#sell_units_container').html(sellCheckboxes);
+              $('#sell_price_units_container').html(sellPriceCheckboxes);
+          },
+          error: function(xhr, status, error) {
+              console.error("Error fetching units: ", error);
+          }
+      });
+  }
+
+
 </script>

@@ -51,7 +51,7 @@
                                     <h3 class="box-title">Products List</h3>
                                 </div>
                                 <div class="col-lg-8">
-                                    <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Products_ajax/add_existing_product/'); ?>','<?php echo '/Admin/Products/add_existing_product/'; ?>')" class="btn btn-info pull-right btn-xs" style="margin-left:10px;"><i class="fa fa-fw fa-tasks"></i> Add Existing Product</a>
+                                    <a href="<?= base_url('Admin/Products/add_existing_product/')?>"  class="btn btn-info pull-right btn-xs" style="margin-left:10px;"><i class="fa fa-fw fa-tasks"></i> Add Existing Product</a>
                                     <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Products_short_list_ajax/'); ?>','<?php echo '/Admin/Products_short_list/'; ?>')" class="btn btn-danger pull-right btn-xs" style="margin-left:10px;"><i class="fa fa-fw fa-tasks"></i> Short List</a>
 
                                     <button type="submit" class="btn btn-primary pull-right btn-xs"><i class="fa fa-barcode"></i> Barcode Generate</button>
@@ -84,13 +84,12 @@
                                 foreach ($products_data as $products) { ?>
                                     <tr>
                                         <td>
-                                            <input type="number" name="barcodeqty[<?php print $products->prod_id; ?>]"
-                                                   style="width: 40px;" value="0">
+                                            <input type="number" name="barcodeqty[<?php print $products->prod_id; ?>]" style="width: 40px;" value="0">
                                         </td>
                                         <td><?php echo $products->name ?></td>
-                                        <td><?php echo productIdByQuantity($products->prod_id) ?>
+                                        <td><?php echo unitOrQtyByUnitQty($products->unit,productIdByQuantity($products->prod_id)) ?>
                                             / <?php echo showUnitName($products->unit) ?></td>
-                                        <td><?php echo showWithCurrencySymbol($products->purchase_price) ?></td>
+                                        <td><?php echo showWithCurrencySymbol(unitOrBasePriceByUnitPrice($products->unit,$products->purchase_price)) ?></td>
                                         <td><?php echo get_data_by_id('name', 'suppliers', 'supplier_id', $products->supplier_id) ?></td>
                                         <td><?php echo get_data_by_id('product_category', 'product_category', 'prod_cat_id', $products->prod_cat_id) ?></td>
                                         <td><?php echo $products->purchase_date ?></td>
@@ -151,9 +150,9 @@
                                         foreach ($products_data as $products) { ?>
                                             <tr>
                                                 <td><?php echo $products->name ?></td>
-                                                <td><?php echo productIdByQuantity($products->prod_id) ?>
+                                                <td><?php echo unitOrQtyByUnitQty($products->unit,productIdByQuantity($products->prod_id)) ?>
                                                     / <?php echo showUnitName($products->unit) ?></td>
-                                                <td><?php echo showWithCurrencySymbol($products->purchase_price) ?></td>
+                                                <td><?php echo showWithCurrencySymbol(unitOrBasePriceByUnitPrice($products->unit,$products->purchase_price)) ?></td>
                                                 <td><?php echo get_data_by_id('name', 'suppliers', 'supplier_id', $products->supplier_id) ?></td>
                                                 <td><?php echo get_data_by_id('product_category', 'product_category', 'prod_cat_id', $products->prod_cat_id) ?></td>
                                                 <td><?php echo $products->purchase_date ?></td>

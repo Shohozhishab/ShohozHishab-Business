@@ -36,8 +36,11 @@ class Products extends BaseController
             return redirect()->to(site_url('Admin/login'));
         } else {
             $shopId = $this->session->shopId;
+
             $productTable = DB()->table('products');
-            $data['products_data'] = $productTable->where('sch_id', $shopId)->where('deleted IS NULL')->get()->getResult();
+            $productTable->join('product_stock_relation','product_stock_relation.product_id = products.prod_id');
+            $productTable->join('stores','stores.store_id = product_stock_relation.store_id');
+            $data['products_data'] = $productTable->where('products.sch_id', $shopId)->where('stores.is_default','1')->get()->getResult();
 
             $data['menu'] = view('Admin/menu_stock');
             // All Permissions
@@ -72,6 +75,11 @@ class Products extends BaseController
             $shopId = $this->session->shopId;
             $productsTable = DB()->table('products');
             $data['product'] = $productsTable->where('prod_id', $id)->where('sch_id', $shopId)->get()->getRow();
+
+            $data['showUnit'] = productIdByDefaultStoreUnit($id);
+            $unitCategory = get_data_by_id('unit_categories_id','units','units_id',$data['showUnit']);
+            $data['units'] = DB()->table('units')->where('unit_categories_id',$unitCategory)->orderBy('conversion_factor','DESC')->get()->getResult();
+
 
             $data['menu'] = view('Admin/menu_stock');
             // All Permissions
@@ -133,13 +141,11 @@ class Products extends BaseController
         $data['prod_id'] = $this->request->getPost('prod_id');
         $data['prod_cat_id'] = $this->request->getPost('sub_cat_id');
         $data['brand_id'] = $this->request->getPost('brand_id');
-        $data['selling_price'] = $this->request->getPost('selling_price');
         $data['size'] = $this->request->getPost('size');
         $data['warranty'] = $this->request->getPost('warranty');
         $data['updatedBy'] = $userId;
 
         $this->validation->setRules([
-            'selling_price' => ['label' => 'selling_price', 'rules' => 'required'],
             'brand_id' => ['label' => 'brand_id', 'rules' => 'required'],
         ]);
 
@@ -148,6 +154,37 @@ class Products extends BaseController
         } else {
             $productTable = DB()->table('products');
             if ($productTable->where('prod_id', $data['prod_id'])->update($data)) {
+                print '<div class="alert alert-success alert-dismissible" role="alert"> Update data successfully  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+            } else {
+                print '<div class="alert alert-danger alert-dismissible" role="alert"> something went wrong  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+            }
+        }
+    }
+    public function unit_update()
+    {
+        $userId = $this->session->userId;
+        $shopId = $this->session->shopId;
+        $data['prod_id'] = $this->request->getPost('prod_id');
+        $sell_units = $this->request->getPost('sell_units[]');
+        $data['unit'] = $this->request->getPost('unit');
+        $data['updatedBy'] = $userId;
+
+        $this->validation->setRules([
+            'unit' => ['label' => 'Unit', 'rules' => 'required'],
+        ]);
+
+        if ($this->validation->run($data) == FALSE) {
+            print '<div class="alert alert-danger alert-dismissible" role="alert">' . $this->validation->listErrors() . ' <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+        } else {
+            $store = DB()->table('stores')->where('sch_id',$shopId)->where('is_default','1')->get()->getRow();
+            DB()->table('product_stock_relation')
+                ->where('store_id',$store->store_id)
+                ->where('product_id',$data['prod_id'])
+                ->update(['unit' => $data['unit']]);
+
+
+            $productTable = DB()->table('products');
+            if ($productTable->where('prod_id', $data['prod_id'])->update(['sale_units'=>json_encode($sell_units)])) {
                 print '<div class="alert alert-success alert-dismissible" role="alert"> Update data successfully  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
             } else {
                 print '<div class="alert alert-danger alert-dismissible" role="alert"> something went wrong  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
@@ -232,6 +269,9 @@ class Products extends BaseController
             $productTable = DB()->table('products');
             $data['products_data'] = $productTable->where('sch_id', $shopId)->where('deleted IS NULL')->get()->getResult();
 
+            $table = DB()->table('unit_set');
+            $data['unit_set'] = $table->where('sch_id',$shopId)->get()->getResult();
+
             $data['menu'] = view('Admin/menu_stock');
             // All Permissions
             //$perm = array('create','read','update','delete','mod_access');
@@ -251,48 +291,97 @@ class Products extends BaseController
     }
 
     public function add_action(){
+        $shopId = $this->session->shopId;
+
+        $categories_id = $this->request->getPost('categories_id');
+        $data['salePrice'] = $this->request->getPost('selling_price');
+        $data['sale_unit'] = $this->request->getPost('sale_unit');
+        $purchase_units_price = $this->request->getPost('purchase_units_price');
+        $sell_unit_price = $this->request->getPost('sell_unit_price');
+
         $data['prod_cat_id'] = $this->request->getPost('sub_category');
         $data['name'] = $this->request->getPost('name');
-        $data['unit'] = $this->request->getPost('unit');
-        $data['purchase_price'] = $this->request->getPost('price');
-        $data['selling_price'] = $this->request->getPost('selling_price');
-        $data2['quantity'] = $this->request->getPost('qty');
+        $data['unit'] = $data['sale_unit'];
+        $data['price'] = $this->request->getPost('price');
+        $data['selling_price'] = $data['salePrice'] ;
+
 
         $this->validation->setRules([
             'prod_cat_id' => ['label' => 'Category', 'rules' => 'required'],
             'name' => ['label' => 'name', 'rules' => 'required'],
             'unit' => ['label' => 'unit', 'rules' => 'required'],
-            'purchase_price' => ['label' => 'price', 'rules' => 'required'],
+            'price' => ['label' => 'price', 'rules' => 'required'],
             'selling_price' => ['label' => 'salePrice', 'rules' => 'required'],
         ]);
 
         if ($this->validation->run($data) == FALSE) {
             print '<div class="alert alert-danger alert-dismissible" role="alert">' . $this->validation->listErrors() . ' <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         } else {
+
+
             DB()->transStart();
-            $shopId = $this->session->shopId;
+
+            $totalQty = 0;
+            if (!empty($categories_id)) {
+                $query = DB()->table('unit_set')->where('unit_set_id',$categories_id)->get()->getRow();
+                $units_id = json_decode($query->purchase_units);
+
+                $unit = array();
+                $units = DB()->table('units')->whereIn('units_id', $units_id)->orderBy('conversion_factor', 'DESC')->get()->getResult();
+                foreach ($units as $val) {
+                    $nameUnit = strtolower(str_replace(' ', '_', $val->name));
+                    $unit[$nameUnit] = $this->request->getPost($nameUnit);
+                    if (!empty($unit[$nameUnit])) {
+                        $totalQty += $val->conversion_factor * $unit[$nameUnit];
+                    }
+                }
+            }
+
+            //purchase price make
+            $basePurchasePrice = 0;
+            $unitsPur = DB()->table('units')->where('units_id', $purchase_units_price)->get()->getRow();
+            if (!empty($unitsPur)){
+                $basePurchasePrice = $data['price']/$unitsPur->conversion_factor;
+            }
+            $purchasePrice = $basePurchasePrice;
+
+            //sale price make
+            $baseSalePrice = 0;
+            $unitsSale = DB()->table('units')->where('units_id', $sell_unit_price)->get()->getRow();
+            if (!empty($unitsSale)){
+                $baseSalePrice = $data['salePrice']/$unitsSale->conversion_factor;
+            }
+            $salePrice = $baseSalePrice;
+
 
             //get default store
             $storeTab = DB()->table('stores');
             $store = $storeTab->where('sch_id', $shopId)->where('is_default', 1)->get()->getRow();
 
             //insert product
-            $data['sch_id'] = $shopId;
-            $data['createdBy'] = $this->session->userId;
-            $data['createdDtm'] = date('Y-m-d H:i:s');
+
+            $dataProduct['prod_cat_id'] = $data['prod_cat_id'];
+            $dataProduct['name'] = $data['name'];
+            $dataProduct['unit'] = $data['sale_unit'];
+            $dataProduct['purchase_price'] = $purchasePrice;
+            $dataProduct['selling_price'] = $salePrice;
+            $dataProduct['purchase_date'] = date('Y-m-d H:i:s');
+            $dataProduct['sch_id'] = $shopId;
+            $dataProduct['createdBy'] = $this->session->userId;
+            $dataProduct['createdDtm'] = date('Y-m-d H:i:s');
             $productTable = DB()->table('products');
-            $productTable->insert($data);
+            $productTable->insert($dataProduct);
             $prodId = DB()->insertID();
 
             //product stock relation insert
             DB()->table('product_stock_relation')->insert([
                 'store_id' => $store->store_id,
                 'product_id' => $prodId,
-                'quantity' => $data2['quantity'],
+                'quantity' => $totalQty,
             ]);
 
             //total amount product
-            $totalAmountPro = $data['purchase_price'] * $data2['quantity'];
+            $totalAmountPro = $purchasePrice * $totalQty;
 
             //capital last balance
             $oldCapital = get_data_by_id('capital', 'shops', 'sch_id', $shopId);

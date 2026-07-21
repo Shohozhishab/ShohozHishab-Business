@@ -7,14 +7,14 @@ use App\Libraries\Permission;
 use CodeIgniter\HTTP\RedirectResponse;
 
 
-class Product_category extends BaseController
+class Unit extends BaseController
 {
 
     protected $permission;
     protected $validation;
     protected $session;
     protected $crop;
-    private $module_name = 'Product_category';
+    private $module_name = 'Unit';
 
     public function __construct()
     {
@@ -26,7 +26,7 @@ class Product_category extends BaseController
 
     /**
      * @description This method provides view
-     * @return RedirectResponse|void\
+     * @return RedirectResponse|void
      */
     public function index()
     {
@@ -36,10 +36,18 @@ class Product_category extends BaseController
             return redirect()->to(site_url('Admin/login'));
         } else {
             $shopId = $this->session->shopId;
-            $product_categoryTable = DB()->table('product_category');
-            $data['product_category_data'] = $product_categoryTable->where('sch_id', $shopId)->get()->getResult();
 
-            $data['menu'] = view('Admin/menu_stock');
+            $unit_categories_id = $this->request->getGet('unit_categories_id');
+
+            $table = DB()->table('units');
+            $table->where('sch_id', $shopId);
+            if (!empty($unit_categories_id)){
+                $table->where('unit_categories_id', $unit_categories_id)->orderBy('conversion_factor','DESC');
+            }
+            $data['units'] = $table->get()->getResult();
+            $data['unit_categories_id'] = isset($unit_categories_id) ? $unit_categories_id: '';
+
+
             // All Permissions
             //$perm = array('create','read','update','delete','mod_access');
             $perm = $this->permission->module_permission_list($role_id, $this->module_name);
@@ -49,7 +57,7 @@ class Product_category extends BaseController
             echo view('Admin/header');
             echo view('Admin/sidebar');
             if (isset($data['mod_access']) and $data['mod_access'] == 1) {
-                echo view('Admin/Product_category/list', $data);
+                echo view('Admin/Unit/list', $data);
             } else {
                 echo view('no_permission');
             }
@@ -58,8 +66,8 @@ class Product_category extends BaseController
     }
 
     /**
-     * @description This method provides view create
-     * @return RedirectResponse|void\
+     * @description This method provides create view
+     * @return RedirectResponse|void
      */
     public function create()
     {
@@ -68,9 +76,8 @@ class Product_category extends BaseController
         if (!isset($isLoggedIn) || $isLoggedIn != TRUE) {
             return redirect()->to(site_url('Admin/login'));
         } else {
-            $data['action'] = base_url('Admin/Product_category/create_action');
+            $data['action'] = base_url('Admin/Unit/create_action');
 
-            $data['menu'] = view('Admin/menu_stock');
             // All Permissions
             //$perm = array('create','read','update','delete','mod_access');
             $perm = $this->permission->module_permission_list($role_id, $this->module_name);
@@ -80,7 +87,7 @@ class Product_category extends BaseController
             echo view('Admin/header');
             echo view('Admin/sidebar');
             if (isset($data['mod_access']) and $data['create'] == 1) {
-                echo view('Admin/Product_category/create', $data);
+                echo view('Admin/Unit/create', $data);
             } else {
                 echo view('no_permission');
             }
@@ -89,31 +96,41 @@ class Product_category extends BaseController
     }
 
     /**
-     * @description This method store Product category
-     * @return void\
+     * @description This method store Brand
+     * @return void
      */
     public function create_action()
     {
         $shopId = $this->session->shopId;
         $userId = $this->session->userId;
 
-        $data['product_category'] = $this->request->getPost('product_category');
-        $data['parent_pro_cat'] = $this->request->getPost('parent_pro_cat') ?? 0;
-        $data['status'] = '1';
+        $data['name'] = $this->request->getPost('name');
+        $data['symbol'] = $this->request->getPost('symbol');
+        $data['unit_categories_id'] = $this->request->getPost('unit_categories_id');
+        $data['conversion_factor'] = $this->request->getPost('conversion_factor');
+        $data['decimal_places'] = $this->request->getPost('decimal_places');
         $data['sch_id'] = $shopId;
         $data['createdBy'] = $userId;
         $data['createdDtm'] = date('Y-m-d h:i:s');
 
         $this->validation->setRules([
-            'product_category' => ['label' => 'product_category', 'rules' => 'required|only_numeric_not_allow|validusername|max_length[32]'],
+            'name' => ['label' => 'Name', 'rules' => 'required|only_numeric_not_allow|max_length[60]'],
+            'symbol' => ['label' => 'Symbol', 'rules' => 'required'],
+            'unit_categories_id' => ['label' => 'Unit Categories', 'rules' => 'required'],
+            'conversion_factor' => ['label' => 'Conversion Factor', 'rules' => 'required'],
+            'decimal_places' => ['label' => 'Decimal Places', 'rules' => 'required'],
         ]);
 
         if ($this->validation->run($data) == FALSE) {
             print '<div class="alert alert-danger alert-dismissible" role="alert">' . $this->validation->listErrors() . ' <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         } else {
+            $isBase = DB()->table('units')->where('unit_categories_id',$data['unit_categories_id'])->where('is_base','1')->countAllResults();
+            if (empty($isBase)){
+                $data['is_base'] = '1';
+            }
 
-            $product_categoryTable = DB()->table('product_category');
-            if ($product_categoryTable->insert($data)) {
+            $table = DB()->table('units');
+            if ($table->insert($data)) {
                 print '<div class="alert alert-success alert-dismissible" role="alert"> Crate data successfully  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
             } else {
                 print '<div class="alert alert-danger alert-dismissible" role="alert"> something went wrong  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
@@ -124,7 +141,7 @@ class Product_category extends BaseController
     /**
      * @description This method provides update view
      * @param int $id
-     * @return RedirectResponse|void\
+     * @return RedirectResponse|void
      */
     public function update($id)
     {
@@ -133,11 +150,13 @@ class Product_category extends BaseController
         if (!isset($isLoggedIn) || $isLoggedIn != TRUE) {
             return redirect()->to(site_url('Admin/login'));
         } else {
-            $product_categoryTable = DB()->table('product_category');
-            $data['product_category'] = $product_categoryTable->where('prod_cat_id', $id)->get()->getRow();
-            $data['action'] = base_url('Admin/Product_category/update_action');
+            $table = DB()->table('units');
+            $data['units'] = $table->where('units_id', $id)->get()->getRow();
 
-            $data['menu'] = view('Admin/menu_stock');
+            $data['isBase'] = DB()->table('units')->where('units_id',$id)->where('is_base','1')->countAllResults();
+
+            $data['action'] = base_url('Admin/Unit/update_action');
+
             // All Permissions
             //$perm = array('create','read','update','delete','mod_access');
             $perm = $this->permission->module_permission_list($role_id, $this->module_name);
@@ -147,7 +166,7 @@ class Product_category extends BaseController
             echo view('Admin/header');
             echo view('Admin/sidebar');
             if (isset($data['mod_access']) and $data['update'] == 1) {
-                echo view('Admin/Product_category/update', $data);
+                echo view('Admin/Unit/update', $data);
             } else {
                 echo view('no_permission');
             }
@@ -156,36 +175,52 @@ class Product_category extends BaseController
     }
 
     /**
-     * @description This method update Product category
-     * @return void\
+     * @description This method update Brand
+     * @return void
      */
     public function update_action()
     {
+
         $userId = $this->session->userId;
 
-        $data['prod_cat_id'] = $this->request->getPost('prod_cat_id');
-        $data['product_category'] = $this->request->getPost('product_category');
-        $data['parent_pro_cat'] = $this->request->getPost('parent_pro_cat');
-        $data['status'] = $this->request->getPost('status');
+        $data['units_id'] = $this->request->getPost('units_id');
+        $data['name'] = $this->request->getPost('name');
+        $data['symbol'] = $this->request->getPost('symbol');
+        $data['unit_categories_id'] = $this->request->getPost('unit_categories_id');
+        $data['conversion_factor'] = $this->request->getPost('conversion_factor');
+        $data['decimal_places'] = $this->request->getPost('decimal_places');
         $data['updatedBy'] = $userId;
 
         $this->validation->setRules([
-            'product_category' => ['label' => 'product_category', 'rules' => 'required|only_numeric_not_allow|validusername|max_length[32]'],
-            'status' => ['label' => 'status', 'rules' => 'required'],
+            'name' => ['label' => 'Name', 'rules' => 'required|only_numeric_not_allow|max_length[60]'],
+            'symbol' => ['label' => 'Symbol', 'rules' => 'required'],
+            'unit_categories_id' => ['label' => 'Unit Categories', 'rules' => 'required'],
+            'conversion_factor' => ['label' => 'Conversion Factor', 'rules' => 'required'],
+            'decimal_places' => ['label' => 'Decimal Places', 'rules' => 'required'],
         ]);
 
         if ($this->validation->run($data) == FALSE) {
             print '<div class="alert alert-danger alert-dismissible" role="alert">' . $this->validation->listErrors() . ' <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         } else {
 
-            $product_categoryTable = DB()->table('product_category');
-            if ($product_categoryTable->where('prod_cat_id', $data['prod_cat_id'])->update($data)) {
+            $table = DB()->table('units');
+            if ($table->where('units_id', $data['units_id'])->update($data)) {
                 print '<div class="alert alert-success alert-dismissible" role="alert"> Update data successfully  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
             } else {
                 print '<div class="alert alert-danger alert-dismissible" role="alert"> something went wrong  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
             }
         }
     }
+    /**
+     * @param int $units_id
+     * @return void
+     */
+    public function delete($units_id){
+        $table = DB()->table('units');
+        $table->where('units_id',$units_id)->delete();
 
+        $this->session->setFlashdata('message', '<div class="alert alert-success alert-dismissible" role="alert"> Delete data successfully  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+        return redirect()->to(site_url('Admin/Unit'));
+    }
 
 }

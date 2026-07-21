@@ -27,35 +27,39 @@
                             <div id="message"></div>
                             <?php if (session()->getFlashdata('message') !== NULL) : echo session()->getFlashdata('message'); endif; ?>
                             <div class="col-lg-6" >
+                                <h4>Category</h4>
                                 <form id="geniusform" action="<?php echo $action; ?>" method="post">
                                     <div class="form-group">
-                                        <label for="varchar">Category </label>
-                                        <input type="text" class="form-control" name="product_category" id="product_category" placeholder="Product Category" required>
+                                        <label for="varchar">Category Name </label>
+                                        <input type="text" class="form-control" name="product_category" id="product_category" placeholder="Category Name" required>
                                         <div class="error"></div>
                                     </div>
-                                    <div class="form-group" id="reloadimg">
-                                        <label for="varchar">Parent Category </label>
-                                        <select class="form-control" name="parent_pro_cat" >
-                                            <option value="">Please Select</option>
-                                            <?php echo subCategoryListOption('','product_category','product_category'); ?>
-                                        </select>
-                                    </div>
-                                    <div class="form-group" >
-                                        <label for="enum">Status</label>
-                                        <select class="form-control" name="status" id="status" required>
-                                            <?php print globalStatus('1'); ?>
-                                        </select>
-                                    </div>
 
-
-                                    <button type="button" class="btn btn-primary" onclick="proCatValidat()"  >Create</button>
+                                    <button type="submit" class="btn btn-primary"  >Create</button>
                                     <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Product_category_ajax/'); ?>','<?php echo '/Admin/Product_category/'; ?>')" class="btn btn-default">Cancel</a>
                                 </form>
                             </div>
 
 
                             <div class="col-lg-6" style="border-left: 1px solid #cecdcd;">
+                                <h4>Sub Category</h4>
+                                <form id="geniusform" action="<?php echo $action; ?>" method="post">
+                                    <div class="form-group" id="reloadimg">
+                                        <label for="varchar">Parent Category </label>
+                                        <select class="form-control" name="parent_pro_cat" required>
+                                            <option value="">Please Select</option>
+                                            <?php echo subCategoryListOption('','product_category','product_category'); ?>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="varchar">Sub Category Name</label>
+                                        <input type="text" class="form-control" name="product_category" id="product_category" placeholder="Category Name" required>
+                                        <div class="error"></div>
+                                    </div>
 
+                                    <button type="submit" class="btn btn-primary"  >Create</button>
+                                    <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Product_category_ajax/'); ?>','<?php echo '/Admin/Product_category/'; ?>')" class="btn btn-default">Cancel</a>
+                                </form>
                             </div>
                         </div>
 

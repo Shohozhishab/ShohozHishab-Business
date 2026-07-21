@@ -1349,10 +1349,15 @@ function unitArray() {
  * @param string $selected
  * @return string
  */
-function showUnitName($selected = '1') {
-    $status = unitArray();
-    $row =  $status[$selected];
-    return $row;
+function showUnitName($unitId) {
+//    $status = unitArray();
+//    $row =  $status[$selected];
+//    return $row;
+
+    $unit = DB()->table('units')->where('units_id',$unitId)->get()->getRow();
+
+    return !empty($unit)?$unit->name:'';
+
 }
 
 /**
@@ -1883,4 +1888,89 @@ function permission_check($module_name,$role_id,$key){
     $permission = new Permission();
     $access = $permission->have_access($role_id, $module_name, $key);
     return empty($access)?false:true;
+}
+function unitOrQtyByUnitQty($unitId,$qty){
+    $query = DB()->table('units')->where('units_id',$unitId)->get()->getRow();
+    $unitQty = $qty;
+    if (!empty($query)){
+        $unitQty = $qty / $query->conversion_factor;
+    }
+    return $unitQty;
+}
+function unitOrBasePriceByUnitPrice($unitId,$price){
+    $query = DB()->table('units')->where('units_id',$unitId)->get()->getRow();
+    $unitPrice = $price;
+    if (!empty($query)){
+        $unitPrice = $price * $query->conversion_factor;
+    }
+    return $unitPrice;
+}
+function productIdByDefaultStoreUnit($prod_id){
+    $result = 0;
+    $table = DB()->table('product_stock_relation');
+    $table->join('stores','stores.store_id = product_stock_relation.store_id');
+    $table->where('stores.is_default','1');
+    $table->where('stores.sch_id',$_SESSION['shopId']);
+    $table->where('product_stock_relation.product_id',$prod_id);
+    $query = $table->get()->getRow();
+    if (!empty($query)){
+        $result = $query->unit;
+    }
+    return $result;
+}
+
+function productIdByDefaultStoreDataRow($prod_id){
+    $table = DB()->table('product_stock_relation');
+    $table->join('stores','stores.store_id = product_stock_relation.store_id');
+    $table->where('stores.is_default','1');
+    $table->where('stores.sch_id',$_SESSION['shopId']);
+    $table->where('product_stock_relation.product_id',$prod_id);
+    return $table->get()->getRow();
+}
+
+
+function convertRevertToArray($qty, $unitIds)
+{
+    $result = [];
+//    unit_categories_id
+    $categories_id = 0;
+    // Get units ordered by highest conversion factor first
+    $units = DB()->table('units')
+        ->whereIn('units_id', $unitIds)
+        ->orderBy('conversion_factor', 'DESC')
+        ->get()
+        ->getResult();
+    foreach ($units as $unit) {
+        $categories_id = $unit->unit_categories_id;
+        $value = floor($qty / $unit->conversion_factor);
+        if ($value > 0) {
+            $result[] = [
+                'unit_id'           => $unit->units_id,
+                'name'              => $unit->name,
+                'symbol'            => $unit->symbol,
+                'qty'               => $value,
+                'conversion_factor' => $unit->conversion_factor,
+            ];
+            // Remaining quantity
+            $qty = $qty % $unit->conversion_factor;
+        }
+    }
+
+    // Remaining base unit
+    if ($qty > 0) {
+        $base = DB()->table('units')
+            ->where('unit_categories_id', $categories_id)
+            ->where('is_base', 1)
+            ->get()
+            ->getRow();
+
+        $result[] = [
+            'unit_id' => $base->units_id,
+            'name'    => $base->name,
+            'symbol'  => $base->symbol,
+            'qty'     => $qty,
+            'conversion_factor' => $base->conversion_factor,
+        ];
+    }
+    return $result;
 }
