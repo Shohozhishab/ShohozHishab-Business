@@ -159,15 +159,17 @@
                                                             <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/moneyReceipt/' . $row->trans_id); ?>','<?php echo '/Admin/Transaction/moneyReceipt/' . $row->trans_id; ?>')"
                                                                class="btn btn-xs btn-info">Money Receipt</a>
                                                     <?php if (isset($update) && $update == 1){ ?>
-                                                            <?php if (edit_expire_check($row->createdDtm) == true) { ?>
-                                                                <a href="javascript:void(0)" class="btn btn-xs btn-warning" onclick="cusTranEdit('<?= $row->trans_id; ?>')" data-toggle="modal" data-target="#modal-default">Edit</a>
-                                                            <?php } ?>
+
+                                                           <a href="javascript:void(0)" class="btn btn-xs btn-warning" onclick="cusTranEdit('<?= $row->trans_id; ?>')" data-toggle="modal" data-target="#modal-default">Edit</a>
+
                                                     <?php } ?>
                                                     <?php if (isset($read) && $read == 1){ ?>
                                                             <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/read/' . $row->trans_id); ?>','<?php echo '/Admin/Transaction/read/' . $row->trans_id; ?>')"
                                                                class="btn btn-xs btn-success">View</a>
                                                     <?php } ?>
-
+                                                    <?php if (isset($delete) && $delete == 1){ ?>
+                                                            <a href="<?php echo site_url('/Admin/Transaction/delete/' . $row->trans_id); ?>" onclick="return confirm('Are you sure you want to delete this item?');"  class="btn btn-danger btn-xs">Delete</a>
+                                                    <?php } ?>
                                                         </td>
                                                     </tr>
                                                 <?php }
@@ -274,15 +276,18 @@
                                                                class="btn btn-success btn-xs">Transaction Flow </a>
                                                     <?php } ?>
                                                     <?php if (isset($update) && $update == 1){ ?>
-                                                            <?php if (edit_expire_check($row->createdDtm) == true) { ?>
-                                                                <a href="javascript:void(0)" class="btn btn-xs btn-warning" onclick="supplierTranEdit('<?= $row->trans_id; ?>')" data-toggle="modal" data-target="#modal-default">Edit</a>
-                                                            <?php } ?>
+
+                                                           <a href="javascript:void(0)" class="btn btn-xs btn-warning" onclick="supplierTranEdit('<?= $row->trans_id; ?>')" data-toggle="modal" data-target="#modal-default">Edit</a>
+
                                                     <?php } ?>
                                                     <?php if (isset($read) && $read == 1){ ?>
                                                             <a href="javascript:void(0)"
                                                                onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/read/' . $row->trans_id); ?>','<?php echo '/Admin/Transaction/read/' . $row->trans_id; ?>')"
                                                                class="btn btn-xs btn-success">View</a>
                                                     <?php } ?>
+                                                            <?php if (isset($delete) && $delete == 1){ ?>
+                                                                <a href="<?php echo site_url('/Admin/Transaction/delete/' . $row->trans_id); ?>" onclick="return confirm('Are you sure you want to delete this item?');"  class="btn btn-danger btn-xs">Delete</a>
+                                                            <?php } ?>
                                                         </td>
                                                     </tr>
                                                 <?php }
@@ -387,15 +392,17 @@
                                                                class="btn btn-success btn-xs">Transaction Flow </a>
                                                     <?php } ?>
                                                     <?php if (isset($update) && $update == 1){ ?>
-                                                        <?php if (edit_expire_check($row->createdDtm) == true) { ?>
-                                                                <a href="javascript:void(0)" class="btn btn-xs btn-warning" onclick="accountTranEdit('<?= $row->trans_id; ?>')" data-toggle="modal" data-target="#modal-default">Edit</a>
-                                                            <?php } ?>
+                                                           <a href="javascript:void(0)" class="btn btn-xs btn-warning" onclick="accountTranEdit('<?= $row->trans_id; ?>')" data-toggle="modal" data-target="#modal-default">Edit</a>
+
                                                     <?php } ?>
                                                     <?php if (isset($read) && $read == 1){ ?>
                                                             <a href="javascript:void(0)"
                                                                onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/read/' . $row->trans_id); ?>','<?php echo '/Admin/Transaction/read/' . $row->trans_id; ?>')"
                                                                class="btn btn-xs btn-success">View</a>
                                                     <?php } ?>
+                                                            <?php if (isset($delete) && $delete == 1){ ?>
+                                                                <a href="<?php echo site_url('/Admin/Transaction/delete/' . $row->trans_id); ?>" onclick="return confirm('Are you sure you want to delete this item?');"  class="btn btn-danger btn-xs">Delete</a>
+                                                            <?php } ?>
 
                                                         </td>
                                                     </tr>
@@ -500,14 +507,16 @@
                                                                class="btn btn-success btn-xs">Transaction Flow </a>
                                                     <?php } ?>
                                                     <?php if (isset($update) && $update == 1){ ?>
-                                                            <?php if (edit_expire_check($row->createdDtm) == true) { ?>
                                                                 <a href="javascript:void(0)" class="btn btn-xs btn-warning" onclick="fundTranEdit('<?= $row->trans_id; ?>')" data-toggle="modal" data-target="#modal-default">Edit</a>
-                                                            <?php } ?>
+
                                                     <?php } ?>
                                                     <?php if (isset($read) && $read == 1){ ?>
                                                             <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/read/' . $row->trans_id); ?>','<?php echo '/Admin/Transaction/read/' . $row->trans_id; ?>')"
                                                                class="btn btn-xs btn-success">View</a>
                                                     <?php } ?>
+                                                            <?php if (isset($delete) && $delete == 1){ ?>
+                                                                <a href="<?php echo site_url('/Admin/Transaction/delete/' . $row->trans_id); ?>" onclick="return confirm('Are you sure you want to delete this item?');"  class="btn btn-danger btn-xs">Delete</a>
+                                                            <?php } ?>
                                                         </td>
                                                     </tr>
                                                 <?php }
@@ -603,14 +612,16 @@
                                                                class="btn btn-success btn-xs">Transaction Flow </a>
                                                     <?php } ?>
                                                             <?php if (isset($update) && $update == 1){ ?>
-                                                            <?php if (edit_expire_check($row->createdDtm) == true) { ?>
                                                                 <a href="javascript:void(0)" class="btn btn-xs btn-warning" onclick="assetsTranEdit('<?= $row->trans_id; ?>')" data-toggle="modal" data-target="#modal-default">Edit</a>
-                                                            <?php } ?>
+
                                                             <?php } ?>
                                                             <?php if (isset($read) && $read == 1){ ?>
                                                             <a href="javascript:void(0)"
                                                                onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/read/' . $row->trans_id); ?>','<?php echo '/Admin/Transaction/read/' . $row->trans_id; ?>')"
                                                                class="btn btn-xs btn-success">View</a>
+                                                            <?php } ?>
+                                                            <?php if (isset($delete) && $delete == 1){ ?>
+                                                                <a href="<?php echo site_url('/Admin/Transaction/delete/' . $row->trans_id); ?>" onclick="return confirm('Are you sure you want to delete this item?');"  class="btn btn-danger btn-xs">Delete</a>
                                                             <?php } ?>
                                                         </td>
                                                     </tr>
@@ -706,14 +717,16 @@
                                                                class="btn btn-success btn-xs">Transaction Flow </a>
                                                     <?php } ?>
                                                             <?php if (isset($update) && $update == 1){ ?>
-                                                            <?php if (edit_expire_check($row->createdDtm) == true) { ?>
                                                                 <a href="javascript:void(0)" class="btn btn-xs btn-warning" onclick="otherSalesTranEdit('<?= $row->trans_id; ?>')" data-toggle="modal" data-target="#modal-default">Edit</a>
-                                                            <?php } ?>
+
                                                             <?php } ?>
                                                             <?php if (isset($read) && $read == 1){ ?>
                                                             <a href="javascript:void(0)"
                                                                onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/read/' . $row->trans_id); ?>','<?php echo '/Admin/Transaction/read/' . $row->trans_id; ?>')"
                                                                class="btn btn-xs btn-success">View</a>
+                                                            <?php } ?>
+                                                            <?php if (isset($delete) && $delete == 1){ ?>
+                                                                <a href="<?php echo site_url('/Admin/Transaction/delete/' . $row->trans_id); ?>" onclick="return confirm('Are you sure you want to delete this item?');"  class="btn btn-danger btn-xs">Delete</a>
                                                             <?php } ?>
 
                                                         </td>
@@ -823,15 +836,17 @@
                                                                onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/salaryreceipt/' . $row->trans_id); ?>','<?php echo '/Admin/Transaction/salaryreceipt/' . $row->trans_id; ?>')"
                                                                class="btn btn-xs btn-info">Salary Receipt</a>
                                                     <?php if (isset($update) && $update == 1){ ?>
-                                                            <?php if (edit_expire_check($row->createdDtm) == true) { ?>
                                                                 <a href="javascript:void(0)" class="btn btn-xs btn-warning " onclick="employeeTranEdit('<?= $row->trans_id; ?>')" data-toggle="modal" data-target="#modal-default">Edit</a>
-                                                            <?php } ?>
+
                                                     <?php } ?>
                                                     <?php if (isset($read) && $read == 1){ ?>
                                                             <a href="javascript:void(0)"
                                                                onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/read/' . $row->trans_id); ?>','<?php echo '/Admin/Transaction/read/' . $row->trans_id; ?>')"
                                                                class="btn btn-xs btn-success">View</a>
                                                     <?php } ?>
+                                                            <?php if (isset($delete) && $delete == 1){ ?>
+                                                                <a href="<?php echo site_url('/Admin/Transaction/delete/' . $row->trans_id); ?>" onclick="return confirm('Are you sure you want to delete this item?');"  class="btn btn-danger btn-xs">Delete</a>
+                                                            <?php } ?>
 
                                                         </td>
                                                     </tr>
@@ -929,15 +944,17 @@
                                                                class="btn btn-success btn-xs">Transaction Flow </a>
                                                     <?php } ?>
                                                     <?php if (isset($update) && $update == 1){ ?>
-                                                            <?php if (edit_expire_check($row->createdDtm) == true) { ?>
                                                                 <a href="javascript:void(0)" class="btn btn-xs btn-warning" onclick="vatTranEdit('<?= $row->trans_id; ?>')" data-toggle="modal" data-target="#modal-default">Edit</a>
-                                                            <?php } ?>
+
                                                     <?php } ?>
                                                     <?php if (isset($read) && $read == 1){ ?>
                                                             <a href="javascript:void(0)"
                                                                onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/read/' . $row->trans_id); ?>','<?php echo '/Admin/Transaction/read/' . $row->trans_id; ?>')"
                                                                class="btn btn-xs btn-success">View</a>
                                                     <?php } ?>
+                                                            <?php if (isset($delete) && $delete == 1){ ?>
+                                                                <a href="<?php echo site_url('/Admin/Transaction/delete/' . $row->trans_id); ?>" onclick="return confirm('Are you sure you want to delete this item?');"  class="btn btn-danger btn-xs">Delete</a>
+                                                            <?php } ?>
                                                         </td>
                                                     </tr>
                                                 <?php }
@@ -1033,15 +1050,17 @@
                                                                class="btn btn-success btn-xs">Transaction Flow </a>
                                                     <?php } ?>
                                                     <?php if (isset($update) && $update == 1){ ?>
-                                                            <?php if (edit_expire_check($row->createdDtm) == true) { ?>
                                                                 <a href="javascript:void(0)" class="btn btn-xs btn-warning" onclick="assetsTranEdit('<?= $row->trans_id; ?>')" data-toggle="modal" data-target="#modal-default">Edit</a>
-                                                            <?php } ?>
+
                                                     <?php } ?>
                                                     <?php if (isset($read) && $read == 1){ ?>
                                                             <a href="javascript:void(0)"
                                                                onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/read/' . $row->trans_id); ?>','<?php echo '/Admin/Transaction/read/' . $row->trans_id; ?>')"
                                                                class="btn btn-xs btn-success">View</a>
                                                     <?php } ?>
+                                                            <?php if (isset($delete) && $delete == 1){ ?>
+                                                                <a href="<?php echo site_url('/Admin/Transaction/delete/' . $row->trans_id); ?>" onclick="return confirm('Are you sure you want to delete this item?');"  class="btn btn-danger btn-xs">Delete</a>
+                                                            <?php } ?>
                                                         </td>
                                                     </tr>
                                                 <?php } } } } ?>

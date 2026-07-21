@@ -95,9 +95,7 @@
                                                    class="btn btn-success btn-xs">Transaction Flow </a>
                                                 <?php } ?>
                                                 <?php if (isset($update) && $update == 1){ ?>
-                                                <?php if(edit_expire_check($val->createdDtm) == true){ ?>
                                                     <a href="javascript:void(0)" class="btn btn-xs btn-warning"  onclick="withdrawEdit('<?= $val->wthd_id;?>')" data-toggle="modal" data-target="#modal-default">Edit</a>
-                                                <?php } ?>
                                                 <?php } ?>
                                             </td>
                                         </tr>
