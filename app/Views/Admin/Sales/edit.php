@@ -25,7 +25,6 @@
                                         <th>Price </th>
                                         <th>Quantity </th>
                                         <th>Total </th>
-                                        <th>Discount</th>
                                         <th>Subtotal</th>
                                     </tr>
                                 </thead>
@@ -71,9 +70,8 @@
                                             <input type="hidden" name="total[]" value="<?= $item->final_price;?>" class="totalVal">
                                             <span ><?= showWithCurrencySymbol($item->final_price);?></span>
                                         </td>
-
-                                        <td><input type="text" name="discount[]" style="width: 100px;" value="<?= $item->discount;?>" class="discount"></td>
                                         <td>
+                                            <input type="hidden" name="discount[]" style="width: 100px;" value="<?= $item->discount;?>" class="discount">
                                             <input type="hidden" name="subTotal[]" value="<?= $item->final_price;?>" class="subTotalVal">
                                             <span id="subTotal" class="subTotal"><?= showWithCurrencySymbol($item->final_price);?></span>
                                         </td>

@@ -61,7 +61,13 @@ class Unit_categories_ajax extends BaseController
         if (!isset($isLoggedIn) || $isLoggedIn != TRUE) {
             return redirect()->to(site_url('Admin/login'));
         } else {
+            $shopId = $this->session->shopId;
+
             $data['action'] = base_url('Admin/Unit_categories/create_action');
+            $data['actionCategory'] = base_url('Admin/Unit_categories/category_create_action');
+
+            $table = DB()->table('unit_categories');
+            $data['categories'] = $table->where('sch_id', $shopId)->get()->getResult();
 
             // All Permissions
             //$perm = array('create','read','update','delete','mod_access');

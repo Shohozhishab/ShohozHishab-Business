@@ -1130,6 +1130,7 @@ class Purchase extends BaseController
 
                 //insert data in table product_stock_relation
                 $dataQty = array(
+                    'sch_id' => $shopId,
                     'store_id' => $storeId,
                     'product_id' => $prodId,
                     'quantity' => $this->request->getPost('quantity[]')[$i],

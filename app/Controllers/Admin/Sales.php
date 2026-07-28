@@ -228,12 +228,6 @@ class Sales extends BaseController
                 $unitQty += $val->conversion_factor * $unit[$nameUnit];
             }
         }
-//        $unitId = get_data_by_id('unit', 'products', 'prod_id', $proId);
-//        $query = DB()->table('units')->where('units_id',$unitId)->get()->getRow();
-//        $unitQty = $quantity;
-//        if (!empty($query)){
-//            $unitQty = $query->conversion_factor * $quantity;
-//        }
 
         $totalquantity = $unitQty + $qty;
         if ($productQnt >= $totalquantity) {
@@ -1299,7 +1293,7 @@ class Sales extends BaseController
                 if ($pro->id == $proId[$i]) {
                     $relRow = productIdByDefaultStoreDataRow($proId[$i]);
                     $productQnt = $relRow->quantity;
-                    $qnt = $productQnt - $quantity[$i];
+                    $qnt = ($productQnt + $pro->amount) - $quantity[$i];
                     $qntProData = array(
                         'quantity' => $qnt,
                     );

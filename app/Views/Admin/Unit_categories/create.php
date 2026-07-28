@@ -43,6 +43,28 @@
 
 
                             <div class="col-lg-6" style="border-left: 1px solid #cecdcd;">
+                                <form  action="<?php echo $actionCategory; ?>" method="post" >
+                                    <div class="form-group">
+                                        <label for="enum">Unit Category </label> <button type="button" class="btn btn-xs btn-primary select-all-btn2" onclick="toggleAllCategories(this)" >Select All</button><br>
+                                        <?php
+                                        foreach (getUnitCategoriesWithUnits() as $key => $val){
+                                            $checked = '';
+                                            foreach ($categories as $cat) {
+                                                if ($cat->name == $key) {
+                                                    $checked = 'checked disabled';
+                                                    break;
+                                                }
+                                            }
+                                            ?>
+                                            <label style="margin-left: 10px;">
+                                                <input type="checkbox" name="unit_category[]" <?= $checked ?>  value="<?= $key ?>"> <?= $key ?>
+                                            </label>
+                                        <?php } ?>
+                                    </div>
+                                    <div class="form-group">
+                                        <button type="submit" class="btn btn-primary"  >Get Unit Category</button>
+                                    </div>
+                                </form>
 
                             </div>
                         </div>

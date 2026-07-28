@@ -74,9 +74,7 @@
                                         <th>Name</th>
                                         <th>Quantity</th>
                                         <th>Price</th>
-                                        <?php if (isset($discount) AND ($discount == 1)) { ?>
-                                            <th>Disc %</th>
-                                        <?php } ?>
+                                        <th>Production Date</th>
                                         <th>Subtotal</th>
                                         <th>Action</th>
                                     </tr>
@@ -110,10 +108,8 @@
                                                 <input type="text" class="form-control" name="unitPrice[]" oninput="priceMakeBase(this.value,'<?= $conversion_factor;?>','<?= $row['id'];?>' )" value="<?= $uPrice ?>">
 
                                             </td>
-                                            <?php if (isset($discount) AND ($discount == 1)) { ?>
-                                                <td><input type="number" step=any class="form-control disc" oninput="minusValueCheck(this.value,this),validationDiscount('disc_<?= $row['id']?>')" name="disc[]" id="disc_<?= $row['id']?>"></td>
-                                            <?php } ?>
                                             <td>
+                                                <input type="hidden" step=any class="form-control disc" oninput="minusValueCheck(this.value,this),validationDiscount('disc_<?= $row['id']?>')" name="disc[]" id="disc_<?= $row['id']?>">
                                                 <input type="hidden" readonly class="form-control subtotal"
                                                        name="subtotal[]" id="subt_<?php print $m++; ?>"
                                                        value="<?php echo $row['subtotal'] ?>">

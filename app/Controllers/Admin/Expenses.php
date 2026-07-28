@@ -134,6 +134,7 @@ class Expenses extends BaseController
 
             // Insert primary account type mapping
             $db->table('accounts_account_type_map')->insert([
+                'sch_id'      => $shopId,
                 'account_id'      => $account_id,
                 'account_type_id' => $account_type_id
             ]);
@@ -141,6 +142,7 @@ class Expenses extends BaseController
             // Insert sub-type mapping if it exists
             if (!empty($sub_type_id)) {
                 $db->table('accounts_account_type_map')->insert([
+                    'sch_id'      => $shopId,
                     'account_id'      => $account_id,
                     'account_type_id' => $sub_type_id
                 ]);
@@ -194,6 +196,7 @@ class Expenses extends BaseController
 
                 // Insert primary account type mapping
                 $db->table('accounts_account_type_map')->insert([
+                    'sch_id'      => $shopId,
                     'account_id'      => $account_id,
                     'account_type_id' => $account_type_id
                 ]);
@@ -201,6 +204,7 @@ class Expenses extends BaseController
                 // Insert sub-type mapping if it exists
                 if (!empty($sub_type_id)) {
                     $db->table('accounts_account_type_map')->insert([
+                        'sch_id'      => $shopId,
                         'account_id'      => $account_id,
                         'account_type_id' => $sub_type_id
                     ]);

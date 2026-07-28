@@ -31,6 +31,13 @@
                                         <div class="error"></div>
                                     </div>
                                     <div class="form-group">
+                                        <label for="varchar">IS Base</label>
+                                        <select class="form-control" name="base">
+                                            <option value="0">No</option>
+                                            <option value="1">Yes</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
                                         <label for="varchar">Symbol</label>
                                         <input type="text" class="form-control" name="symbol" id="symbol" placeholder="Symbol" required>
                                         <div class="error"></div>

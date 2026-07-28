@@ -31,6 +31,13 @@
                                         <div class="error"></div>
                                     </div>
                                     <div class="form-group">
+                                        <label for="varchar">IS Base</label>
+                                        <select class="form-control" onchange="confirmBase()" name="base">
+                                            <option value="0" <?= ($units->is_base == '0')?'selected':'';?> >No</option>
+                                            <option value="1" <?= ($units->is_base == '1')?'selected':'';?>>Yes</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
                                         <label for="varchar">Symbol</label>
                                         <input type="text" class="form-control" name="symbol" id="symbol" placeholder="Symbol" value="<?= $units->symbol;?>" required>
                                         <div class="error"></div>

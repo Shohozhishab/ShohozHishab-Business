@@ -109,6 +109,7 @@ class Unit extends BaseController
         $data['unit_categories_id'] = $this->request->getPost('unit_categories_id');
         $data['conversion_factor'] = $this->request->getPost('conversion_factor');
         $data['decimal_places'] = $this->request->getPost('decimal_places');
+        $data['is_base'] = $this->request->getPost('base');
         $data['sch_id'] = $shopId;
         $data['createdBy'] = $userId;
         $data['createdDtm'] = date('Y-m-d h:i:s');
@@ -125,15 +126,16 @@ class Unit extends BaseController
             print '<div class="alert alert-danger alert-dismissible" role="alert">' . $this->validation->listErrors() . ' <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         } else {
             $isBase = DB()->table('units')->where('unit_categories_id',$data['unit_categories_id'])->where('is_base','1')->countAllResults();
-            if (empty($isBase)){
-                $data['is_base'] = '1';
-            }
+            if (!empty($isBase)){
+                print '<div class="alert alert-danger alert-dismissible" role="alert">  Base unit already exist <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+            }else {
 
-            $table = DB()->table('units');
-            if ($table->insert($data)) {
-                print '<div class="alert alert-success alert-dismissible" role="alert"> Crate data successfully  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
-            } else {
-                print '<div class="alert alert-danger alert-dismissible" role="alert"> something went wrong  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+                $table = DB()->table('units');
+                if ($table->insert($data)) {
+                    print '<div class="alert alert-success alert-dismissible" role="alert"> Crate data successfully  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+                } else {
+                    print '<div class="alert alert-danger alert-dismissible" role="alert"> something went wrong  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+                }
             }
         }
     }
@@ -189,6 +191,7 @@ class Unit extends BaseController
         $data['unit_categories_id'] = $this->request->getPost('unit_categories_id');
         $data['conversion_factor'] = $this->request->getPost('conversion_factor');
         $data['decimal_places'] = $this->request->getPost('decimal_places');
+        $data['is_base'] = $this->request->getPost('base');
         $data['updatedBy'] = $userId;
 
         $this->validation->setRules([
@@ -202,6 +205,9 @@ class Unit extends BaseController
         if ($this->validation->run($data) == FALSE) {
             print '<div class="alert alert-danger alert-dismissible" role="alert">' . $this->validation->listErrors() . ' <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         } else {
+            if ($data['is_base'] == '1') {
+                DB()->table('units')->where('unit_categories_id', $data['unit_categories_id'])->update(['is_base'=>'0']);
+            }
 
             $table = DB()->table('units');
             if ($table->where('units_id', $data['units_id'])->update($data)) {
