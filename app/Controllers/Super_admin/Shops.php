@@ -99,12 +99,14 @@ class Shops extends BaseController
         $data['password'] = $this->request->getPost('password');
         $data['con_password'] = $this->request->getPost('con_password');
         $data['status'] = $this->request->getPost('status');
+        $data['unit_category'] = $this->request->getPost('unit_category[]');
 
         $this->validation->setRules([
             'name' => ['label' => 'name', 'rules' => 'required'],
             'email' => ['label' => 'email', 'rules' => 'required'],
             'password' => ['label' => 'Password', 'rules' => 'required|max_length[155]'],
             'con_password' => ['label' => 'Con password', 'rules' => 'required|matches[password]'],
+            'unit_category' => ['label' => 'Unit Category','rules' => 'required'],
         ]);
 
         if ($this->validation->run($data) == FALSE) {
@@ -205,6 +207,38 @@ class Shops extends BaseController
                 );
                 $this->customer_typeModel->insert($cusTypeData);
                 //customer type create(end)
+
+                //insert unit category or unit
+                if (!empty($data['unit_category'])) {
+                    $db = DB();
+                    $allUnits = getUnitCategoriesWithUnits();
+
+                    foreach ($data['unit_category'] as $unitCategory) {
+
+                        if (!isset($allUnits[$unitCategory])) {
+                            continue;
+                        }
+
+                        $db->table('unit_categories')->insert([
+                            'sch_id' => $shopsId,
+                            'name'   => $unitCategory,
+                        ]);
+
+                        $categoryId = $db->insertID();
+
+                        foreach ($allUnits[$unitCategory] as $item) {
+                            $db->table('units')->insert([
+                                'sch_id'             => $shopsId,
+                                'unit_categories_id' => $categoryId,
+                                'name'               => $item['name'],
+                                'symbol'             => $item['symbol'],
+                                'conversion_factor'  => $item['factor'],
+                                'is_base'            => $item['base'],
+                                'decimal_places'     => $item['decimal'],
+                            ]);
+                        }
+                    }
+                }
 
                 DB()->transComplete();
 
@@ -572,6 +606,22 @@ class Shops extends BaseController
 
         $transactionEditLog = DB()->table('transaction_edit_log');
         $transactionEditLog->where('sch_id', $id)->delete();
+
+        DB()->table('accounts')->where('sch_id', $id)->delete();
+        DB()->table('accounts_account_type_map')->where('sch_id', $id)->delete();
+        DB()->table('account_type')->where('sch_id', $id)->delete();
+        DB()->table('ledger_accounts')->where('sch_id', $id)->delete();
+
+        DB()->table('product_stock_relation')->where('sch_id', $id)->delete();
+
+        DB()->table('stock_transfer')->where('sch_id', $id)->delete();
+        DB()->table('stock_transfer_item')->where('sch_id', $id)->delete();
+
+        DB()->table('transaction_events')->where('sch_id', $id)->delete();
+
+        DB()->table('units')->where('sch_id', $id)->delete();
+        DB()->table('unit_categories')->where('sch_id', $id)->delete();
+        DB()->table('unit_set')->where('sch_id', $id)->delete();
 
 
         $cash = array(

@@ -56,7 +56,7 @@
                                 <?php if (isset($create) && $create == 1){ ?>
                                 <a href="javascript:void(0)"
                                    onclick="showData('<?php echo site_url('/Admin/Customers_ajax/create/'); ?>','<?php echo '/Admin/Customers/create/'; ?>')"
-                                   class="btn btn-block btn-primary">Register</a>
+                                   class="btn btn-block btn-primary"><i class="fa fa-plus"></i> Create Customer</a>
                                 <?php } ?>
                             </div>
                             <div class="col-lg-12" style="margin-top: 20px;">

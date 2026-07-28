@@ -3900,25 +3900,29 @@
       }
   }
   function unitShow(categories_id){
-      $.ajax({
-          method: "POST",
-          url: '<?= base_url("Admin/Purchase/unitShow")?>',
-          data: {unit_set_id:categories_id},
-          beforeSend: function() {
-              $("#loading-image").show();
-          },
-          success: function(data) {
-              $("#loading-image").hide();
-              // alert(data);
-              $('#unitData').html(data);
-          }
+      if (categories_id) {
+          $.ajax({
+              method: "POST",
+              url: '<?= base_url("Admin/Purchase/unitShow")?>',
+              data: {unit_set_id: categories_id},
+              beforeSend: function () {
+                  $("#loading-image").show();
+              },
+              success: function (data) {
+                  $("#loading-image").hide();
+                  // alert(data);
+                  $('#unitData').html(data);
+              }
 
-      });
+          });
+      }else{
+          $('#unitData').html('');
+      }
   }
 
   $(function() {
       var categories_id = $('#categories_id').val();
-      if (categories_id !== undefined) {
+      if (categories_id) {
           $.ajax({
               method: "POST",
               url: '<?= base_url("Admin/Purchase/unitShow")?>',
@@ -4033,6 +4037,22 @@
               console.error("Error fetching units: ", error);
           }
       });
+  }
+
+  function confirmBase(){
+      return confirm("Are you sure you want to set this unit as the base unit? This will remove the base status from the current base unit.");
+  }
+
+  function toggleAllCategories(button) {
+      const checkboxes = document.querySelectorAll('input[type="checkbox"]:not(:disabled)');
+
+      const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+
+      checkboxes.forEach(cb => {
+          cb.checked = !allChecked;
+      });
+
+      button.textContent = allChecked ? 'Select All' : 'Unselect All';
   }
 
 

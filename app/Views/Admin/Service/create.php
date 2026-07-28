@@ -19,33 +19,33 @@
                 <div class="row">
                     <div class="col-md-12">
                         <div class="box">
-                        <div class="box-header">
-                            <h3 class="box-title">Service Create</h3>
-                        </div>
-                        <!-- /.box-header -->
-                        <div class="box-body">
-                            <div class="row">
-                                <div id="message"></div>
-                                <?php if (session()->getFlashdata('message') !== NULL) : echo session()->getFlashdata('message'); endif; ?>
-
-                                <div class="form-group col-md-4">
-                                    <label for="varchar">Name</label>
-                                    <input type="text" class="form-control" name="service_name" id="service_name" placeholder="Name"  required>
-                                    <div class="error"></div>
-                                </div>
-                                <div class="form-group col-md-4">
-                                    <label for="varchar">Price</label>
-                                    <input type="number" class="form-control" name="price" id="price" placeholder="Price"  required>
-                                    <div class="error"></div>
-                                </div>
-                                <div class="form-group col-md-4">
-                                    <button class="btn btn-primary" style="margin-top: 25px;" onclick="addtocartService()" >Add</button>
-                                </div>
+                            <div class="box-header">
+                                <h3 class="box-title">Service Create</h3>
                             </div>
+                            <!-- /.box-header -->
+                            <div class="box-body">
+                                <div class="row">
+                                    <div id="message"></div>
+                                    <?php if (session()->getFlashdata('message') !== NULL) : echo session()->getFlashdata('message'); endif; ?>
 
+                                    <div class="form-group col-md-4">
+                                        <label for="varchar">Name</label>
+                                        <input type="text" class="form-control" name="service_name" id="service_name" placeholder="Name"  required>
+                                        <div class="error"></div>
+                                    </div>
+                                    <div class="form-group col-md-4">
+                                        <label for="varchar">Price</label>
+                                        <input type="number" class="form-control" name="price" id="price" placeholder="Price"  required>
+                                        <div class="error"></div>
+                                    </div>
+                                    <div class="form-group col-md-4">
+                                        <button class="btn btn-primary" style="margin-top: 25px;" onclick="addtocartService()" >Add</button>
+                                    </div>
+                                </div>
+
+                            </div>
+                            <!-- /.box-body -->
                         </div>
-                        <!-- /.box-body -->
-                    </div>
                     </div>
                     <div class="col-md-12">
 
@@ -59,12 +59,12 @@
                                     <div class="col-md-12">
                                         <table class="table table-responsive">
                                             <thead>
-                                                <tr>
-                                                    <th>Sl</th>
-                                                    <th>Name</th>
-                                                    <th>Price</th>
-                                                    <th>Action</th>
-                                                </tr>
+                                            <tr>
+                                                <th>Sl</th>
+                                                <th>Name</th>
+                                                <th>Price</th>
+                                                <th>Action</th>
+                                            </tr>
                                             </thead>
                                             <tbody>
                                             <?php $i = 1; foreach (Cart()->contents() as $row) { ?>
@@ -160,6 +160,7 @@
 
                                     <input type="number" step=any class="form-control saleDisc" oninput="minusValueCheck(this.value,this)" name="saleDisc" id="saleDisc" placeholder="Input Discount %">
                                     <input type="hidden" class="form-control totalamount" name="total" id="totalamount" readonly value="<?php echo Cart()->total() ?>">
+                                    <input type="hidden" class="form-control" id="vatTotallast" readonly value="0">
                                 </div>
 
                                 <div class="col-md-6" >

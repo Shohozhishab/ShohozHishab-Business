@@ -1974,3 +1974,47 @@ function convertRevertToArray($qty, $unitIds)
     }
     return $result;
 }
+
+function getUnitCategoriesWithUnits(){
+    $units = [
+        'Weight' => [
+            ['name'=>'Gram', 'symbol'=>'g', 'factor'=>1, 'base'=>true, 'decimal'=>0],
+            ['name'=>'KG', 'symbol'=>'kg', 'factor'=>1000, 'base'=>false, 'decimal'=>2],
+            ['name'=>'Metric Ton', 'symbol'=>'ton', 'factor'=>1000000, 'base'=>false, 'decimal'=>4],
+            ['name'=>'Milligram', 'symbol'=>'mg', 'factor'=>0.001, 'base'=>false, 'decimal'=>0],
+            ['name'=>'Pound', 'symbol'=>'lb', 'factor'=>453.59237, 'base'=>false, 'decimal'=>3],
+            ['name'=>'Ounce', 'symbol'=>'oz', 'factor'=>28.349523, 'base'=>false, 'decimal'=>3],
+        ],
+        'Length' => [
+            ['name'=>'Millimeter', 'symbol'=>'mm', 'factor'=>1, 'base'=>true, 'decimal'=>1],
+            ['name'=>'Centimeter', 'symbol'=>'cm', 'factor'=>10, 'base'=>false, 'decimal'=>2],
+            ['name'=>'Meter', 'symbol'=>'m', 'factor'=>1000, 'base'=>false, 'decimal'=>3],
+            ['name'=>'Kilometer', 'symbol'=>'km', 'factor'=>1000000, 'base'=>false, 'decimal'=>3],
+            ['name'=>'Inch', 'symbol'=>'in', 'factor'=>25.4, 'base'=>false, 'decimal'=>3],
+            ['name'=>'Foot', 'symbol'=>'ft', 'factor'=>304.8, 'base'=>false, 'decimal'=>3],
+            ['name'=>'Yard', 'symbol'=>'yd', 'factor'=>914.4, 'base'=>false, 'decimal'=>3],
+        ],
+        'Volume' => [
+            ['name'=>'Milliliter', 'symbol'=>'ml', 'factor'=>1, 'base'=>true, 'decimal'=>0],
+            ['name'=>'Liter', 'symbol'=>'L', 'factor'=>1000, 'base'=>false, 'decimal'=>3],
+            ['name'=>'Cubic Meter', 'symbol'=>'m3', 'factor'=>1000000, 'base'=>false, 'decimal'=>4],
+            ['name'=>'Gallon (US)', 'symbol'=>'gal', 'factor'=>3785.41, 'base'=>false, 'decimal'=>3],
+        ],
+        'Area' => [
+            ['name'=>'Square Meter', 'symbol'=>'m²', 'factor'=>1, 'base'=>true, 'decimal'=>2],
+            ['name'=>'Square Foot', 'symbol'=>'ft²', 'factor'=>0.092903, 'base'=>false, 'decimal'=>2],
+            ['name'=>'Square Yard', 'symbol'=>'yd²', 'factor'=>0.836127, 'base'=>false, 'decimal'=>2],
+            ['name'=>'Acre', 'symbol'=>'acre', 'factor'=>4046.856422, 'base'=>false, 'decimal'=>4],
+            ['name'=>'Hectare', 'symbol'=>'ha', 'factor'=>10000, 'base'=>false, 'decimal'=>4],
+        ],
+        'Piece' => [
+            ['name'=>'Piece', 'symbol'=>'pc', 'factor'=>1, 'base'=>true, 'decimal'=>0],
+            ['name'=>'Dozen', 'symbol'=>'dozen', 'factor'=>12, 'base'=>false, 'decimal'=>0],
+            ['name'=>'Score', 'symbol'=>'score', 'factor'=>20, 'base'=>false, 'decimal'=>0],
+            ['name'=>'Gross', 'symbol'=>'gross', 'factor'=>144, 'base'=>false, 'decimal'=>0],
+            ['name'=>'Gira', 'symbol'=>'gr', 'factor'=>57.15, 'base'=>false, 'decimal'=>1],
+            ['name'=>'Hali', 'symbol'=>'h', 'factor'=>4, 'base'=>false, 'decimal'=>0],
+        ],
+    ];
+    return $units;
+}

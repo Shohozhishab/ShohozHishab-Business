@@ -67,7 +67,13 @@ class Unit_categories extends BaseController
         if (!isset($isLoggedIn) || $isLoggedIn != TRUE) {
             return redirect()->to(site_url('Admin/login'));
         } else {
+            $shopId = $this->session->shopId;
+
             $data['action'] = base_url('Admin/Unit_categories/create_action');
+            $data['actionCategory'] = base_url('Admin/Unit_categories/category_create_action');
+
+            $table = DB()->table('unit_categories');
+            $data['categories'] = $table->where('sch_id', $shopId)->get()->getResult();
 
             // All Permissions
             //$perm = array('create','read','update','delete','mod_access');
@@ -192,6 +198,53 @@ class Unit_categories extends BaseController
 
         $this->session->setFlashdata('message', '<div class="alert alert-success alert-dismissible" role="alert"> Delete data successfully  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
         return redirect()->to(site_url('Admin/Unit_categories'));
+    }
+
+    function category_create_action(){
+        $data['unit_category'] = $this->request->getPost('unit_category[]');
+
+        $this->validation->setRules([
+            'unit_category' => ['label' => 'Unit Category', 'rules' => 'required'],
+        ]);
+
+        if ($this->validation->run($data) == FALSE) {
+            $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">' . $this->validation->listErrors() . ' <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+            return redirect()->to(site_url('Admin/Unit_categories/create'));
+        } else {
+            $shopId = $this->session->shopId;
+            $db = DB();
+            $allUnits = getUnitCategoriesWithUnits();
+
+            foreach ($data['unit_category'] as $unitCategory) {
+
+                if (!isset($allUnits[$unitCategory])) {
+                    continue;
+                }
+
+                $db->table('unit_categories')->insert([
+                    'sch_id' => $shopId,
+                    'name'   => $unitCategory,
+                ]);
+
+                $categoryId = $db->insertID();
+
+                foreach ($allUnits[$unitCategory] as $item) {
+                    $db->table('units')->insert([
+                        'sch_id'             => $shopId,
+                        'unit_categories_id' => $categoryId,
+                        'name'               => $item['name'],
+                        'symbol'             => $item['symbol'],
+                        'conversion_factor'  => $item['factor'],
+                        'is_base'            => $item['base'],
+                        'decimal_places'     => $item['decimal'],
+                    ]);
+                }
+            }
+
+            $this->session->setFlashdata('message', '<div class="alert alert-success alert-dismissible" role="alert"> Category Add Successfully <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+            return redirect()->to(site_url('Admin/Unit_categories/create'));
+
+        }
     }
 
 }
