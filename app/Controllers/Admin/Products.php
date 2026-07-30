@@ -359,12 +359,11 @@ class Products extends BaseController
             $store = $storeTab->where('sch_id', $shopId)->where('is_default', 1)->get()->getRow();
 
             //insert product
-
+            $queryUnit = DB()->table('unit_set')->where('unit_set_id',$categories_id)->get()->getRow();
             $dataProduct['prod_cat_id'] = $data['prod_cat_id'];
             $dataProduct['name'] = $data['name'];
-            $dataProduct['unit'] = $data['sale_unit'];
-            $dataProduct['purchase_price'] = $purchasePrice;
-            $dataProduct['selling_price'] = $salePrice;
+            $dataProduct['purchase_units'] = $queryUnit->purchase_units;
+            $dataProduct['sale_units'] = $queryUnit->sell_units;
             $dataProduct['purchase_date'] = date('Y-m-d H:i:s');
             $dataProduct['sch_id'] = $shopId;
             $dataProduct['createdBy'] = $this->session->userId;
@@ -378,6 +377,9 @@ class Products extends BaseController
                 'store_id' => $store->store_id,
                 'product_id' => $prodId,
                 'quantity' => $totalQty,
+                'unit' => $data['sale_unit'],
+                'purchase_price' => $purchasePrice,
+                'selling_price' => $salePrice,
             ]);
 
             //total amount product
