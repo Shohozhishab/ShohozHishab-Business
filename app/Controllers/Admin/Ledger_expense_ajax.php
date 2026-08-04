@@ -36,7 +36,7 @@ class Ledger_expense_ajax extends BaseController
         if (!isset($isLoggedIn) || $isLoggedIn != TRUE) {
             return redirect()->to(site_url('Admin/login'));
         } else {
-              $shopId = $this->session->shopId;
+            $shopId = $this->session->shopId;
 
             $st_date = $this->request->getGet('st_date');
             $en_date = $this->request->getGet('en_date');
@@ -53,6 +53,7 @@ class Ledger_expense_ajax extends BaseController
 
             $data['st_date'] = isset($st_date)?$st_date:'';
             $data['en_date'] = isset($en_date)?$en_date:'';
+
             $data['menu'] = view('Admin/menu_ledger');
             // All Permissions
             //$perm = array('create','read','update','delete','mod_access');

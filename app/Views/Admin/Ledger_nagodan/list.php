@@ -10,11 +10,12 @@
 
     <!-- Main content -->
     <section class="content">
+        <!-- Small boxes (Stat box) -->
         <div class="col-xs-12" style="margin-bottom: 15px;">
             <?php echo $menu;?>
         </div>
         <?php if (isDefaultRole() == true){ ?>
-            <div class="row" id="reloadRoleDiv">
+            <div class="row" id="reloadRoleDiv" style="margin-bottom:20px; ">
                 <div class="col-lg-12" >
                     <button class="btn btn-sm btn-info " style="float: right;" onclick="rollPermissionBtn()">Roll Permission</button>
                 </div>
@@ -40,7 +41,7 @@
                 </div>
             </div>
         <?php } ?>
-        <div class="row" style="margin-top: 20px;">
+        <div class="row">
             <?php if (isset($filter) && $filter == 1){ ?>
             <div class="col-xs-12" >
                 <div class="box box-primary">
@@ -94,12 +95,12 @@
                                     </thead>
                                     <tbody>
                                     <?php
-
                                     $totalRows = count($ledger_nagodan_data) - 1;
-                                    for ($i = $totalRows; $i >= 0; $i--) {
+                                    for ($i = 0; $i <= $totalRows; $i++) {
                                         $particulars = ($ledger_nagodan_data[$i]->particulars == NULL) ? "Payment" : $ledger_nagodan_data[$i]->particulars;
                                         $amountCr = ($ledger_nagodan_data[$i]->trangaction_type != "Cr.") ? "---" : showWithCurrencySymbol($ledger_nagodan_data[$i]->amount);
                                         $amountDr = ($ledger_nagodan_data[$i]->trangaction_type != "Dr.") ? "---" : showWithCurrencySymbol($ledger_nagodan_data[$i]->amount);
+
                                         ?>
                                         <tr>
                                             <td><?php echo $ledger_nagodan_data[$i]->ledg_nagodan_id ?></td>
@@ -108,7 +109,7 @@
                                             <td><a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/read/' . $ledger_nagodan_data[$i]->trans_id); ?>','<?php echo '/Admin/Transaction/read/' . $ledger_nagodan_data[$i]->trans_id; ?>')" ><?php echo $ledger_nagodan_data[$i]->trans_id ?> </a></td>
                                             <td><?php echo $amountDr ?></td>
                                             <td><?php echo $amountCr ?></td>
-                                            <td><?php echo showWithCurrencySymbol($ledger_nagodan_data[$i]->rest_balance) ?></td>
+                                            <td><?php echo showWithCurrencySymbol($ledger_nagodan_data[$i]->r_balance) ?></td>
                                         </tr>
                                     <?php } ?>
 
@@ -140,13 +141,13 @@
 
                             <div class="col-xs-12">
                                 <?php if (isset($print) && $print == 1){ ?>
-                                <button onclick="printDiv('ledgPrint')" class="print_line btn btn-primary pull-right"><i class="fa fa-print "></i> Print Now </button>
+                                    <button onclick="printDiv('ledgPrint')" class="print_line btn btn-primary pull-right"><i class="fa fa-print "></i> Print Now </button>
                                 <?php } ?>
                                 <?php if (isset($download_PDF) && $download_PDF == 1){ ?>
-                                <button type="button" class="btn btn-info pull-right" style="margin-right: 10px;" onclick="downloadPDF('ledgPrint','cash')"><i class="fa fa-file-pdf-o "></i> Download PDF </button>
+                                    <button type="button" class="btn btn-info pull-right" style="margin-right: 10px;" onclick="downloadPDF('ledgPrint','cash')"><i class="fa fa-file-pdf-o "></i> Download PDF </button>
                                 <?php } ?>
                                 <?php if (isset($download_CSV) && $download_CSV == 1){ ?>
-                                <button type="button" class="btn btn-success pull-right" style="margin-right: 10px;" onclick="downloadCSV('ledgPrint','cash')"><i class="fa fa-file-excel-o "></i> Download CSV</button>
+                                    <button type="button" class="btn btn-success pull-right" style="margin-right: 10px;" onclick="downloadCSV('ledgPrint','cash')"><i class="fa fa-file-excel-o "></i> Download CSV</button>
                                 <?php } ?>
                             </div>
 
@@ -191,7 +192,7 @@
                                         <td><?php echo $particulars ?></td>
                                         <td><?php echo $amountDr ?></td>
                                         <td><?php echo $amountCr ?></td>
-                                        <td><?php echo showWithCurrencySymbol($row->rest_balance) ?></td>
+                                        <td><?php echo showWithCurrencySymbol($row->r_balance) ?></td>
                                     </tr>
                                 <?php }?>
 

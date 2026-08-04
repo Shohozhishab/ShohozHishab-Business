@@ -38,8 +38,26 @@ class Ledger_nagodan_ajax extends BaseController
         } else {
             $shopId = $this->session->shopId;
 
-            $table = DB()->table('ledger_nagodan');
-            $data['ledger_nagodan_data'] = $table->where('sch_id', $shopId)->where('deleted IS NULL')->orderBy('ledg_nagodan_id', 'DESC')->get()->getResult();
+            $db = DB();
+            // 1. Define the window function column
+            $mBalanceSubquery = "SUM(
+                CASE 
+                    WHEN LOWER(trangaction_type) LIKE 'dr%' THEN amount 
+                    WHEN LOWER(trangaction_type) LIKE 'cr%' THEN -amount 
+                    ELSE 0 
+                END
+            ) OVER (ORDER BY ledg_nagodan_id) AS r_balance";
+            // 2. Build the inner subquery
+            $subquery = $db->table('ledger_nagodan')
+                ->select('ledger_nagodan.*')
+                ->select($mBalanceSubquery, false); // false prevents CI4 from escaping the raw SQL window function
+            // 3. Query from the subquery derived table
+            $data['ledger_nagodan_data'] = $db->newQuery()
+                ->fromSubquery($subquery, 't')
+                ->where('sch_id', $shopId)
+                ->orderBy('ledg_nagodan_id', 'ASC')
+                ->get()
+                ->getResult();
 
             $data['menu'] = view('Admin/menu_ledger');
             // All Permissions

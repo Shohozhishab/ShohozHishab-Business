@@ -51,9 +51,9 @@ class Ledger_expense extends BaseController
             }
             $data['ledger_expense'] = $table->get()->getResult();
 
+            $data['st_date'] = isset($st_date)?$st_date:'';
+            $data['en_date'] = isset($en_date)?$en_date:'';
 
-            $data['st_date'] = isset($st_date) ? $st_date : '';
-            $data['en_date'] = isset($en_date) ? $en_date : '';
             $data['menu'] = view('Admin/menu_ledger');
             // All Permissions
             //$perm = array('create','read','update','delete','mod_access');
@@ -71,4 +71,6 @@ class Ledger_expense extends BaseController
             echo view('Admin/footer');
         }
     }
+
+
 }

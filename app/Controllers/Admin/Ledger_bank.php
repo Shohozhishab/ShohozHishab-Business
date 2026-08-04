@@ -42,17 +42,38 @@ class Ledger_bank extends BaseController
             $st_date = $this->request->getGet('st_date');
             $en_date = $this->request->getGet('en_date');
             $query = [];
+
             if (!empty($bank_id)) {
-                $table = DB()->table('ledger_bank');
-                if (!empty($st_date) && !empty($en_date)) {
-                    // Assuming your database column name is 'date'
-                    $table->where('createdDtm >=', $st_date . ' 00:00:00');
-                    $table->where('createdDtm <=', $en_date . ' 23:59:59');
-                }
-                $table->where("bank_id", $bank_id);
+                $db = DB();
+                // 1. Define the window function column
+                $mBalanceSubquery = "SUM(
+                    CASE 
+                        WHEN LOWER(trangaction_type) LIKE 'dr%' THEN amount 
+                        WHEN LOWER(trangaction_type) LIKE 'cr%' THEN -amount 
+                        ELSE 0 
+                    END
+                ) OVER (ORDER BY ledgBank_id) AS r_balance";
+                // 2. Build the inner subquery
+                $subquery = $db->table('ledger_bank')
+                    ->select('ledger_bank.*')
+                    ->select($mBalanceSubquery, false); // false prevents CI4 from escaping the raw SQL window function
+                // 3. Query from the subquery derived table
+                $table = $db->newQuery()
+                    ->fromSubquery($subquery, 't')
+                    ->where("bank_id", $bank_id);
+                    if (!empty($st_date) && !empty($en_date)) {
+                        // Assuming your database column name is 'date'
+                        $table->where('createdDtm >=', $st_date . ' 00:00:00');
+                        $table->where('createdDtm <=', $en_date . ' 23:59:59');
+                    }
+                    $table->orderBy('ledgBank_id', 'ASC');
                 $query = $table->get()->getResult();
             }
+
             $data['result'] = $query;
+
+
+
 
             $data['st_date'] = isset($st_date)?$st_date:'';
             $data['en_date'] = isset($en_date)?$en_date:'';
