@@ -38,8 +38,27 @@ class Ledger_nagodan extends BaseController
         } else {
             $shopId = $this->session->shopId;
 
-            $table = DB()->table('ledger_nagodan');
-            $data['ledger_nagodan_data'] = $table->where('sch_id', $shopId)->where('deleted IS NULL')->orderBy('ledg_nagodan_id', 'DESC')->get()->getResult();
+            $db = DB();
+            // 1. Define the window function column
+            $mBalanceSubquery = "SUM(
+                CASE 
+                    WHEN LOWER(trangaction_type) LIKE 'dr%' THEN amount 
+                    WHEN LOWER(trangaction_type) LIKE 'cr%' THEN -amount 
+                    ELSE 0 
+                END
+            ) OVER (ORDER BY ledg_nagodan_id) AS r_balance";
+            // 2. Build the inner subquery
+            $subquery = $db->table('ledger_nagodan')
+                ->select('ledger_nagodan.*')
+                ->select($mBalanceSubquery, false); // false prevents CI4 from escaping the raw SQL window function
+            // 3. Query from the subquery derived table
+            $data['ledger_nagodan_data'] = $db->newQuery()
+                ->fromSubquery($subquery, 't')
+                ->where('sch_id', $shopId)
+                ->orderBy('ledg_nagodan_id', 'ASC')
+                ->get()
+                ->getResult();
+
 
             $data['menu'] = view('Admin/menu_ledger');
             // All Permissions
@@ -69,13 +88,31 @@ class Ledger_nagodan extends BaseController
         $st_date = $this->request->getPost('st_date');
         $en_date = $this->request->getPost('en_date');
 
-        $table = DB()->table('ledger_nagodan');
-        $table->where('createdDtm >=', $st_date . ' 00:00:00');
-        $table->where('createdDtm <=', $en_date . ' 23:59:59');
-        $table->where('sch_id', $shopId);
-        $table->orderBy('ledg_nagodan_id', "DESC");
-        $query = $table->get();
-        $data = $query->getResult();
+
+        $db = DB();
+        // 1. Define the window function column
+        $mBalanceSubquery = "SUM(
+                CASE 
+                    WHEN LOWER(trangaction_type) LIKE 'dr%' THEN amount 
+                    WHEN LOWER(trangaction_type) LIKE 'cr%' THEN -amount 
+                    ELSE 0 
+                END
+            ) OVER (ORDER BY ledg_nagodan_id) AS r_balance";
+        // 2. Build the inner subquery
+        $subquery = $db->table('ledger_nagodan')
+            ->select('ledger_nagodan.*')
+            ->select($mBalanceSubquery, false); // false prevents CI4 from escaping the raw SQL window function
+        // 3. Query from the subquery derived table
+        $data = $db->newQuery()
+            ->fromSubquery($subquery, 't')
+            ->where('createdDtm >=', $st_date . ' 00:00:00')
+            ->where('createdDtm <=', $en_date . ' 23:59:59')
+            ->where('sch_id', $shopId)
+            ->orderBy('ledg_nagodan_id', 'ASC')
+            ->get()
+            ->getResult();
+
+
 
         $view = '<div class="box-body">
                     <div class="row"/>
@@ -93,17 +130,14 @@ class Ledger_nagodan extends BaseController
                                 </tr>
                             </thead>
                             <tbody>';
-        $restBalance = 0;
+
         $totalRows = count($data) - 1;
         for ($i = $totalRows; $i >= 0; $i--) {
             $particulars = ($data[$i]->particulars == NULL) ? "Payment" : $data[$i]->particulars;
             $amountCr = ($data[$i]->trangaction_type != "Cr.") ? "---" : showWithCurrencySymbol($data[$i]->amount);
             $amountDr = ($data[$i]->trangaction_type != "Dr.") ? "---" : showWithCurrencySymbol($data[$i]->amount);
-            if ($data[$i]->trangaction_type == 'Dr.') {
-                $restBalance = $restBalance + $data[$i]->amount;
-            }else {
-                $restBalance = $restBalance - $data[$i]->amount;
-            }
+
+
             $view .= '<tr>
                                     <td>' . $data[$i]->ledg_nagodan_id . '</td>
                                     <td>' . $data[$i]->createdDtm . '</td>
@@ -111,7 +145,7 @@ class Ledger_nagodan extends BaseController
                                     <td>' . $data[$i]->trans_id . '</td>
                                     <td>' . $amountDr . '</td>
                                     <td>' . $amountCr . '</td>
-                                    <td>' . showWithCurrencySymbol($restBalance) . '</td>
+                                    <td>' . showWithCurrencySymbol($data[$i]->r_balance) . '</td>
                                 </tr>';
         }
 

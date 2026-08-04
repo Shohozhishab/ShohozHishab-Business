@@ -43,13 +43,29 @@ class Ledger_suppliers_ajax extends BaseController
             $en_date = $this->request->getGet('en_date');
             $query = [];
             if (!empty($supplier_id)) {
-                $table = DB()->table('ledger_suppliers');
+                $db = DB();
+                // 1. Define the window function column
+                $mBalanceSubquery = "SUM(
+                    CASE 
+                        WHEN LOWER(trangaction_type) LIKE 'dr%' THEN amount 
+                        WHEN LOWER(trangaction_type) LIKE 'cr%' THEN -amount 
+                        ELSE 0 
+                    END
+                ) OVER (ORDER BY ledg_sup_id) AS r_balance";
+                // 2. Build the inner subquery
+                $subquery = $db->table('ledger_suppliers')
+                    ->select('ledger_suppliers.*')
+                    ->select($mBalanceSubquery, false); // false prevents CI4 from escaping the raw SQL window function
+                // 3. Query from the subquery derived table
+                $table = $db->newQuery()
+                    ->fromSubquery($subquery, 't')
+                    ->where("supplier_id", $supplier_id);
                 if (!empty($st_date) && !empty($en_date)) {
                     // Assuming your database column name is 'date'
                     $table->where('createdDtm >=', $st_date . ' 00:00:00');
                     $table->where('createdDtm <=', $en_date . ' 23:59:59');
                 }
-                $table->where("supplier_id", $supplier_id);
+                $table->orderBy('ledg_sup_id', 'ASC');
                 $query = $table->get()->getResult();
             }
             $data['result'] = $query;

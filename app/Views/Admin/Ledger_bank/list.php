@@ -10,11 +10,12 @@
 
     <!-- Main content -->
     <section class="content">
+        <!-- Small boxes (Stat box) -->
         <div class="col-xs-12" style="margin-bottom: 15px;">
             <?php echo $menu;?>
         </div>
         <?php if (isDefaultRole() == true){ ?>
-            <div class="row" id="reloadRoleDiv">
+            <div class="row" id="reloadRoleDiv" style="margin-bottom:20px; ">
                 <div class="col-lg-12" >
                     <button class="btn btn-sm btn-info " style="float: right;" onclick="rollPermissionBtn()">Roll Permission</button>
                 </div>
@@ -40,7 +41,7 @@
                 </div>
             </div>
         <?php } ?>
-        <div class="row" style="margin-top: 20px;">
+        <div class="row">
 
             <div class="col-xs-12">
                 <?php if (isset($filter) && $filter == 1){ ?>
@@ -84,18 +85,18 @@
                 </div>
                 <?php } ?>
                 <?php
-                $name = get_data_by_id('name', 'bank', 'bank_id', $bank_id);
-                $account = get_data_by_id('account_no', 'bank', 'bank_id', $bank_id);
-                $balance = get_data_by_id('balance', 'bank', 'bank_id', $bank_id);
+                    $name = get_data_by_id('name', 'bank', 'bank_id', $bank_id);
+                    $account = get_data_by_id('account_no', 'bank', 'bank_id', $bank_id);
+                    $balance = get_data_by_id('balance', 'bank', 'bank_id', $bank_id);
                 ?>
 
                 <div class="box">
                     <?php if (!empty($bank_id)){ ?>
-                        <div class="box-header">
-                            <h3 class="box-title">
-                                Bank: <?= $name ?> -- <?= $account ?></h3>
-                            <span class="pull-right"><table class="table table-bordered table-striped" id="TFtable"><tr><td>Total Deposit:</td><td> <?= showWithCurrencySymbol(get_total('ledger_bank', 'amount', 'Dr.', 'bank_id', $bank_id)) ?></td></tr><tr><td>Total Withdraw:</td><td><?= showWithCurrencySymbol(get_total('ledger_bank', 'amount', 'Cr.', 'bank_id', $bank_id)) ?></td></tr><tr><td>Balance:</td><td><?= showWithCurrencySymbol($balance) ?></td></tr></table></span>
-                        </div>
+                    <div class="box-header">
+                        <h3 class="box-title">
+                            Bank: <?= $name ?> -- <?= $account ?></h3>
+                        <span class="pull-right"><table class="table table-bordered table-striped" id="TFtable"><tr><td>Total Deposit:</td><td> <?= showWithCurrencySymbol(get_total('ledger_bank', 'amount', 'Dr.', 'bank_id', $bank_id)) ?></td></tr><tr><td>Total Withdraw:</td><td><?= showWithCurrencySymbol(get_total('ledger_bank', 'amount', 'Cr.', 'bank_id', $bank_id)) ?></td></tr><tr><td>Balance:</td><td><?= showWithCurrencySymbol($balance) ?></td></tr></table></span>
+                    </div>
                     <?php } ?>
 
                     <div class="box-body">
@@ -116,14 +117,15 @@
                             <tbody>
                             <?php
                             $totalRows = count($result) - 1;
-                            for ($i = $totalRows; $i >= 0; $i--) {
+                            for ($i = 0; $i <= $totalRows; $i++) {
                                 $particulars = ($result[$i]->particulars == NULL) ? "Pay due" : $result[$i]->particulars;
                                 $amountCr = ($result[$i]->trangaction_type != "Cr.") ? "---" : showWithCurrencySymbol($result[$i]->amount);
                                 $amountDr = ($result[$i]->trangaction_type != "Dr.") ? "---" : showWithCurrencySymbol($result[$i]->amount);
                                 $transId = ($result[$i]->trans_id == NULL) ? "---" : '<a href="'.base_url('Admin/Transaction/read/'.$result[$i]->trans_id).'"> TRNS_'.$result[$i]->trans_id.'</a>';
                                 $purchaseId = ($result[$i]->purchase_id == NULL) ? "---" : '<a href="'.base_url('Admin/Purchase/view/'.$result[$i]->purchase_id).'"> PURS_'.$result[$i]->purchase_id.'</a>';
                                 $invoiceId = ($result[$i]->invoice_id == 0) ? "---" : '<a href="'.base_url('Admin/Invoice/view/'.$result[$i]->invoice_id).'"> INV_'.$result[$i]->invoice_id.'</a>';
-                                ?>
+
+                            ?>
                                 <tr>
                                     <td><?= $result[$i]->ledgBank_id ?></td>
                                     <td><?= $result[$i]->createdDtm  ?></td>
@@ -133,7 +135,7 @@
                                     <td><?= $invoiceId ?></td>
                                     <td><?= $amountDr ?></td>
                                     <td><?= $amountCr ?></td>
-                                    <td><?= showWithCurrencySymbol($result[$i]->rest_balance) ?></td>
+                                    <td><?= showWithCurrencySymbol($result[$i]->r_balance) ?></td>
                                 </tr>
 
                             <?php }?>
@@ -172,7 +174,7 @@
                                 <tbody>
                                 <?php
                                 $totalRows = count($result) - 1;
-                                for ($i = $totalRows; $i >= 0; $i--) {
+                                for ($i = 0; $i <= $totalRows; $i++) {
                                     $particulars = ($result[$i]->particulars == NULL) ? "Pay due" : $result[$i]->particulars;
                                     $amountCr = ($result[$i]->trangaction_type != "Cr.") ? "---" : showWithCurrencySymbol($result[$i]->amount);
                                     $amountDr = ($result[$i]->trangaction_type != "Dr.") ? "---" : showWithCurrencySymbol($result[$i]->amount);
@@ -182,7 +184,7 @@
                                         <td><?= $particulars  ?></td>
                                         <td><?= $amountDr ?></td>
                                         <td><?= $amountCr ?></td>
-                                        <td><?= showWithCurrencySymbol($result[$i]->rest_balance) ?></td>
+                                        <td><?= showWithCurrencySymbol($result[$i]->r_balance) ?></td>
                                     </tr>
 
                                 <?php }?>

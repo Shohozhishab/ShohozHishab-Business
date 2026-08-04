@@ -10,11 +10,12 @@
 
     <!-- Main content -->
     <section class="content">
+        <!-- Small boxes (Stat box) -->
         <div class="col-xs-12" style="margin-bottom: 15px;">
             <a href="#" onclick="showData('<?php echo site_url('/Admin/Employee_ajax/'); ?>','<?php echo '/Admin/Employee/';?>')"  class="btn btn-default">Employee</a>
         </div>
         <?php if (isDefaultRole() == true){ ?>
-            <div class="row" id="reloadRoleDiv">
+            <div class="row" id="reloadRoleDiv" style="margin-bottom:20px; ">
                 <div class="col-lg-12" >
                     <button class="btn btn-sm btn-info " style="float: right;" onclick="rollPermissionBtn()">Roll Permission</button>
                 </div>
@@ -40,7 +41,7 @@
                 </div>
             </div>
         <?php } ?>
-        <div class="row" style="margin-top: 20px;">
+        <div class="row">
 
             <div class="col-xs-12">
                 <?php if (isset($filter) && $filter == 1){ ?>
@@ -111,7 +112,7 @@
                                     <td><?= $particulars ?></td>
                                     <td><?= $amountDr ?></td>
                                     <td><?= $amountCr ?></td>
-                                    <td><?= $row->rest_balance ?></td>
+                                    <td><?= $row->r_balance ?></td>
                                 </tr>
 
                             <?php }?>

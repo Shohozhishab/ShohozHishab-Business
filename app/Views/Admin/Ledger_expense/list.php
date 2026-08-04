@@ -42,39 +42,39 @@
         <?php } ?>
         <div class="row" style="margin-top: 20px;">
             <?php if (isset($filter) && $filter == 1){ ?>
-            <div class="col-xs-12" >
-                <div class="box box-primary">
-                    <div class="box-header with-border">
-                        <h3 class="box-title"><i class="fa fa-filter"></i> Filter</h3>
-                    </div>
-                    <div class="box-body">
-                        <form action="<?= base_url('Admin/Ledger_expense') ?>" method="get">
-                            <div class="row">
-                                <div class="col-md-3">
-                                    <label>Start Date</label>
-                                    <input type="date" class="form-control" name="st_date" value="<?= $st_date; ?>"
-                                           id="st_date" required>
-                                </div>
-                                <div class="col-md-3">
-                                    <label>End Date</label>
-                                    <input type="date" class="form-control" name="en_date" value="<?= $en_date; ?>"
-                                           id="en_date" required>
-                                </div>
+                <div class="col-xs-12" >
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <h3 class="box-title"><i class="fa fa-filter"></i> Filter</h3>
+                        </div>
+                        <div class="box-body">
+                            <form action="<?= base_url('Admin/Ledger_expense') ?>" method="get">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <label>Start Date</label>
+                                        <input type="date" class="form-control" name="st_date" value="<?= $st_date; ?>"
+                                               id="st_date" required>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label>End Date</label>
+                                        <input type="date" class="form-control" name="en_date" value="<?= $en_date; ?>"
+                                               id="en_date" required>
+                                    </div>
 
-                                <div class="col-md-2" style="margin-top: 25px;">
-                                    <button type="submit" class="btn btn-primary btn-block"><i class="fa fa-search"></i>
-                                        Filter
-                                    </button>
+                                    <div class="col-md-2" style="margin-top: 25px;">
+                                        <button type="submit" class="btn btn-primary btn-block"><i class="fa fa-search"></i>
+                                            Filter
+                                        </button>
+                                    </div>
+                                    <div class="col-md-2" style="margin-top: 25px;">
+                                        <a href="<?= base_url('Admin/Ledger_expense') ?>" class="btn btn-default btn-block"><i
+                                                    class="fa fa-refresh"></i> Reset</a>
+                                    </div>
                                 </div>
-                                <div class="col-md-2" style="margin-top: 25px;">
-                                    <a href="<?= base_url('Admin/Ledger_expense') ?>" class="btn btn-default btn-block"><i
-                                                class="fa fa-refresh"></i> Reset</a>
-                                </div>
-                            </div>
-                        </form>
+                            </form>
+                        </div>
                     </div>
                 </div>
-            </div>
             <?php } ?>
             <div class="col-xs-12">
 
@@ -96,12 +96,18 @@
                             </thead>
                             <tbody>
                             <?php
+                            $restBalance = 0;
                             $m = 1;
                             $totalRows = count($ledger_expense)-1;
-                            for($i = $totalRows; $i >= 0; $i--) {
+                            for ($i = 0; $i <= $totalRows; $i++) {
                                 $particulars = ($ledger_expense[$i]->particulars == NULL) ? "Payment" : $ledger_expense[$i]->particulars;
                                 $amountCr = ($ledger_expense[$i]->trangaction_type != "Cr.") ? "---" : showWithCurrencySymbol($ledger_expense[$i]->amount);
                                 $amountDr =($ledger_expense[$i]->trangaction_type != "Dr.")?"---":showWithCurrencySymbol($ledger_expense[$i]->amount);
+                                if ($ledger_expense[$i]->trangaction_type == 'Dr.') {
+                                    $restBalance = $restBalance + $ledger_expense[$i]->amount;
+                                }else {
+                                    $restBalance = $restBalance - $ledger_expense[$i]->amount;
+                                }
                                 ?>
                                 <tr>
                                     <td><?php echo  $m++ ?></td>
@@ -110,7 +116,7 @@
                                     <td><?php echo $ledger_expense[$i]->trans_id ?></td>
                                     <td><?php echo $amountDr ?></td>
                                     <td><?php echo $amountCr ?></td>
-                                    <td><?php echo showWithCurrencySymbol($ledger_expense[$i]->rest_balance) ?></td>
+                                    <td><?php echo showWithCurrencySymbol($restBalance) ?></td>
                                 </tr>
                             <?php }?>
 
@@ -136,13 +142,13 @@
                 <div class="row no-print" >
                     <div class="col-xs-12">
                         <?php if (isset($print) && $print == 1){ ?>
-                        <button onclick="printDiv('ledgPrint')" class="print_line btn btn-primary pull-right" ><i class="fa fa-print "></i> Print Now</button>
+                            <button onclick="printDiv('ledgPrint')" class="print_line btn btn-primary pull-right" ><i class="fa fa-print "></i> Print Now</button>
                         <?php } ?>
                         <?php if (isset($download_PDF) && $download_PDF == 1){ ?>
-                        <button type="button" class="btn btn-info pull-right" style="margin-right: 10px;" onclick="downloadPDF('ledgPrint','expense')"><i class="fa fa-file-pdf-o "></i> Download PDF </button>
+                            <button type="button" class="btn btn-info pull-right" style="margin-right: 10px;" onclick="downloadPDF('ledgPrint','expense')"><i class="fa fa-file-pdf-o "></i> Download PDF </button>
                         <?php } ?>
                         <?php if (isset($download_CSV) && $download_CSV == 1){ ?>
-                        <button type="button" class="btn btn-success pull-right" style="margin-right: 10px;" onclick="downloadCSV('ledgPrint','expense')"><i class="fa fa-file-excel-o "></i> Download CSV</button>
+                            <button type="button" class="btn btn-success pull-right" style="margin-right: 10px;" onclick="downloadCSV('ledgPrint','expense')"><i class="fa fa-file-excel-o "></i> Download CSV</button>
                         <?php } ?>
                     </div>
                 </div>
@@ -174,18 +180,24 @@
                         </thead>
                         <tbody>
                         <?php
+                        $restBalance = 0;
                         foreach ($ledger_expense as $row) {
 
                             $particulars = ($row->particulars == NULL) ? "Payment" : $row->particulars;
                             $amountCr = ($row->trangaction_type != "Cr.") ? "---" : showWithCurrencySymbol($row->amount);
                             $amountDr =($row->trangaction_type != "Dr.")?"---":showWithCurrencySymbol($row->amount);
+                            if ($row->trangaction_type == 'Dr.') {
+                                $restBalance = $restBalance + $row->amount;
+                            }else {
+                                $restBalance = $restBalance - $row->amount;
+                            }
                             ?>
                             <tr>
                                 <td><?php echo bdDateFormat($row->createdDtm) ?></td>
                                 <td><?php echo $particulars ?></td>
                                 <td><?php echo $amountDr ?></td>
                                 <td><?php echo $amountCr ?></td>
-                                <td><?php echo showWithCurrencySymbol($row->rest_balance) ?></td>
+                                <td><?php echo showWithCurrencySymbol($restBalance) ?></td>
                             </tr>
                         <?php }?>
 

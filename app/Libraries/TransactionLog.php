@@ -163,6 +163,12 @@ class TransactionLog{
         return $table->where('invoice_id',$invoiceId)->where('table_name',$tableName)->where('colum_name',$column)->get()->getRow();
     }
 
+    public function transaction_log_data_update($transaction_log_id,$amount){
+        $table = DB()->table('transaction_log');
+        $table->where('transaction_log_id', $transaction_log_id);
+        return $table->update(['amount' => $amount]);
+    }
+
 
 
 }
