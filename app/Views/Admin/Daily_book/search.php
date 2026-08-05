@@ -12,9 +12,7 @@
     <section class="content">
         <!-- Small boxes (Stat box) -->
         <div class="row">
-
             <div class="col-xs-12">
-
                 <div class="box">
                     <div class="box-header">
                         <div class="row">
@@ -51,19 +49,15 @@
                     </div>
                     <!-- /.box-body -->
                 </div>
-
-
             </div>
-
             <div class="col-xs-6">
                 <div class="box">
                     <div class="box-header">
                         <h3 class="box-title">Cash Ledger</h3>
-                        <span class="pull-right">Last Balance <?php echo showWithCurrencySymbol($cashrest_balance); ?></span>
                     </div>
                     <div class="box-body">
                         <table class="table table-bordered table-striped" id="TFtable">
-                                <thead>
+                            <thead>
                                 <tr>
                                     <th>Date</th>
                                     <th>Particulars</th>
@@ -71,44 +65,41 @@
                                     <th>Credit</th>
                                     <th>Balance</th>
                                 </tr>
-                                </thead>
-                                <tbody>
-                                <?php $totalRows = count($cashledger)-1;
-                                for($i = $totalRows; $i >= 0; $i--) {
-                                    $particulars = ($cashledger[$i]->particulars == NULL) ? "Payment" : $cashledger[$i]->particulars;
-                                    $amountCr = ($cashledger[$i]->trangaction_type != "Cr.") ? "---" : showWithCurrencySymbol($cashledger[$i]->amount);
-                                    $amountDr = ($cashledger[$i]->trangaction_type != "Dr.") ? "---" : showWithCurrencySymbol($cashledger[$i]->amount);
-                                    ?>
-
-                                    <tr>
-                                        <td><?php echo bdDateFormat($cashledger[$i]->createdDtm) ?></td>
-                                        <td><?php echo $particulars ?></td>
-                                        <td><?php echo $amountDr ?></td>
-                                        <td><?php echo $amountCr ?></td>
-                                        <td><?php echo showWithCurrencySymbol($cashledger[$i]->rest_balance) ?></td>
-                                    </tr>
-
-                                <?php } ?>
-
-                                </tbody>
-                                <tfoot>
+                            </thead>
+                            <tbody>
+                            <?php $totalRows = count($cashledger)-1;
+                            for($i = $totalRows; $i >= 0; $i--) {
+                                $particulars = ($cashledger[$i]->particulars == NULL) ? "Payment" : $cashledger[$i]->particulars;
+                                $amountCr = ($cashledger[$i]->trangaction_type != "Cr.") ? "---" : showWithCurrencySymbol($cashledger[$i]->amount);
+                                $amountDr = ($cashledger[$i]->trangaction_type != "Dr.") ? "---" : showWithCurrencySymbol($cashledger[$i]->amount);
+                            ?>
                                 <tr>
-                                    <th>Date</th>
-                                    <th>Particulars</th>
-                                    <!-- <th>Trangaction Id</th> -->
-                                    <th>Debit</th>
-                                    <th>Credit</th>
-                                    <th>Balance</th>
+                                    <td><?php echo bdDateFormat($cashledger[$i]->createdDtm) ?></td>
+                                    <td><?php echo $particulars ?></td>
+                                    <td><?php echo $amountDr ?></td>
+                                    <td><?php echo $amountCr ?></td>
+                                    <td><?php echo showWithCurrencySymbol($cashledger[$i]->r_balance) ?></td>
                                 </tr>
-                                </tfoot>
-                            </table>
+                            <?php } ?>
+
+                            </tbody>
+                            <tfoot>
+                            <tr>
+                                <th>Date</th>
+                                <th>Particulars</th>
+                                <!-- <th>Trangaction Id</th> -->
+                                <th>Debit</th>
+                                <th>Credit</th>
+                                <th>Balance</th>
+                            </tr>
+                            </tfoot>
+                        </table>
                     </div>
 
                 </div>
 
 
             </div>
-
             <div class="col-xs-6 no-print">
                 <div class="box">
                     <div class="box-header">
@@ -150,7 +141,7 @@
                                 <th>Total Amount</th>
                                 <th>Total Due</th>
                                 <?php if (isset($profitAcc) && $profitAcc == 1){ ?>
-                                <th>Profit</th>
+                                    <th>Profit</th>
                                 <?php } ?>
                                 <th>Action</th>
                             </tr>
@@ -166,13 +157,13 @@
                                 ?>
                                 <tr>
                                     <td><?php echo $i++ ?></td>
-                                    <td><?php echo invoiceDateFormat($val->date) ?></td>
+                                    <td><?php echo invoiceDateFormat($val->createdDtm) ?></td>
                                     <td><?php echo $cusName ?></td>
                                     <td><?php echo showWithCurrencySymbol(get_data_by_id('amount', 'invoice', 'invoice_id', $val->invoice_id)) ?></td>
                                     <td><?php echo showWithCurrencySymbol(get_data_by_id('due', 'invoice', 'invoice_id', $val->invoice_id)) ?></td>
 
                                     <?php if (isset($profitAcc) && $profitAcc == 1){ ?>
-                                    <td><?php echo showWithCurrencySymbol($profit) ?></td>
+                                        <td><?php echo showWithCurrencySymbol($profit) ?></td>
                                     <?php } ?>
                                     <td>
                                         <?php if (isset($read) && $read == 1){ ?>
@@ -184,7 +175,7 @@
 
                             </tbody>
                             <?php if (isset($profitAcc) && $profitAcc == 1){ ?>
-                            <tfoot>
+                                <tfoot>
                                 <tr>
                                     <th></th>
                                     <th></th>
@@ -194,14 +185,13 @@
                                     <th><b style="color: green;"><?= showWithCurrencySymbol($totalProfit);?></b></th>
                                     <th></th>
                                 </tr>
-                            </tfoot>
+                                </tfoot>
                             <?php } ?>
                         </table>
                     </div>
                     <!-- /.box-body -->
                 </div>
             </div>
-
             <div class="col-xs-12" style="text-transform: capitalize;">
                 <div class="box">
                     <!-- /.box-header -->
@@ -223,7 +213,7 @@
                             foreach ($purchase_data as $purchase) { ?>
                                 <tr>
                                     <td><?php echo $i++ ?></td>
-                                    <td><?php echo invoiceDateFormat($purchase->date) ?></td>
+                                    <td><?php echo invoiceDateFormat($purchase->createdDtm) ?></td>
                                     <td><?php echo get_data_by_id('name', 'suppliers', 'supplier_id', $purchase->supplier_id); ?></td>
                                     <td><?php echo showWithCurrencySymbol(get_data_by_id('amount','purchase','purchase_id',$purchase->purchase_id)); ?></td>
                                     <td><?php echo showWithCurrencySymbol(get_data_by_id('due','purchase','purchase_id',$purchase->purchase_id)); ?></td>
@@ -354,7 +344,7 @@
                                 ?>
                                 <tr>
                                     <td><?= $i++;?></td>
-                                    <td><?= invoiceDateFormat($row->date) ?></td>
+                                    <td><?= invoiceDateFormat($row->createdDtm) ?></td>
                                     <td><?= $name;?></td>
                                     <td><?= $row->trangaction_type; ?></td>
                                     <td><?= showWithCurrencySymbol($row->amount); ?></td>
