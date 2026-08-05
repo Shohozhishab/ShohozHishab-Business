@@ -49,24 +49,24 @@
                             </div>
                             <div class="col-lg-4">
                                 <?php if (isset($print) && $print == 1){ ?>
-                                <a href="<?php echo site_url('Admin/Daily_book/print_preview'); ?>"
-                                   class="print_line btn btn-primary pull-right" style="margin-right: 20px;"><i
-                                            class="fa fa-print"></i> Print Statement Now</a>
+                                    <a href="<?php echo site_url('Admin/Daily_book/print_preview'); ?>"
+                                       class="print_line btn btn-primary pull-right" style="margin-right: 20px;"><i
+                                                class="fa fa-print"></i> Print Statement Now</a>
                                 <?php } ?>
                             </div>
                             <div class="col-lg-4">
                                 <?php if (isset($filter) && $filter == 1){ ?>
-                                <form action="<?php echo site_url('Admin/Daily_book/search'); ?>" method="post">
-                                    <div class="input-group pull-right no-print">
+                                    <form action="<?php echo site_url('Admin/Daily_book/search'); ?>" method="post">
+                                        <div class="input-group pull-right no-print">
                                 <span class="input-group-addon " style="background-color:#367FA9; ">
                                     <i class="fa fa-fw fa-filter" style="color: white;"></i>
                                 </span>
-                                        <input type="date" class="form-control " name="date" id="date" required>
-                                        <span class="input-group-btn">
+                                            <input type="date" class="form-control " name="date" id="date" required>
+                                            <span class="input-group-btn">
                                   <button class="btn btn-primary " type="submit">Filter</button>
                                 </span>
-                                    </div>
-                                </form>
+                                        </div>
+                                    </form>
                                 <?php } ?>
                             </div>
                             <div class="col-lg-12" style="margin-top: 20px;">
@@ -92,45 +92,35 @@
                     </div>
                     <div class="box-body">
                         <table class="table table-bordered table-striped" id="TFtable">
-                                <thead>
+                            <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Particulars</th>
+                                <th>Debit</th>
+                                <th>Credit</th>
+                                <th>Balance</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <?php $totalRows = count($cashLedger)-1;
+                            for($i = $totalRows; $i >= 0; $i--) {
+                                $particulars = ($cashLedger[$i]->particulars == NULL) ? "Payment" : $cashLedger[$i]->particulars;
+                                $amountCr = ($cashLedger[$i]->trangaction_type != "Cr.") ? "---" : showWithCurrencySymbol($cashLedger[$i]->amount);
+                                $amountDr = ($cashLedger[$i]->trangaction_type != "Dr.") ? "---" : showWithCurrencySymbol($cashLedger[$i]->amount);
+                                ?>
+
                                 <tr>
-                                    <th>Date</th>
-                                    <th>Particulars</th>
-                                    <th>Debit</th>
-                                    <th>Credit</th>
-                                    <th>Balance</th>
+                                    <td><?php echo invoiceDateFormat($cashLedger[$i]->createdDtm) ?></td>
+                                    <td><?php echo $particulars ?></td>
+                                    <td><?php echo $amountDr ?></td>
+                                    <td><?php echo $amountCr ?></td>
+                                    <td><?php echo showWithCurrencySymbol($cashLedger[$i]->r_balance) ?></td>
                                 </tr>
-                                </thead>
-                                <tbody>
-                                <?php $totalRows = count($cashLedger)-1;
-                                for($i = $totalRows; $i >= 0; $i--) {
-                                    $particulars = ($cashLedger[$i]->particulars == NULL) ? "Payment" : $cashLedger[$i]->particulars;
-                                    $amountCr = ($cashLedger[$i]->trangaction_type != "Cr.") ? "---" : showWithCurrencySymbol($cashLedger[$i]->amount);
-                                    $amountDr = ($cashLedger[$i]->trangaction_type != "Dr.") ? "---" : showWithCurrencySymbol($cashLedger[$i]->amount);
-                                    ?>
 
-                                    <tr>
-                                        <td><?php echo invoiceDateFormat($cashLedger[$i]->createdDtm) ?></td>
-                                        <td><?php echo $particulars ?></td>
-                                        <td><?php echo $amountDr ?></td>
-                                        <td><?php echo $amountCr ?></td>
-                                        <td><?php echo showWithCurrencySymbol($cashLedger[$i]->rest_balance) ?></td>
-                                    </tr>
+                            <?php } ?>
 
-                                <?php } ?>
-
-                                </tbody>
-                                <tfoot>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Particulars</th>
-                                    <!-- <th>Trangaction Id</th> -->
-                                    <th>Debit</th>
-                                    <th>Credit</th>
-                                    <th>Balance</th>
-                                </tr>
-                                </tfoot>
-                            </table>
+                            </tbody>
+                        </table>
                     </div>
 
                 </div>
@@ -172,17 +162,17 @@
                         <?php $profitAcc = permission_check('Sales',newSession()->role,'profit');?>
                         <table class="table table-bordered table-striped text-capitalize">
                             <thead>
-                                <tr>
-                                    <th>No</th>
-                                    <th>Date</th>
-                                    <th>Customer</th>
-                                    <th>Total Amount</th>
-                                    <th>Total Due</th>
-                                    <?php if (isset($profitAcc) && $profitAcc == 1){ ?>
+                            <tr>
+                                <th>No</th>
+                                <th>Date</th>
+                                <th>Customer</th>
+                                <th>Total Amount</th>
+                                <th>Total Due</th>
+                                <?php if (isset($profitAcc) && $profitAcc == 1){ ?>
                                     <th>Profit</th>
-                                    <?php } ?>
-                                    <th>Action</th>
-                                </tr>
+                                <?php } ?>
+                                <th>Action</th>
+                            </tr>
                             </thead>
                             <tbody>
                             <?php $i = 1;
@@ -195,12 +185,12 @@
                                 ?>
                                 <tr>
                                     <td><?php echo $i++ ?></td>
-                                    <td><?php echo invoiceDateFormat($val->date) ?></td>
+                                    <td><?php echo invoiceDateFormat($val->createdDtm) ?></td>
                                     <td><?php echo $cusName ?></td>
                                     <td><?php echo showWithCurrencySymbol(get_data_by_id('amount', 'invoice', 'invoice_id', $val->invoice_id)) ?></td>
                                     <td><?php echo showWithCurrencySymbol(get_data_by_id('due', 'invoice', 'invoice_id', $val->invoice_id)) ?></td>
                                     <?php if (isset($profitAcc) && $profitAcc == 1){ ?>
-                                    <td><?php echo showWithCurrencySymbol($profit) ?></td>
+                                        <td><?php echo showWithCurrencySymbol($profit) ?></td>
                                     <?php } ?>
                                     <td>
                                         <?php if (isset($read) && $read == 1){ ?>
@@ -212,7 +202,7 @@
 
                             </tbody>
                             <?php if (isset($profitAcc) && $profitAcc == 1){ ?>
-                            <tfoot>
+                                <tfoot>
                                 <tr>
                                     <th></th>
                                     <th></th>
@@ -222,7 +212,7 @@
                                     <th><b style="color: green;"><?= showWithCurrencySymbol($totalProfit);?></b></th>
                                     <th></th>
                                 </tr>
-                            </tfoot>
+                                </tfoot>
                             <?php } ?>
                         </table>
                     </div>
@@ -251,7 +241,7 @@
                             foreach ($purchase_data as $purchase) { ?>
                                 <tr>
                                     <td><?php echo $i++ ?></td>
-                                    <td><?php echo invoiceDateFormat($purchase->date) ?></td>
+                                    <td><?php echo invoiceDateFormat($purchase->createdDtm) ?></td>
                                     <td><?php echo get_data_by_id('name', 'suppliers', 'supplier_id', $purchase->supplier_id); ?></td>
                                     <td><?php echo showWithCurrencySymbol(get_data_by_id('amount','purchase','purchase_id',$purchase->purchase_id)); ?></td>
                                     <td><?php echo showWithCurrencySymbol(get_data_by_id('due','purchase','purchase_id',$purchase->purchase_id)); ?></td>
@@ -379,10 +369,10 @@
 
                                     $name = 'Other Sales';
                                 }
-                            ?>
+                                ?>
                                 <tr>
                                     <td><?= $i++;?></td>
-                                    <td><?= invoiceDateFormat($row->date) ?></td>
+                                    <td><?= invoiceDateFormat($row->createdDtm) ?></td>
                                     <td><?= $name;?></td>
                                     <td><?= $row->trangaction_type; ?></td>
                                     <td><?= showWithCurrencySymbol($row->amount); ?></td>

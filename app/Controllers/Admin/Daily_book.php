@@ -39,31 +39,46 @@ class Daily_book extends BaseController
             $shopId = $this->session->shopId;
 
             //Show today all cash transaction list in ledger_nagodan table (start)
-            $ledger_nagodanTab = DB()->table('ledger_nagodan');
-            $data['cashLedger'] = $ledger_nagodanTab->where('sch_id', $shopId)->like('DATE(createdDtm)', date('Y-m-d'))->orderBy("createdDtm", "DESC")->get()->getResult();
+            $db = DB();
+            // 1. Define the window function column
+            $mBalanceSubquery = "SUM(
+                CASE 
+                    WHEN LOWER(trangaction_type) LIKE 'dr%' THEN amount 
+                    WHEN LOWER(trangaction_type) LIKE 'cr%' THEN -amount 
+                    ELSE 0 
+                END
+            ) OVER (ORDER BY ledg_nagodan_id) AS r_balance";
+            // 2. Build the inner subquery
+            $subquery = $db->table('ledger_nagodan')
+                ->select('ledger_nagodan.*')
+                ->select($mBalanceSubquery, false)
+                ->where('sch_id', $shopId);
+            // 3. Query from the subquery derived table
+            $data['cashLedger'] = $db->newQuery()
+                ->fromSubquery($subquery, 't')
+                ->where('sch_id', $shopId)
+                ->like('DATE(createdDtm)', date('Y-m-d'))
+                ->orderBy('ledg_nagodan_id', 'DESC')
+                ->get()
+                ->getResult();
 
-            $nagodTab = DB()->table('ledger_nagodan');
-            $rest = $nagodTab->where('sch_id', $shopId)->like('DATE(createdDtm)', date('Y-m-d'))->orderBy("createdDtm", "DESC")->limit(1)->get()->getRow();
-            $data['cashrest_balance'] = empty($rest) ? 0 : $rest->rest_balance;
+            $data['cashrest_balance'] = get_data_by_id('cash','shops','sch_id',$shopId);
 
-            //Show today all cash transaction list in ledger_nagodan table (end)
-
-            $prevTab = DB()->table('ledger_nagodan');
-            $prevbalance = $prevTab->where("sch_id", $shopId)->where('DATE(createdDtm) <', date('Y-m-d'))->limit(1)->orderBy("createdDtm", "DESC")->get()->getRow();
-            $data['prev_balance'] = empty($prevbalance) ? 0 : $prevbalance->rest_balance;
 
 
             $bankTab = DB()->table('bank');
             $data['allBank'] = $bankTab->where("sch_id", $shopId)->get()->getResult();
 
+
+
             $data['sales'] = DB()->table('sales')
                 ->where('sales.sch_id', $shopId)
-                ->where('DATE(date)', date('Y-m-d'))
+                ->where('DATE(createdDtm)', date('Y-m-d'))
                 ->get()->getResult();
 
             $data['purchase_data'] = DB()->table('purchase')
                 ->where('sch_id', $shopId)
-                ->where('DATE(date)', date('Y-m-d'))
+                ->where('DATE(createdDtm)', date('Y-m-d'))
                 ->get()->getResult();
 
             $data['capital'] = DB()->table('capital')
@@ -73,7 +88,7 @@ class Daily_book extends BaseController
 
             $data['transaction'] = DB()->table('transaction')
                 ->where('sch_id',$shopId)
-                ->where('DATE(date)', date('Y-m-d'))
+                ->where('DATE(createdDtm)', date('Y-m-d'))
                 ->get()->getResult();
 
 
@@ -104,13 +119,31 @@ class Daily_book extends BaseController
         $date = $this->request->getPost('date');
         $searchDate = (empty($date)) ? date('Y-m-d') : $date;
 
-        $ledger_bankTab = DB()->table('ledger_bank');
-        $balance = $ledger_bankTab->where("bank_id", $bankId)->like('createdDtm', $searchDate)->limit(1)->orderBy("createdDtm", "DESC")->get()->getRow();
-        $restBalance = empty($balance) ? 0 : $balance->rest_balance;
 
+        $restBalance = get_data_by_id('balance','bank','bank_id',$bankId);
 
-        $ledgerTab = DB()->table('ledger_bank');
-        $data = $ledgerTab->where("bank_id", $bankId)->like('createdDtm', $searchDate)->limit(30)->orderBy("createdDtm", "DESC")->get()->getResult();
+        $db = DB();
+        // 1. Define the window function column
+        $mBalanceSubquery = "SUM(
+                    CASE 
+                        WHEN LOWER(trangaction_type) LIKE 'dr%' THEN amount 
+                        WHEN LOWER(trangaction_type) LIKE 'cr%' THEN -amount 
+                        ELSE 0 
+                    END
+                ) OVER (ORDER BY ledgBank_id) AS r_balance";
+        // 2. Build the inner subquery
+        $subquery = $db->table('ledger_bank')
+            ->select('ledger_bank.*')
+            ->select($mBalanceSubquery, false)
+            ->where("bank_id", $bankId); // false prevents CI4 from escaping the raw SQL window function
+        // 3. Query from the subquery derived table
+        $table = $db->newQuery()
+            ->fromSubquery($subquery, 't')
+            ->where("bank_id", $bankId)
+            ->like('createdDtm', $searchDate)
+            ->limit(30);
+        $table->orderBy('ledgBank_id', 'ASC');
+        $data = $table->get()->getResult();
 
 
         $view = '<span class="pull-right">Last Balance ' . showWithCurrencySymbol($restBalance) . '</span>';
@@ -132,27 +165,14 @@ class Daily_book extends BaseController
             $amountCr = ($row->trangaction_type != "Cr.") ? "---" : showWithCurrencySymbol($row->amount);
             $amountDr = ($row->trangaction_type != "Dr.") ? "---" : showWithCurrencySymbol($row->amount);
             $view .= '<tr>
-                                        <td>' . $row->createdDtm . '</td>
+                                        <td>' . invoiceDateFormat($row->createdDtm) . '</td>
                                         <td>' . get_data_by_id('name', 'bank', 'bank_id', $row->bank_id) . '</td>
                                         <td>' . $particulars . '</td>
                                         <td>' . $amountDr . '</td>
                                         <td>' . $amountCr . '</td>
-                                        <td>' . showWithCurrencySymbol($row->rest_balance) . '</td>
+                                        <td>' . showWithCurrencySymbol($row->r_balance) . '</td>
                                     </tr>';
         }
-
-        $view .= '</tbody>
-                                <tfoot>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Bank</th>
-                                        <th>Particulars</th>
-                                        <th>Debit</th>
-                                        <th>Credit</th>
-                                        <th>Balance</th>
-                                    </tr>
-                                </tfoot>
-                            </table>';
 
         print $view;
 
@@ -175,17 +195,29 @@ class Daily_book extends BaseController
             $date = $this->request->getPost('date');
             $data['date'] = $date;
 
+            $db = DB();
+            // 1. Define the window function column
+            $mBalanceSubquery = "SUM(
+                CASE 
+                    WHEN LOWER(trangaction_type) LIKE 'dr%' THEN amount 
+                    WHEN LOWER(trangaction_type) LIKE 'cr%' THEN -amount 
+                    ELSE 0 
+                END
+            ) OVER (ORDER BY ledg_nagodan_id) AS r_balance";
+            // 2. Build the inner subquery
+            $subquery = $db->table('ledger_nagodan')
+                ->select('ledger_nagodan.*')
+                ->select($mBalanceSubquery, false)
+                ->where('sch_id', $shopId);
+            // 3. Query from the subquery derived table
+            $data['cashledger'] = $db->newQuery()
+                ->fromSubquery($subquery, 't')
+                ->where('sch_id', $shopId)
+                ->like('createdDtm', $date)
+                ->orderBy('ledg_nagodan_id', 'ASC')
+                ->get()
+                ->getResult();
 
-            $ledger_nagodanTab = DB()->table('ledger_nagodan');
-            $prevbalance = $ledger_nagodanTab->where('createdDtm <', $date)->where("sch_id", $shopId)->limit(1)->orderBy("createdDtm", "DESC")->get()->getRow();
-            $data['prev_balance'] = empty($prevbalance) ? 0 : $prevbalance->rest_balance;
-
-            $ledgerTab = DB()->table('ledger_nagodan');
-            $data['cashledger'] = $ledgerTab->where("sch_id", $shopId)->like('createdDtm', $date)->orderBy("createdDtm", "DESC")->get()->getResult();
-
-            $ledger_nagTab = DB()->table('ledger_nagodan');
-            $balance = $ledger_nagTab->where("sch_id", $shopId)->like('createdDtm', $date)->limit(1)->orderBy("createdDtm", "DESC")->get()->getRow();
-            $data['cashrest_balance'] = empty($balance) ? 0 : $balance->rest_balance;
 
 
             $bankTab = DB()->table('bank');
@@ -193,12 +225,12 @@ class Daily_book extends BaseController
 
             $data['sales'] = DB()->table('sales')
                 ->where('sales.sch_id', $shopId)
-                ->where('DATE(date)', $date)
+                ->where('DATE(createdDtm)', $date)
                 ->get()->getResult();
 
             $data['purchase_data'] = DB()->table('purchase')
                 ->where('sch_id', $shopId)
-                ->where('DATE(date)', $date)
+                ->where('DATE(createdDtm)', $date)
                 ->get()->getResult();
 
             $data['capital'] = DB()->table('capital')
@@ -208,7 +240,7 @@ class Daily_book extends BaseController
 
             $data['transaction'] = DB()->table('transaction')
                 ->where('sch_id',$shopId)
-                ->where('DATE(date)', $date)
+                ->where('DATE(createdDtm)', $date)
                 ->get()->getResult();
 
 
@@ -245,19 +277,36 @@ class Daily_book extends BaseController
 
             $dateKey = !empty($date) ? $date: date('Y-m-d');
 
+            $db = DB();
+            // 1. Define the window function column
+            $mBalanceSubquery = "SUM(
+                CASE 
+                    WHEN LOWER(trangaction_type) LIKE 'dr%' THEN amount 
+                    WHEN LOWER(trangaction_type) LIKE 'cr%' THEN -amount 
+                    ELSE 0 
+                END
+            ) OVER (ORDER BY ledg_nagodan_id) AS r_balance";
+            // 2. Build the inner subquery
+            $subquery = $db->table('ledger_nagodan')
+                ->select('ledger_nagodan.*')
+                ->select($mBalanceSubquery, false)
+                ->where('sch_id', $shopId);
+            // 3. Query from the subquery derived table
+            $data['cashLedger'] = $db->newQuery()
+                ->fromSubquery($subquery, 't')
+                ->where('sch_id', $shopId)
+                ->like('createdDtm', $dateKey)
+                ->orderBy('ledg_nagodan_id', 'DESC')
+                ->get()
+                ->getResult();
 
-            $ledgerTab = DB()->table('ledger_nagodan');
-            $data['cashLedger'] = $ledgerTab->where("sch_id", $shopId)->like('createdDtm', $dateKey)->orderBy("createdDtm", "DESC")->get()->getResult();
+            $data['cashrest_balance'] = get_data_by_id('cash','shops','sch_id',$shopId);
 
-
-            $ledger_nagTab = DB()->table('ledger_nagodan');
-            $balance = $ledger_nagTab->where("sch_id", $shopId)->like('createdDtm', $dateKey)->limit(1)->orderBy("createdDtm", "DESC")->get()->getRow();
-            $data['cashrest_balance'] = empty($balance) ? 0 : $balance->rest_balance;
-
-
+            //
             $ledger_nagodanTab = DB()->table('ledger_nagodan');
             $prevbalance = $ledger_nagodanTab->where('createdDtm <', $dateKey)->where("sch_id", $shopId)->limit(1)->orderBy("createdDtm", "DESC")->get()->getRow();
             $data['prevAll_balance'] = empty($prevbalance) ? 0 : $prevbalance->rest_balance;
+            //
 
 
             $bankTab = DB()->table('bank');
@@ -265,12 +314,12 @@ class Daily_book extends BaseController
 
             $data['sales'] = DB()->table('sales')
                 ->where('sales.sch_id', $shopId)
-                ->where('DATE(date)', $dateKey)
+                ->where('DATE(createdDtm)', $dateKey)
                 ->get()->getResult();
 
             $data['purchase_data'] = DB()->table('purchase')
                 ->where('sch_id', $shopId)
-                ->where('DATE(date)', $dateKey)
+                ->where('DATE(createdDtm)', $dateKey)
                 ->get()->getResult();
 
             $data['capital'] = DB()->table('capital')
@@ -280,7 +329,7 @@ class Daily_book extends BaseController
 
             $data['transaction'] = DB()->table('transaction')
                 ->where('sch_id',$shopId)
-                ->where('DATE(date)', $dateKey)
+                ->where('DATE(createdDtm)', $dateKey)
                 ->get()->getResult();
 
             $data['searchDate'] = $dateKey;

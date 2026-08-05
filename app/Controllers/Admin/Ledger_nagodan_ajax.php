@@ -50,7 +50,8 @@ class Ledger_nagodan_ajax extends BaseController
             // 2. Build the inner subquery
             $subquery = $db->table('ledger_nagodan')
                 ->select('ledger_nagodan.*')
-                ->select($mBalanceSubquery, false); // false prevents CI4 from escaping the raw SQL window function
+                ->select($mBalanceSubquery, false)
+                ->where('sch_id', $shopId);
             // 3. Query from the subquery derived table
             $data['ledger_nagodan_data'] = $db->newQuery()
                 ->fromSubquery($subquery, 't')

@@ -87,7 +87,7 @@
                                                 <td><?php echo $particulars ?></td>
                                                 <td><?php echo $amountDr ?></td>
                                                 <td><?php echo $amountCr ?></td>
-                                                <td><?php echo showWithCurrencySymbol($cashLedger[$i]->rest_balance) ?></td>
+                                                <td><?php echo showWithCurrencySymbol($cashLedger[$i]->r_balance) ?></td>
                                             </tr>
 
                                         <?php } ?>
@@ -97,17 +97,17 @@
                                 </div>
                                 <div class="col-xs-4 col-md-4">
                                     <?php if ($searchDate == date('Y-m-d')){ ?>
-                                    <h3>Balance</h3>
-                                    <table class="table table-bordered table-striped" >
-                                        <tr>
-                                            <td>Previous Balance :</td>
-                                            <td><?php echo showWithCurrencySymbol($prevAll_balance) ?></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Last Balance :</td>
-                                            <td><?php echo showWithCurrencySymbol($cashrest_balance) ?></td>
-                                        </tr>
-                                    </table>
+                                        <h3>Balance</h3>
+                                        <table class="table table-bordered table-striped" >
+                                            <tr>
+                                                <td>Previous Balance :</td>
+                                                <td><?php echo showWithCurrencySymbol($prevAll_balance) ?></td>
+                                            </tr>
+                                            <tr>
+                                                <td>Last Balance :</td>
+                                                <td><?php echo showWithCurrencySymbol($cashrest_balance) ?></td>
+                                            </tr>
+                                        </table>
                                     <?php } ?>
                                 </div>
                             </div>
@@ -142,7 +142,7 @@
                                                     <td><?php print $particulars ?></td>
                                                     <td><?php print $amountDr ?></td>
                                                     <td><?php print $amountCr ?></td>
-                                                    <td><?php print showWithCurrencySymbol($row->rest_balance) ?></td>
+                                                    <td><?php print showWithCurrencySymbol($row->r_balance) ?></td>
                                                 </tr>
 
 
@@ -152,17 +152,17 @@
                                     </div>
                                     <div class="col-xs-4 col-md-4">
                                         <?php if ($searchDate == date('Y-m-d')){ ?>
-                                        <h3>Balance</h3>
-                                        <table class="table table-bordered table-striped" >
-                                            <tr>
-                                                <td>Previous Balance :</td>
-                                                <td><?php echo showWithCurrencySymbol(bank_ledger_prev_restBalance($rowbak->bank_id,date('Y-m-d'))) ?></td>
-                                            </tr>
-                                            <tr>
-                                                <td>Last Balance :</td>
-                                                <td><?php echo showWithCurrencySymbol(bank_ledger_restBalance($rowbak->bank_id,date('Y-m-d'))) ?></td>
-                                            </tr>
-                                        </table>
+                                            <h3>Balance</h3>
+                                            <table class="table table-bordered table-striped" >
+                                                <tr>
+                                                    <td>Previous Balance :</td>
+                                                    <td><?php echo showWithCurrencySymbol(bank_ledger_prev_restBalance($rowbak->bank_id,date('Y-m-d'))) ?></td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Last Balance :</td>
+                                                    <td><?php echo showWithCurrencySymbol(bank_ledger_restBalance($rowbak->bank_id,date('Y-m-d'))) ?></td>
+                                                </tr>
+                                            </table>
                                         <?php } ?>
                                     </div>
                                 </div>
@@ -178,7 +178,7 @@
                                         <th>Total Amount</th>
                                         <th>Total Due</th>
                                         <?php if (isset($profitAcc) && $profitAcc == 1){ ?>
-                                        <th>Profit</th>
+                                            <th>Profit</th>
                                         <?php } ?>
                                     </tr>
                                     </thead>
@@ -192,19 +192,19 @@
                                         $totalProfit += $profit;
                                         ?>
                                         <tr>
-                                            <td><?php echo invoiceDateFormat($val->date) ?></td>
+                                            <td><?php echo invoiceDateFormat($val->createdDtm) ?></td>
                                             <td><?php echo $cusName ?></td>
                                             <td><?php echo showWithCurrencySymbol(get_data_by_id('amount', 'invoice', 'invoice_id', $val->invoice_id)) ?></td>
                                             <td><?php echo showWithCurrencySymbol(get_data_by_id('due', 'invoice', 'invoice_id', $val->invoice_id)) ?></td>
                                             <?php if (isset($profitAcc) && $profitAcc == 1){ ?>
-                                            <td><?php echo showWithCurrencySymbol($profit) ?></td>
+                                                <td><?php echo showWithCurrencySymbol($profit) ?></td>
                                             <?php } ?>
                                         </tr>
                                     <?php } ?>
 
                                     </tbody>
                                     <?php if (isset($profitAcc) && $profitAcc == 1){ ?>
-                                    <tfoot>
+                                        <tfoot>
                                         <tr>
                                             <th></th>
                                             <th></th>
@@ -212,7 +212,7 @@
                                             <th>Total Profit</th>
                                             <th><?= showWithCurrencySymbol($totalProfit);?></th>
                                         </tr>
-                                    </tfoot>
+                                        </tfoot>
                                     <?php } ?>
                                 </table>
                             </div>
@@ -231,7 +231,7 @@
                                     <?php $i = 1;
                                     foreach ($purchase_data as $purchase) { ?>
                                         <tr>
-                                            <td><?php echo invoiceDateFormat($purchase->date) ?></td>
+                                            <td><?php echo invoiceDateFormat($purchase->createdDtm) ?></td>
                                             <td><?php echo get_data_by_id('name', 'suppliers', 'supplier_id', $purchase->supplier_id); ?></td>
                                             <td><?php echo showWithCurrencySymbol(get_data_by_id('amount','purchase','purchase_id',$purchase->purchase_id)); ?></td>
                                             <td><?php echo showWithCurrencySymbol(get_data_by_id('due','purchase','purchase_id',$purchase->purchase_id)); ?></td>
@@ -339,7 +339,7 @@
                                         }
                                         ?>
                                         <tr>
-                                            <td><?= invoiceDateFormat($row->date) ?></td>
+                                            <td><?= invoiceDateFormat($row->createdDtm) ?></td>
                                             <td><?= $name;?></td>
                                             <td><?= $row->trangaction_type; ?></td>
                                             <td><?= showWithCurrencySymbol($row->amount); ?></td>
@@ -502,7 +502,7 @@
                                         $totalProfit += $profit;
                                         ?>
                                         <tr>
-                                            <td><?php echo invoiceDateFormat($val->date) ?></td>
+                                            <td><?php echo invoiceDateFormat($val->createdDtm) ?></td>
                                             <td><?php echo $cusName ?></td>
                                             <td><?php echo showWithCurrencySymbol(get_data_by_id('amount', 'invoice', 'invoice_id', $val->invoice_id)) ?></td>
                                             <td><?php echo showWithCurrencySymbol(get_data_by_id('due', 'invoice', 'invoice_id', $val->invoice_id)) ?></td>
@@ -651,7 +651,7 @@
                                         }
                                         ?>
                                         <tr>
-                                            <td><?= invoiceDateFormat($row->date) ?></td>
+                                            <td><?= invoiceDateFormat($row->createdDtm) ?></td>
                                             <td><?= $name;?></td>
                                             <td><?= $row->trangaction_type; ?></td>
                                             <td><?= showWithCurrencySymbol($row->amount); ?></td>

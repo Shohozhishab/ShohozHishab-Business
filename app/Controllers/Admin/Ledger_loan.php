@@ -55,7 +55,8 @@ class Ledger_loan extends BaseController
                 // 2. Build the inner subquery
                 $subquery = $db->table('ledger_loan')
                     ->select('ledger_loan.*')
-                    ->select($mBalanceSubquery, false); // false prevents CI4 from escaping the raw SQL window function
+                    ->select($mBalanceSubquery, false)
+                    ->where("loan_pro_id", $loan_pro_id); // false prevents CI4 from escaping the raw SQL window function
                 // 3. Query from the subquery derived table
                 $table = $db->newQuery()
                     ->fromSubquery($subquery, 't')

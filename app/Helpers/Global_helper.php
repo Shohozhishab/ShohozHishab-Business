@@ -1532,10 +1532,30 @@ function get_sup_settings_by_lavel($lavel){
 function bank_ledger($bankId,$date){
     $searchDate = (empty($date))? date('Y-m-d') :$date;
 
-    $ledger_bankTab = DB()->table('ledger_bank');
-    $data = $ledger_bankTab->where("bank_id",$bankId)->like('DATE(createdDtm)',$searchDate)->limit(30)->orderBy("createdDtm","DESC")->get()->getResult();
+    $db = DB();
+    // 1. Define the window function column
+    $mBalanceSubquery = "SUM(
+                    CASE 
+                        WHEN LOWER(trangaction_type) LIKE 'dr%' THEN amount 
+                        WHEN LOWER(trangaction_type) LIKE 'cr%' THEN -amount 
+                        ELSE 0 
+                    END
+                ) OVER (ORDER BY ledgBank_id) AS r_balance";
+    // 2. Build the inner subquery
+    $subquery = $db->table('ledger_bank')
+        ->select('ledger_bank.*')
+        ->select($mBalanceSubquery, false)
+        ->where("bank_id", $bankId); // false prevents CI4 from escaping the raw SQL window function
+    // 3. Query from the subquery derived table
+    $table = $db->newQuery()
+        ->fromSubquery($subquery, 't')
+        ->where("bank_id", $bankId)
+        ->like('createdDtm',$searchDate)->limit(30);
 
-    return $data;
+    $table->orderBy('ledgBank_id', 'ASC');
+    $query = $table->get()->getResult();
+
+    return $query;
 }
 
 /**

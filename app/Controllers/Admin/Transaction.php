@@ -665,8 +665,26 @@ class Transaction extends BaseController
 
         $custData = $this->request->getPost('custId');
 
-        $ledgerTable = DB()->table('ledger');
-        $data = $ledgerTable->where('customer_id', $custData)->orderBy('ledg_id', 'DESC')->limit(10)->get()->getResult();
+        $db = DB();
+        // 1. Define the window function column
+        $mBalanceSubquery = "SUM(
+                    CASE 
+                        WHEN LOWER(trangaction_type) LIKE 'dr%' THEN amount 
+                        WHEN LOWER(trangaction_type) LIKE 'cr%' THEN -amount 
+                        ELSE 0 
+                    END
+                ) OVER (ORDER BY ledg_id) AS r_balance";
+        // 2. Build the inner subquery
+        $subquery = $db->table('ledger')
+            ->select('ledger.*')
+            ->select($mBalanceSubquery, false)
+            ->where("customer_id", $custData);
+        // 3. Query from the subquery derived table
+        $table = $db->newQuery()
+            ->fromSubquery($subquery, 't')
+            ->where("customer_id", $custData);
+        $table->orderBy('ledg_id', 'DESC')->limit(10);
+        $data = $table->get()->getResult();
 
         $customerBalance = get_data_by_id('balance', 'customers', 'customer_id', $custData);
 
@@ -697,7 +715,7 @@ class Transaction extends BaseController
                                     <td>' . $particulars . '</td>
                                     <td>' . $amountDr . '</td>
                                     <td>' . $amountCr . '</td>
-                                    <td>' . showWithCurrencySymbol($row->rest_balance) . '</td>
+                                    <td>' . showWithCurrencySymbol($row->r_balance) . '</td>
                                 </tr>';
         }
 
@@ -1110,9 +1128,26 @@ class Transaction extends BaseController
     {
         $suppId = $this->request->getPost('suppId');
 
-
-        $ledger_suppliersTable = DB()->table('ledger_suppliers');
-        $data = $ledger_suppliersTable->where('supplier_id', $suppId)->orderBy('ledg_sup_id', 'DESC')->limit(10)->get()->getResult();
+        $db = DB();
+        // 1. Define the window function column
+        $mBalanceSubquery = "SUM(
+                    CASE 
+                        WHEN LOWER(trangaction_type) LIKE 'dr%' THEN amount 
+                        WHEN LOWER(trangaction_type) LIKE 'cr%' THEN -amount 
+                        ELSE 0 
+                    END
+                ) OVER (ORDER BY ledg_sup_id) AS r_balance";
+        // 2. Build the inner subquery
+        $subquery = $db->table('ledger_suppliers')
+            ->select('ledger_suppliers.*')
+            ->select($mBalanceSubquery, false)
+            ->where("supplier_id", $suppId); // false prevents CI4 from escaping the raw SQL window function
+        // 3. Query from the subquery derived table
+        $table = $db->newQuery()
+            ->fromSubquery($subquery, 't')
+            ->where("supplier_id", $suppId);
+        $table->orderBy('ledg_sup_id', 'DESC')->limit(10);
+        $data = $table->get()->getResult();
 
         $suppliersBalance = get_data_by_id('balance', 'suppliers', 'supplier_id', $suppId);
 
@@ -1145,7 +1180,7 @@ class Transaction extends BaseController
                                     <td>' . $particulars . '</td>
                                     <td>' . $amountDr . '</td>
                                     <td>' . $amountCr . '</td>
-                                    <td>' . showWithCurrencySymbol($row->rest_balance) . '</td>
+                                    <td>' . showWithCurrencySymbol($row->r_balance) . '</td>
                                 </tr>';
         }
 
@@ -1566,9 +1601,26 @@ class Transaction extends BaseController
     {
         $lonProvId = $this->request->getPost('lonProvId');
 
-
-        $ledger_loanTable = DB()->table('ledger_loan');
-        $data = $ledger_loanTable->where('loan_pro_id', $lonProvId)->orderBy('ledg_loan_id', 'DESC')->limit(10)->get()->getResult();
+        $db = DB();
+        // 1. Define the window function column
+        $mBalanceSubquery = "SUM(
+                    CASE 
+                        WHEN LOWER(trangaction_type) LIKE 'dr%' THEN amount 
+                        WHEN LOWER(trangaction_type) LIKE 'cr%' THEN -amount 
+                        ELSE 0 
+                    END
+                ) OVER (ORDER BY ledg_loan_id) AS r_balance";
+        // 2. Build the inner subquery
+        $subquery = $db->table('ledger_loan')
+            ->select('ledger_loan.*')
+            ->select($mBalanceSubquery, false)
+            ->where("loan_pro_id", $lonProvId); // false prevents CI4 from escaping the raw SQL window function
+        // 3. Query from the subquery derived table
+        $table = $db->newQuery()
+            ->fromSubquery($subquery, 't')
+            ->where("loan_pro_id", $lonProvId);
+        $table->orderBy('ledg_loan_id', 'DESC')->limit(10);
+        $data = $table->get()->getResult();
 
 
         $loanProBalance = get_data_by_id('balance', 'loan_provider', 'loan_pro_id', $lonProvId);
@@ -1600,7 +1652,7 @@ class Transaction extends BaseController
                                     <td>' . $loanProId . '</td>
                                     <td>' . $amountDr . '</td>
                                     <td>' . $amountCr . '</td>
-                                    <td>' . showWithCurrencySymbol($row->rest_balance) . '</td>
+                                    <td>' . showWithCurrencySymbol($row->r_balance) . '</td>
                                 </tr>';
         }
 
@@ -1779,8 +1831,26 @@ class Transaction extends BaseController
     {
         $bankId = $this->request->getPost('bankId');
 
-        $ledger_bankTable = DB()->table('ledger_bank');
-        $data = $ledger_bankTable->where('bank_id', $bankId)->orderBy('ledgBank_id', 'DESC')->limit(10)->get()->getResult();
+        $db = DB();
+        // 1. Define the window function column
+        $mBalanceSubquery = "SUM(
+                    CASE 
+                        WHEN LOWER(trangaction_type) LIKE 'dr%' THEN amount 
+                        WHEN LOWER(trangaction_type) LIKE 'cr%' THEN -amount 
+                        ELSE 0 
+                    END
+                ) OVER (ORDER BY ledgBank_id) AS r_balance";
+        // 2. Build the inner subquery
+        $subquery = $db->table('ledger_bank')
+            ->select('ledger_bank.*')
+            ->select($mBalanceSubquery, false)
+            ->where("bank_id", $bankId); // false prevents CI4 from escaping the raw SQL window function
+        // 3. Query from the subquery derived table
+        $table = $db->newQuery()
+            ->fromSubquery($subquery, 't')
+            ->where("bank_id", $bankId);
+        $table->orderBy('ledgBank_id', 'DESC')->limit(10);
+        $data = $table->get()->getResult();
 
         $view = '<table class="table table-bordered table-striped" id="TFtable">
                             <thead>
@@ -1808,7 +1878,7 @@ class Transaction extends BaseController
                                     <td>' . $bankId . '</td>
                                     <td>' . $amountDr . '</td>
                                     <td>' . $amountCr . '</td>
-                                    <td>' . $row->rest_balance . '</td>
+                                    <td>' . $row->r_balance . '</td>
                                 </tr>';
         }
 
@@ -2778,9 +2848,26 @@ class Transaction extends BaseController
     {
         $vatId = $this->request->getPost('vatId');
 
-        $ledger_vatTable = DB()->table('ledger_vat');
-        $data = $ledger_vatTable->where('vat_id', $vatId)->orderBy('ledg_vat_id', 'DESC')->limit(10)->get()->getResult();
-
+        $db = DB();
+        // 1. Define the window function column
+        $mBalanceSubquery = "SUM(
+                    CASE 
+                        WHEN LOWER(trangaction_type) LIKE 'dr%' THEN amount 
+                        WHEN LOWER(trangaction_type) LIKE 'cr%' THEN -amount 
+                        ELSE 0 
+                    END
+                ) OVER (ORDER BY ledg_vat_id) AS r_balance";
+        // 2. Build the inner subquery
+        $subquery = $db->table('ledger_vat')
+            ->select('ledger_vat.*')
+            ->select($mBalanceSubquery, false)
+            ->where('vat_id', $vatId);
+        // 3. Query from the subquery derived table
+        $table = $db->newQuery()
+            ->fromSubquery($subquery, 't')
+            ->where('vat_id', $vatId);
+        $table->orderBy('ledg_vat_id', 'DESC')->limit(10);
+        $data = $table->get()->getResult();
         $vatBalance = get_data_by_id('balance', 'vat_register', 'vat_id', $vatId);
 
         $view = '<span class="pull-right"> Balance: ' . showWithCurrencySymbol($vatBalance) . '</span>';
@@ -2808,7 +2895,7 @@ class Transaction extends BaseController
                                     <td>' . $vat_register . '</td>
                                     <td>' . $amountDr . '</td>
                                     <td>' . $amountCr . '</td>
-                                    <td>' . showWithCurrencySymbol($row->rest_balance) . '</td>
+                                    <td>' . showWithCurrencySymbol($row->r_balance) . '</td>
                                 </tr>';
         }
 
