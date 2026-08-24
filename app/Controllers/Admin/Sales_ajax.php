@@ -87,8 +87,12 @@ class Sales_ajax extends BaseController
             return redirect()->to(site_url('Admin/login'));
         } else {
             $shopId = $this->session->shopId;
+            $sale_save_id = $this->request->getGet("sale_save_id");
+
             $salesTable = DB()->table('sales');
             $data['sales'] = $salesTable->where('sch_id', $shopId)->where('deleted IS NULL')->get()->getResult();
+
+            $data['salesSave'] = DB()->table('sale_save')->where('sale_save_id',$sale_save_id)->get()->getRow();
 
             $data['action'] = base_url('Admin/Sales/create_action');
             $data['menu'] = view('Admin/menu_sales', $data);
@@ -141,4 +145,33 @@ class Sales_ajax extends BaseController
             }
         }
     }
+
+    public function draft_list(){
+        $isLoggedIn = $this->session->isLoggedIn;
+        $role_id = $this->session->role;
+        if (!isset($isLoggedIn) || $isLoggedIn != TRUE) {
+            return redirect()->to(site_url('Admin/login'));
+        } else {
+            $shopId = $this->session->shopId;
+
+            $table = DB()->table('sale_save');
+            $table->where('sch_id', $shopId);
+            $data['sales'] = $table->get()->getResult();
+
+            // All Permissions
+            //$perm = array('create','read','update','delete','mod_access');
+            $perm = $this->permission->module_permission_list($role_id, $this->module_name);
+            foreach ($perm as $key => $val) {
+                $data[$key] = $this->permission->have_access($role_id, $this->module_name, $key);
+            }
+
+            if (isset($data['mod_access']) and $data['mod_access'] == 1) {
+                echo view('Admin/Sales/draft_list', $data);
+            } else {
+                echo view('no_permission');
+            }
+        }
+    }
+
+
 }

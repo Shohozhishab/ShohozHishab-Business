@@ -37,9 +37,10 @@ class Products_ajax extends BaseController
             $shopId = $this->session->shopId;
 
             $productTable = DB()->table('products');
+            $productTable->select('products.*,product_stock_relation.*');
             $productTable->join('product_stock_relation','product_stock_relation.product_id = products.prod_id');
             $productTable->join('stores','stores.store_id = product_stock_relation.store_id');
-            $data['products_data'] = $productTable->where('products.sch_id', $shopId)->where('stores.is_default','1')->get()->getResult();
+            $data['products_data'] = $productTable->where('products.sch_id', $shopId)->groupBy('products.prod_id')->where('stores.is_default','1')->get()->getResult();
 
 
             $data['menu'] = view('Admin/menu_stock');

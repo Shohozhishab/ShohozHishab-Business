@@ -51,7 +51,9 @@
                                     <h3 class="box-title">Products List</h3>
                                 </div>
                                 <div class="col-lg-8">
+
                                     <a href="<?= base_url('Admin/Products/add_existing_product/')?>"  class="btn btn-info pull-right btn-xs" style="margin-left:10px;"><i class="fa fa-fw fa-tasks"></i> Add Existing Product</a>
+                                    <a href="<?= base_url('Admin/Products/add_product/')?>"  class="btn btn-warning pull-right btn-xs" style="margin-left:10px;"><i class="fa fa-fw fa-tasks"></i> Add Product</a>
                                     <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Products_short_list_ajax/'); ?>','<?php echo '/Admin/Products_short_list/'; ?>')" class="btn btn-danger pull-right btn-xs" style="margin-left:10px;"><i class="fa fa-fw fa-tasks"></i> Short List</a>
 
                                     <button type="submit" class="btn btn-primary pull-right btn-xs"><i class="fa fa-barcode"></i> Barcode Generate</button>

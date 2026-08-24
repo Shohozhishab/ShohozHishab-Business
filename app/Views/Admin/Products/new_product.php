@@ -1,0 +1,87 @@
+<div class="content-wrapper" id="viewpage">
+    <!-- Content Header (Page header) -->
+    <section class="content-header">
+        <h1> Products <small> Products Add</small></h1>
+        <ol class="breadcrumb">
+            <li><a href="#"><i class="fa fa-dashboard"></i> Home</a></li>
+            <li class="active"> Products Add</li>
+        </ol>
+    </section>
+
+    <!-- Main content -->
+    <section class="content">
+        <!-- Small boxes (Stat box) -->
+        <div class="row">
+            <div class="col-xs-12" style="margin-bottom: 15px;">
+                <?php echo $menu; ?>
+            </div>
+            <div class="col-xs-12">
+                <form id="geniusform" action="<?php echo base_url('Admin/Products/add_action_product') ?>" method="post">
+                    <div class="box">
+                        <div class="box-header">
+                            <div class="row">
+                                <div class="col-lg-4">
+                                    <h3 class="box-title"> Products Add</h3>
+                                </div>
+                                <div class="col-lg-8">
+                                </div>
+                                <div class="col-lg-12" style="margin-top: 20px;" id="message">
+                                    <?php if (session()->getFlashdata('message') !== NULL) : echo session()->getFlashdata('message'); endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- /.box-header -->
+                        <div class="box-body">
+                            <div class="form-group col-xs-3">
+                                <label for="int">Category </label>
+                                <select class="form-control" onchange="showSubCategory(this.value)" name="category" id="category">
+                                    <option value="">Please Select</option>
+                                    <?php echo getCatListInOption('prod_cat_id', 'prod_cat_id', 'product_category', 'product_category'); ?>
+                                </select>
+                            </div>
+                            <div class="form-group col-xs-3">
+                                <label for="int">Sub Category </label>
+                                <select class="form-control" name="sub_category" id="subCat">
+                                    <option value="">Please Select</option>
+                                </select>
+                            </div>
+                            <div class="form-group col-xs-3">
+                                <label for="int">Supplier</label>
+                                <select class="form-control" name="supplier_id" id="supData"  >
+                                    <option value="">Please select</option>
+                                    <?php echo getAllListInOptionWithStatus('','supplier_id','name','suppliers','name'); ?>
+                                </select>
+                            </div>
+                            <div class="form-group col-xs-3">
+                                <label for="varchar">Product Name </label> <span id="nameValid" style="color: red;"></span>
+                                <input type="text" class="form-control" name="name" id="name" placeholder="Name"/>
+                            </div>
+                            <div class="form-group col-xs-3">
+                                <label for="int">Unit Set</label>
+                                <select class="form-control" name="categories_id" id="categories_id" onchange="unitShow(this.value)" >
+                                    <option value="">Please Select</option>
+                                    <?php foreach ($unit_set as $cat){ ?>
+                                        <option value="<?= $cat->unit_set_id;?>" <?= ($cat->default_set == '1')?'Selected':'';?> ><?= $cat->name;?></option>
+                                    <?php } ?>
+                                </select>
+                                <input type="hidden"   id="noPurchase" value="1">
+                            </div>
+                            <div id="unitData"></div>
+
+                            <div class="form-group col-xs-12">
+                                <button type="submit" class="btn btn-primary ">Add</button>
+                                <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Products_ajax/'); ?>','<?php echo '/Admin/Products/'; ?>')" class="btn btn-danger">Back</a>
+                            </div>
+                        </div>
+                        <!-- /.box-body -->
+                    </div>
+                    <!-- /.box -->
+                </form>
+            </div>
+
+        </div>
+        <!-- /.row -->
+
+    </section>
+    <!-- /.content -->
+</div>

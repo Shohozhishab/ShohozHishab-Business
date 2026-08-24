@@ -22,51 +22,51 @@
             </div>
             <div class="col-md-8">
 
-                    <div class="box">
-                        <div class="box-header">
-                            <h3 class="box-title">Sales Create</h3>
-                        </div>
-                        <!-- /.box-header -->
-                        <div class="box-body">
-                            <div class="col-md-8">
-                                <div class="input-group">
+                <div class="box">
+                    <div class="box-header">
+                        <h3 class="box-title">Sales Create</h3>
+                    </div>
+                    <!-- /.box-header -->
+                    <div class="box-body">
+                        <div class="col-md-8">
+                            <div class="input-group">
                                     <span class="input-group-addon " style="background-color:#367FA9; ">
                                         <i class="fa fa-pencil-square-o fa-lg" style="color: white;"></i>
                                     </span>
-                                    <input type="text" class="form-control input-lg" onkeypress="findResult()"
-                                           name="keyWord" id="keyWord" value="">
+                                <input type="text" class="form-control input-lg" onkeypress="findResult()"
+                                       name="keyWord" id="keyWord" value="">
 
-                                    <span class="input-group-btn">
+                                <span class="input-group-btn">
                                       <button class="btn btn-primary btn-lg" type="submit">Search</button>
                                     </span>
-                                </div>
-
                             </div>
-                            <div class="col-md-4">
-                                <div class="input-group">
+
+                        </div>
+                        <div class="col-md-4">
+                            <div class="input-group">
                                     <span class="input-group-addon " style="background-color:#367FA9; ">
                                         <i class="fa fa-barcode fa-lg" style="color: white;"></i>
                                     </span>
-                                    <input type="text" class="form-control input-lg" oninput="QrScan(this.value)"
-                                           name="qrKey" id="qrKey" placeholder="Scan barcode">
-                                </div>
+                                <input type="text" class="form-control input-lg" oninput="QrScan(this.value)"
+                                       name="qrKey" id="qrKey" placeholder="Scan barcode">
+                            </div>
 
-                            </div>
-                            <div class="input-group col-md-12">
-                                <ul style="list-style-type:none;" id="result"></ul>
-                            </div>
                         </div>
-                        <!-- /.box-body -->
+                        <div class="input-group col-md-12">
+                            <ul style="list-style-type:none;" id="result"></ul>
+                        </div>
                     </div>
+                    <!-- /.box-body -->
+                </div>
 
-                    <form action="<?php echo $action; ?>" method="post">
+                <form id="saleForm" action="<?php echo $action; ?>" method="post">
                     <div class="box">
                         <div class="box-header">
                             <h3 class="box-title"><i class="fa fa-fw fa-cart-plus"></i> Product cart list</h3>
                         </div>
                         <!-- /.box-header -->
                         <div class="box-body">
-                            <div class="col-xs-12" id="box_form">
+                            <div class="col-xs-12" id="box_form" style="padding: 0px !important;">
                                 <table class="table table-bordered table-striped" id="TFtable">
                                     <thead>
                                     <tr>
@@ -74,7 +74,6 @@
                                         <th>Name</th>
                                         <th>Quantity</th>
                                         <th>Price</th>
-                                        <th>Production Date</th>
                                         <th>Subtotal</th>
                                         <th>Action</th>
                                     </tr>
@@ -86,13 +85,14 @@
                                     $l = 0;
                                     $m = 0;
                                     $n = 0;
-                                    foreach (Cart()->contents() as $row) { $unitId = productIdByDefaultStoreUnit($row['id']); ?>
+                                    foreach (Cart()->contents() as $row) { $unitId = productIdByDefaultStoreUnit($row['prod_id']); ?>
                                         <tr>
                                             <td><?php echo ++$i; ?></td>
                                             <td>
                                                 <?php echo $row['name']; ?>
                                                 <input type="hidden" class="form-control " name="productId[]"
-                                                       value="<?php echo $row['id']; ?>">
+                                                       value="<?php echo $row['prod_id']; ?>">
+                                                <input type="hidden"  name="product_stock_relation_id[]" value="<?php echo $row['id']; ?>">
                                             </td>
                                             <td>
                                                 <?php echo unitOrQtyByUnitQty($unitId,$row['qty']); ?>/<?php echo showUnitName($unitId) ?>
@@ -102,20 +102,16 @@
                                             <td>
                                                 <input type="hidden" class="form-control upprice" id="qtyUp_<?= $row['id']; ?>" name="price[]" value="<?php echo $row['price']; ?>">
                                                 <?php
-                                                    $uPrice = unitOrBasePriceByUnitPrice($unitId,$row['price']);
-                                                    $conversion_factor = get_data_by_id('conversion_factor', 'units', 'units_id', $unitId)
+                                                $uPrice = unitOrBasePriceByUnitPrice($unitId,$row['price']);
+                                                $conversion_factor = get_data_by_id('conversion_factor', 'units', 'units_id', $unitId)
                                                 ?>
-                                                <input type="text" class="form-control" name="unitPrice[]" oninput="priceMakeBase(this.value,'<?= $conversion_factor;?>','<?= $row['id'];?>' )" value="<?= $uPrice ?>">
+                                                <input type="text" class="form-control"  oninput="priceMakeBase(this.value,'<?= $conversion_factor;?>','<?= $row['id'];?>' )" value="<?= $uPrice ?>">
 
                                             </td>
                                             <td>
                                                 <input type="hidden" step=any class="form-control disc" oninput="minusValueCheck(this.value,this),validationDiscount('disc_<?= $row['id']?>')" name="disc[]" id="disc_<?= $row['id']?>">
-                                                <input type="hidden" readonly class="form-control subtotal"
-                                                       name="subtotal[]" id="subt_<?php print $m++; ?>"
-                                                       value="<?php echo $row['subtotal'] ?>">
-                                                <input type="hidden" name="suballtotal[]"
-                                                       id="subtl2_<?php print $k++; ?>"
-                                                       value="<?php echo $row['subtotal']; ?>">
+                                                <input type="hidden" readonly class="form-control subtotal" name="subtotal[]" id="subt_<?php print $m++; ?>" value="<?php echo $row['subtotal'] ?>">
+                                                <input type="hidden" name="suballtotal[]" id="subtl2_<?php print $k++; ?>" value="<?php echo $row['subtotal']; ?>">
                                                 <span id="subtl_<?php print $l++; ?>">
                                                     <span id="subtl_<?php print $j++; ?>">
                                                      <?php echo number_format($row['subtotal']); ?>
@@ -124,8 +120,12 @@
 
                                             </td>
                                             <td width="120px">
-                                                <a href="<?php echo site_url('/Admin/Sales/remove_cart/' . $row['rowid']); ?>"
-                                                   onclick="javasciprt: return confirm('Are You Sure ?')"
+                                                <?php
+
+                                                $getUrl = !empty($salesSave) ? '?sale_save_id='.$salesSave->sale_save_id : '';
+                                                ?>
+                                                <a href="<?php echo site_url('/Admin/Sales/remove_cart/' . $row['rowid'].$getUrl); ?>"
+                                                   onclick="return confirm('Are You Sure ?')"
                                                    class="btn btn-danger btn-xs">Cancel</a>
                                             </td>
                                         </tr>
@@ -156,29 +156,58 @@
             <div class="col-md-4" style="background-color: #e8b96f;padding: 10px;">
                 <div class="col-xs-12" style="border:1px dashed #D0D3D8 ;padding-top: 10px;padding-bottom: 10px;">
                     <label>Sale Date</label>
-                    <input type="date" class="form-control" name="date" value="<?= date('Y-m-d') ?>">
+                    <input type="date" class="form-control" name="date" value="<?= !empty($salesSave)?$salesSave->date:date('Y-m-d'); ?>">
+                    <input type="hidden" name="sale_save_id" id="sale_save_id" value="<?= !empty($salesSave)?$salesSave->sale_save_id:'';?>">
                 </div>
-
                 <div class="col-xs-12" style="border:1px dashed #D0D3D8 ;padding-top: 10px;">
                     <label>Customer</label>
                     <div class="panel with-nav-tabs panel-default nav-tabs-custom"
                          style="background-color: #e8b96f; border-color: ;" >
                         <ul class="nav nav-tabs" >
-                            <li class="active"><a href="#existing" data-toggle="tab">Existing Customer</a></li>
-                            <li class=""><a href="#new" data-toggle="tab">New Customer</a></li>
+                            <?php
+                            $cusActive = '';
+                            $cusNameActive = '';
+                            $customerId = '';
+                            $customerName = '';
+                            $discountVal = '';
+                            $vatVal = '';
+                            $cashPay = '';
+                            $bankId = '';
+                            $bankPay = '';
+                            $chequeNo = '';
+                            $chequePay = '';
+                            if (!empty($salesSave)){
+                                $cusActive = !empty($salesSave->customer_id)?'active':'';
+                                $cusNameActive = !empty($salesSave->customer_name)?'active':'';
+                                $customerId = $salesSave->customer_id;
+                                $customerName = $salesSave->customer_name;
+                                $discountVal = $salesSave->discount;
+                                $vatVal = $salesSave->vat;
+                                $cashPay = $salesSave->cash_pay;
+                                $bankId = $salesSave->bank_id;
+                                $bankPay = $salesSave->bank_paid;
+                                $chequeNo = $salesSave->cheque_no;
+                                $chequePay = $salesSave->cheque_amount;
+                            }
+
+                            $existingActive = !empty($cusActive) || (empty($cusActive) && empty($cusNameActive));
+                            $newActive = !empty($cusNameActive);
+                            ?>
+                            <li class="<?= $existingActive ? 'active' : ''; ?>"><a href="#existing" data-toggle="tab">Existing Customer</a></li>
+                            <li class="<?= $newActive ? 'active' : ''; ?>"><a href="#new" data-toggle="tab">New Customer</a></li>
                         </ul>
                         <div class="panel-body">
                             <div class="tab-content">
-                                <div class="tab-pane fade active in" id="existing">
+                                <div class="tab-pane fade <?= $existingActive ? 'active in' : ''; ?> " id="existing">
                                     <div class="row">
                                         <div class="col-xs-12">
-                                            <select class="form-control select2 select2-hidden-accessible"
-                                                    onchange="createBtnShow(),customerBalanceShow(this.value)" style=" width: 100%;"
-                                                    tabindex="-1" aria-hidden="true" name="customer_id"
+                                            <select class="form-control select2"
+                                                    onchange="createBtnShow(),customerBalanceShow(this.value),emptyOponentCustomer() " style=" width: 100%;"
+                                                    name="customer_id"
                                                     id="cus">
 
                                                 <option selected="selected" value="">Please Select</option>
-                                                <?php echo getAllListInOptionWithStatus('customer_id', 'customer_id', 'customer_name', 'customers','customer_name'); ?>
+                                                <?php echo getAllListInOptionWithStatus($customerId, 'customer_id', 'customer_name', 'customers','customer_name'); ?>
                                             </select>
                                             <a href="javascript:void(0)" type="button" data-toggle="modal" data-target="#modal-customer">Create new</a><br>
                                             <span id="balance"></span>
@@ -186,11 +215,11 @@
                                     </div>
                                 </div>
 
-                                <div class="tab-pane fade in" id="new">
+                                <div class="tab-pane fade <?= $newActive ? 'active in' : ''; ?>" id="new">
                                     <div class="row">
                                         <div class="col-xs-12">
-                                            <input type="text" class="form-control " name="name" id="name"
-                                                   placeholder="Name" value=""/>
+                                            <input type="text" class="form-control " oninput="emptyOponentCustomer()" name="name" id="name"
+                                                   placeholder="Name" value="<?= $customerName;?>"/>
                                         </div>
                                     </div>
                                 </div>
@@ -201,13 +230,12 @@
 
 
                 <?php if (isset($discount) AND ($discount == 1)) { ?>
-                    <div class="col-xs-6"
-                         style="border:1px dashed #D0D3D8 ;padding:5px;">
+                    <div class="col-xs-6" style="border:1px dashed #D0D3D8 ;padding:5px;">
 
                         <label>Entire Sale Discount: %</label>
 
                         <input type="number" step=any class="form-control saleDisc" oninput="minusValueCheck(this.value,this)" name="saleDisc" id="saleDisc"
-                               placeholder="Input Discount %">
+                               placeholder="Input Discount %" value="<?= $discountVal;?>" >
                         <input type="hidden" class="form-control totalamount" name="total" id="totalamount"
                                readonly value="<?php echo Cart()->total() ?>">
                         <!--  </div> -->
@@ -220,22 +248,22 @@
                     </div>
                 <?php } ?>
                 <?php if (isset($vat_option) AND ($vat_option == 1)) { ?>
-                <div class="col-xs-12"
-                     style="border:1px dashed #D0D3D8 ; padding:5px; ">
-                    <div class="col-xs-6" style="border:1px dashed #D0D3D8 ; padding:5px;">
-                        <label>Vat: %</label>
-                        <input type="number" step=any class="form-control vat" oninput="minusValueCheck(this.value,this)" name="vat" id="vat" placeholder="vat %">
+                    <div class="col-xs-12"
+                         style="border:1px dashed #D0D3D8 ; padding:5px; ">
+                        <div class="col-xs-6" style="border:1px dashed #D0D3D8 ; padding:5px;">
+                            <label>Vat: %</label>
+                            <input type="number" step=any class="form-control vat" oninput="minusValueCheck(this.value,this)" name="vat" id="vat" placeholder="vat %" value="<?= $vatVal;?>">
 
-                        <input type="hidden" class="form-control vatTotallast" name="vatTotallast"
-                               id="vatTotallast" readonly value="<?php echo Cart()->total() ?>">
-                    </div>
-                    <div class="col-xs-6" style="border:1px dashed #D0D3D8 ; padding:5px;">
-                        <label>Vat Amount</label>
-                        <input type="text" onchange="checkBankId()" class="form-control vatAmount"
-                               name="vatAmount" id="vatAmount" placeholder="Vat Amount" readonly>
+                            <input type="hidden" class="form-control vatTotallast" name="vatTotallast"
+                                   id="vatTotallast" readonly value="<?php echo Cart()->total() ?>">
+                        </div>
+                        <div class="col-xs-6" style="border:1px dashed #D0D3D8 ; padding:5px;">
+                            <label>Vat Amount</label>
+                            <input type="text" onchange="checkBankId()" class="form-control vatAmount"
+                                   name="vatAmount" id="vatAmount" placeholder="Vat Amount" readonly>
 
+                        </div>
                     </div>
-                </div>
                 <?php } ?>
 
                 <div class="col-xs-12"
@@ -256,20 +284,20 @@
                         <div class="col-xs-12" style="border:1px dashed #D0D3D8 ; padding:5px;">
                             <label>Cash</label>
                             <input type="number" step=any class="form-control nagod" oninput="minusValueCheck(this.value,this)" name="nagod" id="nagod"
-                                   placeholder="Input Cash Amount">
+                                   placeholder="Input Cash Amount" value="<?= $cashPay;?>">
                         </div>
                         <div class="col-xs-12" style="border:1px dashed #D0D3D8 ; padding:5px;">
                             <div class="col-xs-6" style="border:1px dashed #D0D3D8 ; padding:5px;">
                                 <label>Bank</label>
                                 <select class="form-control" name="bank_id" id="bank_id">
                                     <option value="">Select Bank</option>
-                                    <?php echo getTwoValueInOption('bank_id', 'bank_id', 'name', 'account_no', 'bank'); ?>
+                                    <?php echo getTwoValueInOption($bankId, 'bank_id', 'name', 'account_no', 'bank'); ?>
                                 </select>
                             </div>
                             <div class="col-xs-6" style="border:1px dashed #D0D3D8 ; padding:5px;">
                                 <label>Bank Amount</label>
                                 <input type="number" step=any onchange="checkBankId()" class="form-control bankAmount"
-                                       name="bankAmount" id="bankAmount" oninput="minusValueCheck(this.value,this)" placeholder="input Bank Amount">
+                                       name="bankAmount" id="bankAmount" oninput="minusValueCheck(this.value,this)" placeholder="input Bank Amount" value="<?= $bankPay;?>" >
                                 <b id="Bank_valid"></b>
                             </div>
                         </div>
@@ -277,12 +305,12 @@
                             <div class="col-xs-6" style="border:1px dashed #D0D3D8 ; padding:5px;">
                                 <label>Cheque No</label>
                                 <input type="text" class="form-control" name="chequeNo" id="chequeNo"
-                                       placeholder="Input Cheque No ">
+                                       placeholder="Input Cheque No " value="<?= $chequeNo;?>">
                             </div>
                             <div class="col-xs-6" style="border:1px dashed #D0D3D8 ; padding:5px;">
                                 <label>Cheque Amount</label>
                                 <input type="number" step=any onchange="cheque()" class="form-control chequeAmount"
-                                       name="chequeAmount" oninput="minusValueCheck(this.value,this)" id="chequeAmount" placeholder="Input Cheque Amount ">
+                                       name="chequeAmount" oninput="minusValueCheck(this.value,this)" id="chequeAmount" placeholder="Input Cheque Amount " value="<?= $chequePay;?>">
                                 <b id="cheque_valid"></b>
                             </div>
                         </div>
@@ -306,6 +334,7 @@
                     </div>
                 </div>
                 <div class="col-xs-12" style="padding:20px; ">
+                    <button  type="button" class="btn btn-secondary" onclick="saveToDraft()" >Save to draft </button>
 
                     <button style="float: right;" id="btn" type="submit"
                             class="btn btn-primary">Sale</button>
@@ -335,79 +364,79 @@
                 <h4 class="modal-title">New Customer Add</h4>
             </div>
 
-                <div class="modal-body">
-                    <div id="cusmessage2"></div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <form id="customerform" action="<?= base_url('Admin/Customers/create_action_ajax');?>" method="post">
-                                <div class="form-group">
-                                    <label for="varchar">Customer Name </label>
-                                    <input type="text" class="form-control" name="customer_name" id="customer_name" placeholder="Customer Name" required />
-                                    <div class="error"></div>
-                                </div>
-                                <div class="form-group">
-                                    <label for="int">Mobile </label>
-                                    <input type="number" class="form-control" name="mobile" id="mobile" placeholder="Mobile"  required/>
-                                    <div class="error"></div>
-                                </div>
-                                <div class="form-group">
-                                    <label for="int">Customer Type</label>
-                                    <select class="form-control" name="cus_type_id" id="cus_type_id" required>
-                                        <?php echo getAllListInOption('','cus_type_id','type_name','customer_type'); ?>
-                                    </select>
-                                    <div class="error"></div>
-                                </div>
-                                <button type="button" class="btn btn-primary" onclick="customerValidat()" >Save</button>
-                            </form>
-                        </div>
-                        <div class="col-md-6" style="border-left: 1px solid #cecdcd;">
-                            <form id="customerform2" action="<?= base_url('Admin/Customers/create_action_existing_ajax');?>" method="post">
-                                <h4>Existing Customer</h4>
-                                <div class="form-group">
-                                    <label for="varchar">Customer Name </label>
-                                    <input type="text" class="form-control" name="customer_name" id="customer_name_ex" placeholder="Customer Name" required />
-                                    <div class="error"></div>
-                                </div>
-                                <div class="form-group">
-                                    <label for="int">Mobile</label>
-                                    <input type="number" class="form-control" name="mobile" id="mobile_ex" placeholder="Mobile" required/>
-                                    <div class="error"></div>
-                                </div>
-                                <div class="form-group">
-                                    <label for="int">Customer Type</label>
+            <div class="modal-body">
+                <div id="cusmessage2"></div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <form id="customerform" action="<?= base_url('Admin/Customers/create_action_ajax');?>" method="post">
+                            <div class="form-group">
+                                <label for="varchar">Customer Name </label>
+                                <input type="text" class="form-control" name="customer_name" id="customer_name" placeholder="Customer Name" required />
+                                <div class="error"></div>
+                            </div>
+                            <div class="form-group">
+                                <label for="int">Mobile </label>
+                                <input type="number" class="form-control" name="mobile" id="mobile" placeholder="Mobile"  required/>
+                                <div class="error"></div>
+                            </div>
+                            <div class="form-group">
+                                <label for="int">Customer Type</label>
+                                <select class="form-control" name="cus_type_id" id="cus_type_id" required>
+                                    <?php echo getAllListInOption('','cus_type_id','type_name','customer_type'); ?>
+                                </select>
+                                <div class="error"></div>
+                            </div>
+                            <button type="button" class="btn btn-primary" onclick="customerValidat()" >Save</button>
+                        </form>
+                    </div>
+                    <div class="col-md-6" style="border-left: 1px solid #cecdcd;">
+                        <form id="customerform2" action="<?= base_url('Admin/Customers/create_action_existing_ajax');?>" method="post">
+                            <h4>Existing Customer</h4>
+                            <div class="form-group">
+                                <label for="varchar">Customer Name </label>
+                                <input type="text" class="form-control" name="customer_name" id="customer_name_ex" placeholder="Customer Name" required />
+                                <div class="error"></div>
+                            </div>
+                            <div class="form-group">
+                                <label for="int">Mobile</label>
+                                <input type="number" class="form-control" name="mobile" id="mobile_ex" placeholder="Mobile" required/>
+                                <div class="error"></div>
+                            </div>
+                            <div class="form-group">
+                                <label for="int">Customer Type</label>
 
-                                    <select class="form-control" name="cus_type_id" id="cus_type_id_ex" required>
-                                        <option value="">Please Select</option>
-                                        <?php echo getAllListInOption('','cus_type_id','type_name','customer_type'); ?>
-                                    </select>
-                                    <div class="error"></div>
-                                </div>
+                                <select class="form-control" name="cus_type_id" id="cus_type_id_ex" required>
+                                    <option value="">Please Select</option>
+                                    <?php echo getAllListInOption('','cus_type_id','type_name','customer_type'); ?>
+                                </select>
+                                <div class="error"></div>
+                            </div>
 
-                                <div class="form-group">
-                                    <label for="enum">Transaction Type</label>
-                                    <select class="form-control input" name="transaction_type" id="transaction_type" required>
-                                        <option value="">Please Select</option>
-                                        <option value="1">খরচ (Cr.) /পাওনাদার</option>
-                                        <option value="2">জমা (Dr.) /দেনাদার</option>
-                                    </select>
-                                    <div class="error"></div>
-                                </div>
+                            <div class="form-group">
+                                <label for="enum">Transaction Type</label>
+                                <select class="form-control input" name="transaction_type" id="transaction_type" required>
+                                    <option value="">Please Select</option>
+                                    <option value="1">খরচ (Cr.) /পাওনাদার</option>
+                                    <option value="2">জমা (Dr.) /দেনাদার</option>
+                                </select>
+                                <div class="error"></div>
+                            </div>
 
-                                <div class="form-group databank" id="chaque">
-                                    <label for="int">Amount</label>
-                                    <input type="number" class="form-control input" name="amount" id="amount" placeholder="Amount" oninput="minusValueCheck(this.value,this)" required/>
-                                    <div class="error"></div>
-                                </div>
+                            <div class="form-group databank" id="chaque">
+                                <label for="int">Amount</label>
+                                <input type="number" class="form-control input" name="amount" id="amount" placeholder="Amount" oninput="minusValueCheck(this.value,this)" required/>
+                                <div class="error"></div>
+                            </div>
 
-                                <button type="button" class="btn btn-primary" onclick="customerExisValidat()"  >Save</button>
-                            </form>
-                        </div>
+                            <button type="button" class="btn btn-primary" onclick="customerExisValidat()"  >Save</button>
+                        </form>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-default pull-left" data-dismiss="modal">Close</button>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default pull-left" data-dismiss="modal">Close</button>
 
-                </div>
+            </div>
 
         </div>
     </div>

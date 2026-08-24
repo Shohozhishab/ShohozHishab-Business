@@ -61,6 +61,10 @@
                 <span  class="head-cash">Cash : <?php echo admin_cash(); ?></span>
 
                 <ul class="nav navbar-nav" style="margin-right: 135px;" >
+                    <?php $draft_sale = permission_check('Sales',newSession()->role,'draft_sale');?>
+                    <?php if (isset($draft_sale) && $draft_sale == 1){ ?>
+                    <li style="padding: 5px;"><a href="#" onclick="showData('<?php echo site_url('/Admin/Sales_ajax/draft_list/'); ?>','<?php echo '/Admin/Sales/draft_list/';?>'),activeTab(this)"  class="btn btn-success " id="btnSize" ><i class="fa fa-fw fa-tasks"></i> Draft Sales</a></li>
+                    <?php } ?>
                     <li style="padding: 5px;"><a href="#" onclick="showData('<?php echo site_url('/Admin/Purchase_ajax/create/'); ?>','<?php echo '/Admin/Purchase/create/';?>'),activeTab(this)"  class="btn btn-success " id="btnSize" ><i class="fa fa-fw fa-briefcase"></i>Purchase</a></li>
 
                     <li style="padding: 5px;"><a href="#" onclick="showData('<?php echo site_url('Admin/Sales_ajax/create/'); ?>','<?php echo '/Admin/Sales/create/';?>'),activeTab(this)" class="btn btn-success " id="btnSize" ><i class="fa fa-fw fa-cart-plus"></i> Sale</a></li>

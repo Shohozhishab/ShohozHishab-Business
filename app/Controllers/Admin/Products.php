@@ -38,9 +38,10 @@ class Products extends BaseController
             $shopId = $this->session->shopId;
 
             $productTable = DB()->table('products');
+            $productTable->select('products.*,product_stock_relation.*');
             $productTable->join('product_stock_relation','product_stock_relation.product_id = products.prod_id');
             $productTable->join('stores','stores.store_id = product_stock_relation.store_id');
-            $data['products_data'] = $productTable->where('products.sch_id', $shopId)->where('stores.is_default','1')->get()->getResult();
+            $data['products_data'] = $productTable->where('products.sch_id', $shopId)->groupBy('products.prod_id')->where('stores.is_default','1')->get()->getResult();
 
             $data['menu'] = view('Admin/menu_stock');
             // All Permissions
@@ -374,6 +375,7 @@ class Products extends BaseController
 
             //product stock relation insert
             DB()->table('product_stock_relation')->insert([
+                'sch_id' => $shopId,
                 'store_id' => $store->store_id,
                 'product_id' => $prodId,
                 'quantity' => $totalQty,
@@ -435,5 +437,121 @@ class Products extends BaseController
         }
     }
 
+    public function add_product(){
+        $isLoggedIn = $this->session->isLoggedIn;
+        $role_id = $this->session->role;
+        if (!isset($isLoggedIn) || $isLoggedIn != TRUE) {
+            return redirect()->to(site_url('Admin/login'));
+        } else {
+            $shopId = $this->session->shopId;
+            $productTable = DB()->table('products');
+            $data['products_data'] = $productTable->where('sch_id', $shopId)->where('deleted IS NULL')->get()->getResult();
+
+            $table = DB()->table('unit_set');
+            $data['unit_set'] = $table->where('sch_id',$shopId)->get()->getResult();
+
+            $data['menu'] = view('Admin/menu_stock');
+            // All Permissions
+            //$perm = array('create','read','update','delete','mod_access');
+            $perm = $this->permission->module_permission_list($role_id, $this->module_name);
+            foreach ($perm as $key => $val) {
+                $data[$key] = $this->permission->have_access($role_id, $this->module_name, $key);
+            }
+            echo view('Admin/header');
+            echo view('Admin/sidebar');
+            if (isset($data['mod_access']) and $data['mod_access'] == 1) {
+                echo view('Admin/Products/new_product', $data);
+            } else {
+                echo view('no_permission');
+            }
+            echo view('Admin/footer');
+        }
+    }
+    public function add_action_product(){
+        $shopId = $this->session->shopId;
+
+        $categories_id = $this->request->getPost('categories_id');
+        $data['salePrice'] = $this->request->getPost('selling_price');
+        $data['sale_unit'] = $this->request->getPost('sale_unit');
+        $purchase_units_price = $this->request->getPost('purchase_units_price');
+        $sell_unit_price = $this->request->getPost('sell_unit_price');
+
+        $data['prod_cat_id'] = $this->request->getPost('sub_category');
+        $data['supplier_id'] = $this->request->getPost('supplier_id');
+        $data['name'] = $this->request->getPost('name');
+        $data['unit'] = $data['sale_unit'];
+        $data['price'] = $this->request->getPost('price');
+        $data['selling_price'] = $data['salePrice'] ;
+
+
+        $this->validation->setRules([
+            'prod_cat_id' => ['label' => 'Category', 'rules' => 'required'],
+            'name' => ['label' => 'name', 'rules' => 'required'],
+            'unit' => ['label' => 'unit', 'rules' => 'required'],
+            'price' => ['label' => 'price', 'rules' => 'required'],
+            'selling_price' => ['label' => 'salePrice', 'rules' => 'required'],
+        ]);
+
+        if ($this->validation->run($data) == FALSE) {
+            print '<div class="alert alert-danger alert-dismissible" role="alert">' . $this->validation->listErrors() . ' <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+        } else {
+            DB()->transStart();
+
+                $totalQty = 0;
+
+                //purchase price make
+                $basePurchasePrice = 0;
+                $unitsPur = DB()->table('units')->where('units_id', $purchase_units_price)->get()->getRow();
+                if (!empty($unitsPur)){
+                    $basePurchasePrice = $data['price']/$unitsPur->conversion_factor;
+                }
+                $purchasePrice = $basePurchasePrice;
+
+                //sale price make
+                $baseSalePrice = 0;
+                $unitsSale = DB()->table('units')->where('units_id', $sell_unit_price)->get()->getRow();
+                if (!empty($unitsSale)){
+                    $baseSalePrice = $data['salePrice']/$unitsSale->conversion_factor;
+                }
+                $salePrice = $baseSalePrice;
+
+
+                //get default store
+                $storeTab = DB()->table('stores');
+                $store = $storeTab->where('sch_id', $shopId)->where('is_default', 1)->get()->getRow();
+
+                //insert product
+                $queryUnit = DB()->table('unit_set')->where('unit_set_id',$categories_id)->get()->getRow();
+                $dataProduct['prod_cat_id'] = $data['prod_cat_id'];
+                $dataProduct['name'] = $data['name'];
+                $dataProduct['purchase_units'] = $queryUnit->purchase_units;
+                $dataProduct['sale_units'] = $queryUnit->sell_units;
+                $dataProduct['purchase_date'] = date('Y-m-d H:i:s');
+                $dataProduct['sch_id'] = $shopId;
+                $dataProduct['createdBy'] = $this->session->userId;
+                $dataProduct['createdDtm'] = date('Y-m-d H:i:s');
+                $productTable = DB()->table('products');
+                $productTable->insert($dataProduct);
+                $prodId = DB()->insertID();
+
+                //product stock relation insert
+                DB()->table('product_stock_relation')->insert([
+                    'sch_id' => $shopId,
+                    'store_id' => $store->store_id,
+                    'product_id' => $prodId,
+                    'supplier_id' => $data['supplier_id'],
+                    'is_default' =>'1',
+                    'quantity' => $totalQty,
+                    'unit' => $data['sale_unit'],
+                    'purchase_price' => $purchasePrice,
+                    'selling_price' => $salePrice,
+                ]);
+
+            DB()->transComplete();
+
+            print '<div class="alert alert-success alert-dismissible" role="alert"> Product added successfully  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+
+        }
+    }
 
 }

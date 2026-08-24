@@ -46,8 +46,10 @@
                                             ?></td>
                                         <td>
                                             <input type="hidden" name="prod_id[]" value="<?= $item->prod_id;?>">
+                                            <input type="hidden" name="product_stock_relation_id[]" value="<?= $item->product_stock_relation_id;?>">
                                             <input type="hidden" name="inv_item[]" value="<?= $item->inv_item;?>">
                                             <input type="hidden" name="price[]" value="<?= $item->price;?>">
+                                            <input type="hidden" name="totalAm[]" value="<?= $item->final_price;?>" class="totalVal">
                                             <label for="int" class="text-capitalize"><?= showUnitName($unit)?></label><?= showWithCurrencySymbol(unitOrBasePriceByUnitPrice($unit,$item->price));?>
                                         </td>
                                         <td>
@@ -62,12 +64,9 @@
                                                     </div>
                                                 <?php } ?>
                                             </div>
-
-
-
                                         </td>
                                         <td>
-                                            <input type="hidden" name="total[]" value="<?= $item->final_price;?>" class="totalVal">
+
                                             <span ><?= showWithCurrencySymbol($item->final_price);?></span>
                                         </td>
                                         <td>

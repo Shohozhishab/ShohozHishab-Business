@@ -1,10 +1,10 @@
 
-<?php foreach ($units as $val){ ?>
+<?php if (empty($noPurchase)){ foreach ($units as $val){ ?>
     <div class="form-group col-xs-3">
         <label for="int" class="text-capitalize"><?= $val->name;?> </label>
         <input type="text" class="form-control" name="<?= strtolower(str_replace(' ', '_', $val->name));?>" placeholder="<?= $val->name;?>" value="" >
     </div>
-<?php } ?>
+<?php } } ?>
 
 <input type="hidden" name="purchase_units_price" value="<?= $unitSet->purchase_units_price;?>" >
 <input type="hidden" name="sell_unit_price" value="<?= $unitSet->sell_unit_price;?>" >
