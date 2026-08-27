@@ -107,7 +107,7 @@
                                 </li>
                                 <li class="tab-pane fade in <?php echo (($active_category ?? '') == 'fund_transfer') ? 'active' : ''; ?>"><a href="#bank" data-toggle="tab">Fund Transfer</a></li>
                                 <li class="tab-pane fade in <?php echo (($active_category ?? '') == 'expense') ? 'active' : ''; ?>"><a href="#expense" data-toggle="tab">Expense</a></li>
-                                <li class="tab-pane fade in <?php echo (($active_category ?? '') == 'othersales') ? 'active' : ''; ?>"><a href="#othersales" data-toggle="tab">Other Sales</a>
+                                <li class="tab-pane fade in <?php echo (($active_category ?? '') == 'othersales') ? 'active' : ''; ?>"><a href="#othersales" data-toggle="tab">Other Income</a>
                                 </li>
                                 <li class="tab-pane fade in <?php echo (($active_category ?? '') == 'employee') ? 'active' : ''; ?>"><a href="#employeeSalary" data-toggle="tab">Employee
                                         Salary</a></li>
@@ -116,7 +116,7 @@
                             </ul>
                             <div class="panel-body">
                                 <div class="tab-content">
-                                    <div class="tab-pane fade <?php echo (($active_category ?? '') == 'customer' || empty($active_category ?? '')) ? 'active in' : ''; ?>"" id="customer">
+                                    <div class="tab-pane fade <?php echo (($active_category ?? '') == 'customer' || empty($active_category ?? '')) ? 'active in' : ''; ?>" id="customer">
                                     <div class="box-header">
                                         <div class="col-md-3">
                                             <h3 class="box-title">Customer Transaction List</h3>
@@ -688,14 +688,15 @@
 
                                 <div class="tab-pane fade <?php echo (($active_category ?? '') == 'othersales') ? 'active in' : 'in'; ?>" id="othersales">
                                     <div class="box-header">
-                                        <h3 class="box-title">Other Sales Transaction</h3>
+                                        <h3 class="box-title">Other Income Transaction</h3>
                                     </div>
                                     <div class="box-body">
                                         <table class="table table-bordered table-striped othersales" id="other2">
                                             <thead>
                                             <tr>
                                                 <th>No</th>
-                                                <th>Other Sales</th>
+                                                <th>Date</th>
+                                                <th>Name</th>
                                                 <th>Transaction Type</th>
                                                 <th>Amount</th>
                                                 <th>Action</th>
@@ -704,35 +705,34 @@
                                             <tbody>
                                             <?php $i = 0;
                                             foreach ($transaction_data as $row) {
-                                                if ($row->loan_pro_id == NULL && $row->customer_id == NULL && $row->supplier_id == NULL && $row->bank_id == NULL && $row->lc_id == NULL && $row->account_id == NULL && $row->trangaction_type == 'Dr.') { ?>
+                                                if ($row->account_id != NULL) { $accountType = accountIdByType($row->account_id); if (!empty($accountType)){ if ($accountType->type_key == 'other_income'){  ?>
                                                     <tr>
                                                         <td><?php echo ++$i; ?></td>
-                                                        <td>Other Sales</td>
+                                                        <td><?php echo invoiceDateFormat($row->date); ?></td>
+                                                        <td><?php echo get_data_by_id('name', 'accounts', 'account_id', $row->account_id); ?></td>
                                                         <td><?php echo $row->trangaction_type; ?></td>
                                                         <td><?php echo showWithCurrencySymbol($row->amount); ?></td>
                                                         <td>
-                                                    <?php if (isset($transaction_flow) && $transaction_flow == 1){ ?>
-                                                            <a href="javascript:void(0)"
-                                                               onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/transaction_flow/' . $row->trans_id); ?>','<?php echo '/Admin/Transaction/transaction_flow/' . $row->trans_id; ?>')"
-                                                               class="btn btn-success btn-xs">Transaction Flow </a>
-                                                    <?php } ?>
+                                                            <?php if (isset($transaction_flow) && $transaction_flow == 1){ ?>
+                                                                <a href="javascript:void(0)"
+                                                                   onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/transaction_flow/' . $row->trans_id); ?>','<?php echo '/Admin/Transaction/transaction_flow/' . $row->trans_id; ?>')"
+                                                                   class="btn btn-success btn-xs">Transaction Flow </a>
+                                                            <?php } ?>
                                                             <?php if (isset($update) && $update == 1){ ?>
-                                                                <a href="javascript:void(0)" class="btn btn-xs btn-warning" onclick="otherSalesTranEdit('<?= $row->trans_id; ?>')" data-toggle="modal" data-target="#modal-default">Edit</a>
+                                                                <a href="javascript:void(0)" class="btn btn-xs btn-warning" onclick="otherIncomeTranEdit('<?= $row->trans_id; ?>')" data-toggle="modal" data-target="#modal-default">Edit</a>
 
                                                             <?php } ?>
                                                             <?php if (isset($read) && $read == 1){ ?>
-                                                            <a href="javascript:void(0)"
-                                                               onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/read/' . $row->trans_id); ?>','<?php echo '/Admin/Transaction/read/' . $row->trans_id; ?>')"
-                                                               class="btn btn-xs btn-success">View</a>
+                                                                <a href="javascript:void(0)"
+                                                                   onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/read/' . $row->trans_id); ?>','<?php echo '/Admin/Transaction/read/' . $row->trans_id; ?>')"
+                                                                   class="btn btn-xs btn-success">View</a>
                                                             <?php } ?>
                                                             <?php if (isset($delete) && $delete == 1){ ?>
                                                                 <a href="<?php echo site_url('/Admin/Transaction/delete/' . $row->trans_id); ?>" onclick="return confirm('Are you sure you want to delete this item?');"  class="btn btn-danger btn-xs">Delete</a>
                                                             <?php } ?>
-
                                                         </td>
                                                     </tr>
-                                                <?php }
-                                            } ?>
+                                                <?php } } } } ?>
                                             </tbody>
 
                                         </table>
@@ -765,11 +765,12 @@
                                                 </div>
                                             </div>
                                             <div class="col-md-12">
-                                                <table class="table table-bordered table-striped">
+                                                <table class="table table-bordered table-striped" >
                                                     <thead>
                                                     <tr>
                                                         <th>No</th>
-                                                        <th>Other Sales</th>
+                                                        <th>Date</th>
+                                                        <th>Name</th>
                                                         <th>Transaction Type</th>
                                                         <th>Amount</th>
                                                     </tr>
@@ -777,15 +778,15 @@
                                                     <tbody>
                                                     <?php $i = 0;
                                                     foreach ($transaction_data as $row) {
-                                                        if ($row->loan_pro_id == NULL && $row->customer_id == NULL && $row->supplier_id == NULL && $row->bank_id == NULL && $row->lc_id == NULL && $row->trangaction_type == 'Dr.') { ?>
+                                                        if ($row->account_id != NULL) { $accountType = accountIdByType($row->account_id); if (!empty($accountType)){ if ($accountType->type_key == 'other_income'){  ?>
                                                             <tr>
                                                                 <td><?php echo ++$i; ?></td>
-                                                                <td>Other Sales</td>
+                                                                <td><?php echo invoiceDateFormat($row->date); ?></td>
+                                                                <td><?php echo get_data_by_id('name', 'accounts', 'account_id', $row->account_id); ?></td>
                                                                 <td><?php echo $row->trangaction_type; ?></td>
                                                                 <td><?php echo showWithCurrencySymbol($row->amount); ?></td>
                                                             </tr>
-                                                        <?php }
-                                                    } ?>
+                                                        <?php } } } } ?>
                                                     </tbody>
 
                                                 </table>
@@ -1292,5 +1293,18 @@
             $('#' + entityId).val(value);
         }
         $('#filterForm').submit();
+    }
+
+    function otherIncomeTranEdit(tranId) {
+        $.ajax({
+            type: "POST",
+            url: "<?php echo site_url('Admin/Transaction/otherIncomeDataEdit') ?>",
+            data: {
+                id: tranId
+            },
+            success: function(data) {
+                $('#formData').html(data);
+            }
+        });
     }
 </script>

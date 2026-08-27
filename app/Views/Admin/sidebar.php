@@ -244,7 +244,7 @@
                         <?php echo add_main_ajax_based_menu_with_permission('Account Head', '/Admin/Loan_provider', $role_id, 'fa fa-user-plus', '/Admin/Loan_provider_ajax','Loan_provider'); ?>
                         <?php echo add_main_ajax_based_menu_with_permission('Assets', '/Admin/Assets', $role_id, 'fa fa-user-plus', '/Admin/Assets_ajax','Assets'); ?>
                         <?php echo add_main_ajax_based_menu_with_permission('Expenses', '/Admin/Expenses', $role_id, 'fa fa-user-plus', '/Admin/Expenses_ajax','Expenses'); ?>
-
+                        <?php echo add_main_ajax_based_menu_with_permission('Other Income', '/Admin/Other_income', $role_id, 'fa fa-user-plus', '/Admin/Other_income_ajax','OtherIncome'); ?>
                     </ul>
                 </li>
             <?php } ?>

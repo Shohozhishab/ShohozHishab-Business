@@ -2077,6 +2077,7 @@
         $('#message').show();
         $('#message').html(data);
         $('#geniusform')[0].reset();
+        $('#geniusform select.select2').val('').trigger('change');
         $.ajax({
           method: "get",
           url: "<?php echo site_url('Admin/Transaction/updated_case') ?>",
@@ -3494,6 +3495,7 @@
         $('#reload').load(document.URL + ' #reload');
         $('#assets1').load(document.URL + ' #assets1');
         $('#expense2').load(document.URL + ' #expense2');
+        $('#other2').load(document.URL + ' #other2');
       }
 
     });

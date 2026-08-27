@@ -351,13 +351,6 @@
                                                 <div class="col-md-4">
                                                     <form id="geniusform" action="<?php echo $actionExpense; ?>"
                                                           method="post">
-<!--                                                        <div class="form-group">-->
-<!--                                                            <label for="particulars">Memo-->
-<!--                                                                Number </label>-->
-<!---->
-<!--                                                            <input type="text" class="form-control input"-->
-<!--                                                                   name="memo_number" required>-->
-<!--                                                        </div>-->
                                                         <div class="form-group">
                                                             <label for="date">Transaction Date </label>
                                                             <input type="date" class="form-control" name="date" value="<?= date('Y-m-d') ?>" >
@@ -417,26 +410,30 @@
                                         <div class="box-body">
                                             <div class="row">
                                                 <div class="col-md-4">
-                                                    <form id="geniusform" action="<?php echo $actionOtherSales; ?>"
-                                                          method="post">
+                                                    <form id="geniusform" action="<?php echo $actionOtherSales; ?>" method="post">
                                                         <div class="form-group">
                                                             <label for="date">Transaction Date </label>
                                                             <input type="date" class="form-control" name="date" value="<?= date('Y-m-d') ?>" >
                                                         </div>
                                                         <div class="form-group">
+                                                            <label for="int">Other Income</label>
+                                                            <select class="form-control select2  input" style="width: 100%;"  name="account_id" required>
+                                                                <option selected="selected" value="">Please Select </option>
+                                                                <?php foreach ($otherIncome as $val){ ?>
+                                                                    <option value="<?= $val->account_id;?>"><?= $val->name;?> </option>
+                                                                <?php } ?>
+                                                            </select>
+                                                        </div>
+                                                        <div class="form-group">
                                                             <label for="particulars">Particulars </label>
-                                                            <textarea class="form-control" rows="3" name="particulars"
-                                                                      id="particulars" placeholder="Particulars"
-                                                                      required></textarea>
+                                                            <textarea class="form-control input" rows="3" name="particulars" id="particulars" placeholder="Particulars" required></textarea>
                                                         </div>
 
                                                         <div class="form-group">
                                                             <label for="int">Amount </label>
-                                                            <input type="number" step=any class="form-control" name="amount"
-                                                                   id="amount" oninput="minusValueCheck(this.value,this)" placeholder="Amount" required/>
+                                                            <input type="number" step=any class="form-control input" name="amount" id="amount" oninput="minusValueCheck(this.value,this)" placeholder="Amount" required/>
                                                         </div>
-                                                        <button type="submit"
-                                                                class="btn btn-primary geniusSubmit-btn"><?php echo $button ?></button>
+                                                        <button type="submit" class="btn btn-primary geniusSubmit-btn"><?php echo $button ?></button>
                                                         <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Transaction_ajax/'); ?>','<?php echo '/Admin/Transaction/'; ?>')"
                                                            class="btn btn-default">Cancel</a>
                                                     </form>

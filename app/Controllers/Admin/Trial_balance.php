@@ -222,7 +222,22 @@ class Trial_balance extends BaseController
             $serviceCharge = $shopsTable->where('sch_id', $shopId)->get()->getRow()->service_charge;
             //service charge
 
-            $totalCredit = $totalAmo + $capital + $profit + $vatEarn + $serviceCharge;
+            $otherIncomeData = DB()->table('accounts')
+                ->join('accounts_account_type_map', 'accounts_account_type_map.account_id = accounts.account_id')
+                ->join('account_type', 'account_type.account_type_id = accounts_account_type_map.account_type_id')
+                ->where('accounts.sch_id', $shopId)
+                ->where('account_type.type_key', 'other_income')
+                ->get()->getResult();
+
+            $otherIncome = DB()->table('accounts')
+                ->selectSum('accounts.balance')
+                ->join('accounts_account_type_map', 'accounts_account_type_map.account_id = accounts.account_id')
+                ->join('account_type', 'account_type.account_type_id = accounts_account_type_map.account_type_id')
+                ->where('accounts.sch_id', $shopId)
+                ->where('account_type.type_key', 'other_income')
+                ->get()->getRow()->balance;
+
+            $totalCredit = $totalAmo + $capital + $profit + $vatEarn + $serviceCharge + $otherIncome;
 
             // all Credit(end)
 
@@ -254,6 +269,7 @@ class Trial_balance extends BaseController
                 'employee' => $employee,
                 'accountsAssets' => $accountsAssets,
                 'accountsExpenses' => $accountsExpenses,
+                'otherIncome' => $otherIncomeData,
 
             );
 
