@@ -42,6 +42,10 @@
                 </a>
                 <ul class="treeview-menu">
                     <?php echo add_main_ajax_based_menu_with_permission('Sales List', '/Admin/Sales', $role_id, 'fa fa-cart-plus', '/Admin/Sales_ajax','Sales'); ?>
+                    <?php $draft_sale = permission_check('Sales',newSession()->role,'draft_sale');?>
+                    <?php if (isset($draft_sale) && $draft_sale == 1){ ?>
+                    <?php echo add_main_ajax_based_menu_with_permission('Draft Sales List', '/Admin/Sales/draft_list', $role_id, 'fa fa fa-tasks', '/Admin/Sales_ajax/draft_list','Sales'); ?>
+                    <?php } ?>
                     <?php echo add_main_ajax_based_menu_with_permission('Return  Sales', '/Admin/Return_sale', $role_id, 'fa fa-cart-plus', '/Admin/Return_sale_ajax','Return_sale'); ?>
                     <?php echo add_main_ajax_based_menu_with_permission('Invoice', '/Admin/Invoice', $role_id, 'fa fa fa-tasks', '/Admin/Invoice_ajax','Invoice'); ?>
                 </ul>

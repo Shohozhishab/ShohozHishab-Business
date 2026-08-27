@@ -78,6 +78,8 @@
                 <a href="javascript:void(0)"
                    onclick="showData('<?php echo site_url('/Admin/Purchase_ajax/create/'); ?>','<?php echo '/Admin/Purchase/create/'; ?>')"
                    class="btn btn-success"><i class="fa fa-plus"></i> Add Purchase</a>
+
+                <a href="<?= base_url('/Admin/Purchase/purchase_product/')?>" class="btn btn-success"><i class="fa fa-plus"></i> New Purchase</a>
             </div>
             <?php } ?>
             <div class="col-xs-12">

@@ -1848,6 +1848,7 @@ function productIdByQuantity($productId){
 }
 function totalProductInStoreByProductIdOrStoreId($prod_id,$store_id){
     $query = DB()->table('product_stock_relation')
+        ->selectSum('quantity')
         ->where('store_id',$store_id)
         ->where('product_id',$prod_id)
         ->get()

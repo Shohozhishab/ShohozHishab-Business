@@ -476,15 +476,14 @@
   function findResult() {
     $('#keyWord').on('keyup', function() {
       var search_text = $('#keyWord').val();
+        var sale_save_id = $('#sale_save_id').val();
       if (search_text == "") {
         $('#result').empty();
       } else {
         $.ajax({
           type: "POST",
           url: "<?php echo site_url('Admin/Sales/search_prod') ?>",
-          data: {
-            keyWord: search_text
-          },
+          data: {keyWord: search_text,sale_save_id:sale_save_id},
 
           success: function(html) {
 
@@ -495,6 +494,27 @@
     });
   }
   //salse moduels search product (end)
+
+
+  function findResultPurchase() {
+      $('#keyWord').on('keyup', function() {
+          var search_text = $('#keyWord').val();
+          if (search_text == "") {
+              $('#result').empty();
+          } else {
+              $.ajax({
+                  type: "POST",
+                  url: "<?php echo site_url('Admin/Purchase/search_prod') ?>",
+                  data: {keyWord: search_text},
+
+                  success: function(html) {
+
+                      $("#result").html(html).show();
+                  }
+              });
+          }
+      });
+  }
 </script>
 
 <script type="text/javascript">
@@ -930,31 +950,31 @@
     allSaleVatCalculate();
   }
 
-  //salse price new input calculet (start)
+  //sales price new input calculate (start)
   function priceUpCalculate() {
-    var total = 0;
-    var n = $("input[name^='price']").length;
-    var qty = $("input[name^='qty']");
-    var upPrice = $("input[name^='price']");
-    for (i = 0; i < n; i++) {
-      qt = qty[i].value;
-      up = upPrice[i].value;
-      itemPrice = qt * up;
-      total += itemPrice;
-      $("#subtl_" + i).html(itemPrice);
-      $("#subt_" + i).val(itemPrice);
-      $("#subtl2_" + i).val(itemPrice);
-    }
-    $("#totalamount").val(total.toFixed(2));
-    $("#grandtotaldue").val(total.toFixed(2));
-    $("#grandtotal").val(total.toFixed(2));
-    $("#grandtotal2").val(total.toFixed(2));
-    $("#grandtotallast").val(total.toFixed(2));
+        var total = 0;
+        var n = $("input[name^='price']").length;
+        var qty = $("input[name^='qty']");
+        var upPrice = $("input[name^='price']");
+        for (i = 0; i < n; i++) {
+          qt = qty[i].value;
+          up = upPrice[i].value;
+          itemPrice = qt * up;
+          total += itemPrice;
+          $("#subtl_" + i).html(itemPrice);
+          $("#subt_" + i).val(itemPrice);
+          $("#subtl2_" + i).val(itemPrice);
+        }
+        $("#totalamount").val(total.toFixed(2));
+        $("#grandtotaldue").val(total.toFixed(2));
+        $("#grandtotal").val(total.toFixed(2));
+        $("#grandtotal2").val(total.toFixed(2));
+        $("#grandtotallast").val(total.toFixed(2));
   }
   $(document).on('input', '.upprice', function() {
-    priceUpCalculate();
+        priceUpCalculate();
   });
-  //salse price new input calculet (end)
+  //sales price new input calculate (end)
 
   function priceMakeBase(val,key,printId){
       var total = val/key;
@@ -3901,10 +3921,11 @@
   }
   function unitShow(categories_id){
       if (categories_id) {
+          var noPurchase = $('#noPurchase').val();
           $.ajax({
               method: "POST",
               url: '<?= base_url("Admin/Purchase/unitShow")?>',
-              data: {unit_set_id: categories_id},
+              data: {unit_set_id: categories_id,noPurchase:noPurchase},
               beforeSend: function () {
                   $("#loading-image").show();
               },
@@ -3923,16 +3944,16 @@
   $(function() {
       var categories_id = $('#categories_id').val();
       if (categories_id) {
+          var noPurchase = $('#noPurchase').val();
           $.ajax({
               method: "POST",
               url: '<?= base_url("Admin/Purchase/unitShow")?>',
-              data: {unit_set_id: categories_id},
+              data: {unit_set_id: categories_id,noPurchase:noPurchase},
               beforeSend: function () {
                   $("#loading-image").show();
               },
               success: function (data) {
                   $("#loading-image").hide();
-                  // alert(data);
                   $('#unitData').html(data);
               }
 
@@ -4053,6 +4074,124 @@
       });
 
       button.textContent = allChecked ? 'Select All' : 'Unselect All';
+  }
+
+  function emptyOponentCustomer() {
+      const customerId = $('#cus').val();
+      const customerName = $('#name').val();
+
+      if (customerId) {
+          $('#name').val('');
+      }
+
+      if (customerName.trim() !== '') {
+          if(customerId !== '') {
+              $('#cus').val('').trigger('change');
+          }
+          $('#balance').html('');
+      }
+  }
+
+  $(document).ready(function () {
+      calculateTotalDiscount();
+      totalPay();
+      calculateDueAndShowBtn();
+  });
+
+  function saveToDraft() {
+      // Finds the closest parent form element holding this button
+      // const form = buttonElement.closest('form');
+      const form = document.querySelector('#saleForm');
+      // Change this URL to your specific backend draft destination
+      form.action = "<?= base_url('Admin/Sales/saleSaveAction')?>";
+
+      // Submits the form data to the new URL
+      form.submit();
+  }
+
+
+
+// purchase data calculate
+  function calculateRow(row) {
+      var qty = parseFloat($(row).find('input[name="qty[]"]').val()) || 0;
+      var price = parseFloat($(row).find('input[name="unitPrice[]"]').val()) || 0;
+      var conversionFactor = parseFloat($(row).find('input[name="conversion_factore[]"]').val()) || 0;
+
+      // qty is base quantity, so convert to KG
+      // Example: 3002000 / 1000 = 3002 KG
+      // var conversionFactor = 1000;
+      var actualQty = qty / conversionFactor;
+
+      var subtotal = actualQty * price;
+
+      $(row).find('input[name="subtotal[]"]').val(subtotal.toFixed(2));
+      $(row).find('input[name="suballtotal[]"]').val(subtotal.toFixed(2));
+
+      var index = $(row).index();
+      $('#subtl_' + index).text(
+          subtotal.toLocaleString('en-US', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2
+          })
+      );
+      totalDue();
+      checkDue()
+      return subtotal;
+  }
+
+
+  function calculateGrandTotal() {
+      var grandTotal = 0;
+
+      $('#TFtable tbody tr').each(function () {
+          grandTotal += calculateRow(this);
+      });
+      $('#totalPrice').val(grandTotal.toFixed(8));
+
+      totalDue();
+      checkDue();
+  }
+
+
+  // Unit price change
+  $(document).on('input', 'input[name="unitPrice[]"]', function () {
+      calculateGrandTotal();
+      checkDue();
+  });
+  // Cash / Bank change
+  $(document).on('input', '#cash, #bank', function () {
+      totalDue();
+      checkDue();
+  });
+
+  function priceMakeBasePurchase(val, key, printId) {
+      var price = parseFloat(val) || 0;
+      var factor = parseFloat(key) || 1;
+
+      // KG price -> base unit price
+      var basePrice = price / factor;
+      $('#qtyUp_' + printId).val(basePrice.toFixed(8));
+
+      calculateGrandTotal();
+  }
+
+  function checkDue() {
+      var totalDue = parseFloat($('#totaldue').val()) || 0;
+
+      if (totalDue < 0) {
+          $('#createBtn').hide();
+      } else {
+          $('#createBtn').show();
+      }
+  }
+
+  function priceMakeBaseSalePrice(val, key, printId) {
+      var price = parseFloat(val) || 0;
+      var factor = parseFloat(key) || 1;
+
+      // KG price -> base unit price
+      var basePrice = price / factor;
+      $('#salePrice_' + printId).val(basePrice.toFixed(8));
   }
 
 
