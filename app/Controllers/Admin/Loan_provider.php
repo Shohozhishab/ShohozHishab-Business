@@ -465,5 +465,115 @@ class Loan_provider extends BaseController
         return redirect()->to(site_url('Admin/Loan_provider'));
     }
 
+    public function csv_action()
+    {
+        // 1. Validate the uploaded file
+        $validationRule = [
+            'file' => [
+                'label' => 'CSV File',
+                'rules' => 'uploaded[file]|ext_in[file,csv]|max_size[file,2048]', // 2MB max
+            ],
+        ];
+
+        if (!$this->validate($validationRule)) {
+            $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">'.$this->validator->getErrors().'<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+            return redirect()->to(site_url('Admin/Loan_provider/create'));
+        }
+
+        $file = $this->request->getFile('file');
+
+        if (!$file->isValid() || $file->hasMoved()) {
+            $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">Invalid file upload.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+            return redirect()->to(site_url('Admin/Loan_provider/create'));
+        }
+
+        // 2. Move the file to a temporary location
+        $newName = $file->getRandomName();
+        $file->move(WRITEPATH . 'uploads', $newName);
+        $filePath = WRITEPATH . 'uploads/' . $newName;
+
+        // 3. Process the CSV
+        $handle = fopen($filePath, 'r');
+        if ($handle === false) {
+            return redirect()->back()->with('error', 'Unable to open the CSV file.');
+        }
+
+        $db      = DB();
+        $builder = $db->table('loan_provider'); // ← change table name if needed
+
+        $header   = null;
+        $inserted = 0;
+        $updated  = 0;
+        $skipped  = 0;
+        $rowNum   = 0;
+        $shopId = $this->session->shopId;
+        $userId = $this->session->userId;
+        while (($row = fgetcsv($handle, 1000, ',')) !== false) {
+            $rowNum++;
+
+            // Skip empty rows
+            if (count(array_filter($row)) === 0) {
+                continue;
+            }
+
+            // First row = header
+            if ($header === null) {
+                $header = array_map('trim', array_map('strtolower', $row));
+                continue;
+            }
+
+            // Map CSV columns to associative array
+            $data = array_combine($header, $row);
+            if ($data === false) {
+                $skipped++;
+                continue;
+            }
+
+            // Clean values
+            $name = trim($data['name'] ?? '');
+            $mobile       = trim($data['phone'] ?? '');
+
+            // Must have at least customer_name OR mobile
+            if (empty($name) && empty($mobile)) {
+                $skipped++;
+                continue;
+            }
+
+            // Prepare data to insert/update (add more fields as needed)
+            $saveData = [
+                'sch_id' => $shopId,
+                'name' => $name ?: null,
+                'phone'        => $mobile ?: null,
+                'createdBy'    => $userId,
+                'createdDtm'    => date('Y-m-d H:i:s'),
+            ];
+
+            // Check if record already exists (by mobile first, then by name)
+            $existing = null;
+
+            if (!empty($mobile)) {
+                $existing = $builder->where('phone', $mobile)->get()->getRow();
+            }
+
+            if (!$existing) {
+                $builder->insert($saveData);
+                $inserted++;
+            }else{
+                $skipped++;
+                continue;
+            }
+        }
+
+        fclose($handle);
+
+        // 4. Delete temporary file
+        @unlink($filePath);
+
+        // 5. Return result
+        $message = "CSV processed successfully. Inserted: {$inserted}, Skipped: {$skipped}";
+        $this->session->setFlashdata('message', '<div class="alert alert-success alert-dismissible" role="alert">'.$message.'<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+        return redirect()->to(site_url('Admin/Loan_provider/create'));
+    }
+
 
 }

@@ -723,5 +723,144 @@ class Customers extends BaseController
         return redirect()->to(site_url('Admin/Customers'));
     }
 
+    public function csv_action()
+    {
+        // 1. Validate the uploaded file
+        $validationRule = [
+            'file' => [
+                'label' => 'CSV File',
+                'rules' => 'uploaded[file]|ext_in[file,csv]|max_size[file,2048]', // 2MB max
+            ],
+        ];
+
+        if (!$this->validate($validationRule)) {
+            $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">'.$this->validator->getErrors().'<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+            return redirect()->to(site_url('Admin/Customers/create'));
+        }
+
+        $file = $this->request->getFile('file');
+
+        if (!$file->isValid() || $file->hasMoved()) {
+            $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">Invalid file upload.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+            return redirect()->to(site_url('Admin/Customers/create'));
+        }
+
+        // 2. Move the file to a temporary location
+        $newName = $file->getRandomName();
+        $file->move(WRITEPATH . 'uploads', $newName);
+        $filePath = WRITEPATH . 'uploads/' . $newName;
+
+        // 3. Process the CSV
+        $handle = fopen($filePath, 'r');
+        if ($handle === false) {
+            return redirect()->back()->with('error', 'Unable to open the CSV file.');
+        }
+
+        $db      = DB();
+        $builder = $db->table('customers'); // ← change table name if needed
+
+        $header   = null;
+        $inserted = 0;
+        $updated  = 0;
+        $skipped  = 0;
+        $rowNum   = 0;
+        $shopId = $this->session->shopId;
+        $userId = $this->session->userId;
+
+
+        // Cache customer types for this shop (avoids N+1 queries)
+        $typeCache = [];
+        $types = $db->table('customer_type')
+            ->where('sch_id', $shopId)
+            ->get()
+            ->getResultArray();
+        foreach ($types as $t) {
+            $typeCache[strtolower(trim($t['type_name']))] = $t['cus_type_id'];
+        }
+
+        while (($row = fgetcsv($handle, 1000, ',')) !== false) {
+            $rowNum++;
+
+            // Skip empty rows
+            if (count(array_filter($row)) === 0) {
+                continue;
+            }
+
+            // First row = header
+            if ($header === null) {
+                $header = array_map('trim', array_map('strtolower', $row));
+                continue;
+            }
+
+            // Map CSV columns to associative array
+            $data = array_combine($header, $row);
+            if ($data === false) {
+                $skipped++;
+                continue;
+            }
+
+            // Clean values
+            $customerName = trim($data['customer_name'] ?? '');
+            $mobile       = trim($data['mobile'] ?? '');
+            $typeName       = trim($data['type_name'] ?? '');
+
+            // Must have at least customer_name OR mobile
+            if (empty($customerName) && empty($mobile)) {
+                $skipped++;
+                continue;
+            }
+
+            $cusTypeId = 0;
+            if ($typeName !== '') {
+                $key = strtolower($typeName);
+                if (isset($typeCache[$key])) {
+                    $cusTypeId = $typeCache[$key];
+                } else {
+                    $db->table('customer_type')->insert([
+                        'sch_id'    => $shopId,
+                        'type_name' => $typeName,
+                    ]);
+                    $cusTypeId = $db->insertID();
+                    $typeCache[$key] = $cusTypeId;
+                }
+            }
+
+            // Prepare data to insert/update (add more fields as needed)
+            $saveData = [
+                'sch_id' => $shopId,
+                'cus_type_id' => $cusTypeId,
+                'customer_name' => $customerName ?: null,
+                'mobile'        => $mobile ?: null,
+                'createdBy'    => $userId,
+                'createdDtm'    => date('Y-m-d H:i:s'),
+            ];
+
+            // Check if record already exists (by mobile first, then by name)
+            $existing = null;
+
+            if (!empty($mobile)) {
+                $existing = $builder->where('mobile', $mobile)->get()->getRow();
+            }
+
+            if (!$existing) {
+                $builder->insert($saveData);
+                $inserted++;
+            }else{
+                $skipped++;
+                continue;
+            }
+        }
+
+        fclose($handle);
+
+        // 4. Delete temporary file
+        @unlink($filePath);
+
+        // 5. Return result
+        $message = "CSV processed successfully. Inserted: {$inserted}, Skipped: {$skipped}";
+        $this->session->setFlashdata('message', '<div class="alert alert-success alert-dismissible" role="alert">'.$message.'<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+        return redirect()->to(site_url('Admin/Customers/create'));
+    }
+
 
 }
