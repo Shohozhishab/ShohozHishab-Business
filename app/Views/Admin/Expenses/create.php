@@ -18,6 +18,8 @@
                 <div class="box">
                     <div class="box-header">
                         <h3 class="box-title">Expenses Create </h3>
+                        <button  data-toggle="modal" data-target="#modalDefault" class="btn btn-info " style="float: right;"><i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i> CSV Upload</button>
+                        <br><br><a href="<?= base_url('uploads/csv/expenses.csv')?>" style="float: right;">Example</a>
                     </div>
                     <!-- /.box-header -->
                     <div class="box-body">
@@ -32,7 +34,7 @@
                                         <input type="text" class="form-control" name="name" id="name" placeholder="Name" required/>
                                     </div>
                                     <div class="form-group">
-                                        <label for="enum">Assets Sub Type </label>
+                                        <label for="enum">Expenses Sub Type </label>
                                         <select class="form-control input" name="sub_type_id" id="sub_type" >
                                             <option value="">Please select</option>
                                             <?php foreach ($subType as $val){ ?>
@@ -57,7 +59,7 @@
                                         <div class="error"></div>
                                     </div>
                                     <div class="form-group">
-                                        <label for="enum">Assets Sub Type </label>
+                                        <label for="enum">Expenses Sub Type </label>
                                         <select class="form-control input" name="sub_type_id" id="sub_type2" >
                                             <option value="">Please select</option>
                                             <?php foreach ($subType as $val){ ?>
@@ -121,6 +123,31 @@
             </div>
         </div>
         <!--customer modal-->
+
+        <div class="modal fade" id="modalDefault">
+            <div class="modal-dialog ">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title">File upload</h4>
+                    </div>
+                    <div class="modal-body">
+
+                        <form action="<?= base_url('Admin/Expenses/csv_action')?>" method="post" enctype="multipart/form-data" >
+                            <div class="form-group">
+                                <label for="varchar">CSV File </label>
+                                <input type="file" class="form-control" accept=".csv,text/csv" name="file" required />
+                            </div>
+                            <button type="submit" class="btn btn-primary" >Upload</button>
+                        </form>
+
+                    </div>
+                </div>
+                <!-- /.modal-content -->
+            </div>
+            <!-- /.modal-dialog -->
+        </div>
 
     </section>
     <!-- /.content -->

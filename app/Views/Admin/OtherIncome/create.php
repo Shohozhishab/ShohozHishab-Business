@@ -1,10 +1,10 @@
 <div class="content-wrapper" id="viewpage">
     <!-- Content Header (Page header) -->
     <section class="content-header">
-        <h1> Assets <small>Assets Create</small> </h1>
+        <h1> Other Income <small>Other Income Create</small> </h1>
         <ol class="breadcrumb">
             <li><a href="#"><i class="fa fa-dashboard"></i> Home</a></li>
-            <li class="active">Assets </li>
+            <li class="active">Other Income </li>
         </ol>
     </section>
 
@@ -17,9 +17,7 @@
 
                 <div class="box">
                     <div class="box-header">
-                        <h3 class="box-title">Assets Create </h3>
-                        <button  data-toggle="modal" data-target="#modalDefault" class="btn btn-info " style="float: right;"><i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i> CSV Upload</button>
-                        <br><br><a href="<?= base_url('uploads/csv/assets.csv')?>" style="float: right;">Example</a>
+                        <h3 class="box-title">Other Income Create </h3>
                     </div>
                     <!-- /.box-header -->
                     <div class="box-body">
@@ -28,13 +26,13 @@
                             <?php if (session()->getFlashdata('message') !== NULL) : echo session()->getFlashdata('message'); endif; ?>
                             <div class="col-lg-6" >
                                 <form id="geniusform" action="<?php echo $action; ?>" method="post">
-                                    <h4>New Assets</h4>
+                                    <h4>New Other Income</h4>
                                     <div class="form-group">
                                         <label for="varchar">Name</label>
                                         <input type="text" class="form-control" name="name" id="name" placeholder="Name" required/>
                                     </div>
                                     <div class="form-group">
-                                        <label for="enum">Assets Sub Type </label>
+                                        <label for="enum">Other Income Sub Type </label>
                                         <select class="form-control input" name="sub_type_id" id="sub_type" >
                                             <option value="">Please select</option>
                                             <?php foreach ($subType as $val){ ?>
@@ -43,23 +41,23 @@
                                         </select>
                                         <a href="javascript:void(0)" type="button" data-toggle="modal" data-target="#modal-create">Create new</a>
                                     </div>
-                                    <input type="hidden" name="account_type_id" value="<?= $assetsType;?>">
+                                    <input type="hidden" name="account_type_id" value="<?= $type;?>">
                                     <button type="submit" class="btn btn-primary" >Create</button>
-                                    <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Assets_ajax/'); ?>','<?php echo '/Admin/Assets/'; ?>')" class="btn btn-default">Cancel</a>
+                                    <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Other_income_ajax/'); ?>','<?php echo '/Admin/Other_income/'; ?>')" class="btn btn-default">Cancel</a>
                                 </form>
                             </div>
 
 
                             <div class="col-lg-6" style="border-left: 1px solid #cecdcd;">
                                 <form id="geniusform3" action="<?php echo $actionExisting; ?>" method="post">
-                                    <h4>Existing Assets</h4>
+                                    <h4>Existing Other Income</h4>
                                     <div class="form-group">
                                         <label for="varchar">Name </label>
                                         <input type="text" class="form-control" name="name" id="name_ex" placeholder="Name" required/>
                                         <div class="error"></div>
                                     </div>
                                     <div class="form-group">
-                                        <label for="enum">Assets Sub Type </label>
+                                        <label for="enum">Other Income Sub Type </label>
                                         <select class="form-control input" name="sub_type_id" id="sub_type2" >
                                             <option value="">Please select</option>
                                             <?php foreach ($subType as $val){ ?>
@@ -75,9 +73,9 @@
                                                required />
                                         <div class="error"></div>
                                     </div>
-                                    <input type="hidden" name="account_type_id" value="<?= $assetsType;?>">
+                                    <input type="hidden" name="account_type_id" value="<?= $type;?>">
                                     <button type="submit" class="btn btn-primary" >Create</button>
-                                    <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Assets_ajax/'); ?>','<?php echo '/Admin/Assets/'; ?>')" class="btn btn-default">Cancel</a>
+                                    <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Other_income_ajax/'); ?>','<?php echo '/Admin/Other_income/'; ?>')" class="btn btn-default">Cancel</a>
                                 </form>
 
                             </div>
@@ -99,22 +97,21 @@
                     <div class="modal-header">
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                             <span aria-hidden="true">&times;</span></button>
-                        <h4 class="modal-title">New Assets Type</h4>
+                        <h4 class="modal-title">New Other Income Type</h4>
                     </div>
-                    <form id="typeform" action="<?= base_url('Admin/Assets/type_action');?>" method="post">
+                    <form id="typeform" action="<?= base_url('Admin/Other_income/type_action');?>" method="post">
                         <div class="modal-body">
                             <div class="row">
                                 <div class="col-md-12">
                                     <div class="form-group">
-                                        <label for="varchar">Assets Sub Type </label>
+                                        <label for="varchar">Other Income Sub Type </label>
                                         <input type="text" class="form-control" name="sub_type" id="sub_type" placeholder="Type" required />
                                     </div>
                                 </div>
-
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <input type="hidden" name="account_type_id" value="<?= $assetsType;?>">
+                            <input type="hidden" name="account_type_id" value="<?= $type;?>">
                             <button type="button" class="btn btn-default pull-left" data-dismiss="modal">Close</button>
                             <button type="submit" class="btn btn-primary" >Save</button>
                         </div>
@@ -123,30 +120,7 @@
             </div>
         </div>
         <!--customer modal-->
-        <div class="modal fade" id="modalDefault">
-            <div class="modal-dialog ">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span></button>
-                        <h4 class="modal-title">File upload</h4>
-                    </div>
-                    <div class="modal-body">
 
-                        <form action="<?= base_url('Admin/Assets/csv_action')?>" method="post" enctype="multipart/form-data" >
-                            <div class="form-group">
-                                <label for="varchar">CSV File </label>
-                                <input type="file" class="form-control" accept=".csv,text/csv" name="file" required />
-                            </div>
-                            <button type="submit" class="btn btn-primary" >Upload</button>
-                        </form>
-
-                    </div>
-                </div>
-                <!-- /.modal-content -->
-            </div>
-            <!-- /.modal-dialog -->
-        </div>
     </section>
     <!-- /.content -->
 </div>

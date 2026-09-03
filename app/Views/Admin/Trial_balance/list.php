@@ -209,6 +209,16 @@
                                     <?php } } ?>
                                 </table>
 
+                                <h5><b>Other Income </b></h5>
+                                <table class="table table-bordered table-striped" id="">
+                                    <?php foreach ($otherIncome as $val){ ?>
+                                        <tr>
+                                            <td style="width: 50%;"><a href="<?= base_url('Admin/Ledger_accounts?account_id='.$val->account_id)?>" class="text-black" ><?= $val->name ?></a></td>
+                                            <td><?= showWithCurrencySymbol(-$val->balance) ?></td>
+                                        </tr>
+                                    <?php } ?>
+                                </table>
+
                                 <table class="table table-bordered table-striped" >
                                     <tr style="background-color: #decf77;">
                                         <td style="width: 50%;">Total</td>

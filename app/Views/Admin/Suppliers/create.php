@@ -18,6 +18,8 @@
                 <div class="box">
                     <div class="box-header">
                         <h3 class="box-title">Suppliers Create</h3>
+                        <button  data-toggle="modal" data-target="#modal-default" class="btn btn-info " style="float: right;"><i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i> CSV Upload</button>
+                        <br><br><a href="<?= base_url('uploads/csv/supplier.csv')?>" style="float: right;">Example</a>
                     </div>
                     <!-- /.box-header -->
                     <div class="box-body">
@@ -104,4 +106,29 @@
 
     </section>
     <!-- /.content -->
+</div>
+
+<div class="modal fade" id="modal-default">
+    <div class="modal-dialog ">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title">File upload</h4>
+            </div>
+            <div class="modal-body">
+
+                <form action="<?= base_url('Admin/Suppliers/csv_action')?>" method="post" enctype="multipart/form-data" >
+                    <div class="form-group">
+                        <label for="varchar">CSV File </label>
+                        <input type="file" class="form-control" accept=".csv,text/csv" name="file" required />
+                    </div>
+                    <button type="submit" class="btn btn-primary" >Upload</button>
+                </form>
+
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
 </div>
