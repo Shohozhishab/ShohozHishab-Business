@@ -199,21 +199,18 @@
     <!-- /.content -->
 </div>
 <div class="modal fade" id="modal-default">
-    <div class="modal-dialog modal-lg">
+    <!-- Custom style added to force max width -->
+    <div class="modal-dialog modal-lg" style="width: 90%; max-width: 1200px;">
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span></button>
+                    <span aria-hidden="true">&times;</span>
+                </button>
                 <h4 class="modal-title">Edit Data</h4>
             </div>
-            <div class="modal-body" id="formData">
-
-
-            </div>
+            <div class="modal-body" id="formData"></div>
         </div>
-        <!-- /.modal-content -->
     </div>
-    <!-- /.modal-dialog -->
 </div>
 
 <script>

@@ -63,8 +63,11 @@
                                     <td><?php echo ($invoice->due == 0) ? "<button class='btn btn-xs btn-success'>Paid</button>" : showWithCurrencySymbol($invoice->due); ?></td>
                                     <td>
                                         <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Invoice_ajax/view/'.$invoice->invoice_id); ?>','<?php echo '/Admin/Invoice/view/'.$invoice->invoice_id; ?>')" class="btn btn-info btn-xs">View</a>
-
-                                        <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Return_sale_ajax/return/'.$invoice->invoice_id); ?>','<?php echo '/Admin/Return_sale/return/'.$invoice->invoice_id; ?>')" class="btn btn-warning btn-xs"><i class="fa fa-pencil-square-o"></i> Return</a>
+                                        <?php if ($return_status == 0){ ?>
+                                            <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Return_sale_ajax/return/'.$invoice->invoice_id); ?>','<?php echo '/Admin/Return_sale/return/'.$invoice->invoice_id; ?>')" class="btn btn-warning btn-xs"><i class="fa fa-pencil-square-o"></i> Return</a>
+                                        <?php }else{ ?>
+                                            <button class="btn btn-success btn-xs" >Already returned</button>
+                                        <?php } ?>
                                     </td>
                                 </tr>
                             <?php } ?>

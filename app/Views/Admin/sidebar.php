@@ -190,6 +190,10 @@
                 </a>
                 <ul class="treeview-menu">
                     <?php echo add_main_ajax_based_menu_with_permission('Report', '/Admin/Report', $role_id, 'fa fa-line-chart', '/Admin/Report_ajax','Report'); ?>
+                    <?php $incomeStatement = permission_check('IncomeStatement',newSession()->role,'mod_access');?>
+                    <?php if (isset($incomeStatement) && $incomeStatement == 1){ ?>
+                        <li><a href="<?= base_url('Admin/Income_statement')?>" ><i class="fa fa fa-line-chart"></i><span>Income Statement</span></a></li>
+                    <?php }?>
                     <?php echo add_main_ajax_based_menu_with_permission('Balance Report', '/Admin/Balance_report', $role_id, 'fa fa-line-chart', '/Admin/Balance_report_ajax','Balance_report'); ?>
                     <?php echo add_main_ajax_based_menu_with_permission('Stock Report', '/Admin/Stock_report', $role_id, 'fa fa-line-chart', '/Admin/Stock_report_ajax','Stock_report'); ?>
                     <?php echo add_main_ajax_based_menu_with_permission('Sale Report', '/Admin/Sales_report', $role_id, 'fa fa-line-chart', '/Admin/Sales_report_ajax','Sales_report'); ?>

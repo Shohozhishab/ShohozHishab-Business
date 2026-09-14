@@ -102,6 +102,7 @@ class Bank extends BaseController
         $userId = $this->session->userId;
 
         $data['name'] = $this->request->getPost('name');
+        $data['account_name'] = $this->request->getPost('account_name');
         $data['account_no'] = $this->request->getPost('account_no');
         $data['sch_id'] = $shopId;
         $data['createdBy'] = $userId;
@@ -109,6 +110,7 @@ class Bank extends BaseController
 
         $this->validation->setRules([
             'name' => ['label' => 'Name', 'rules' => 'required|only_numeric_not_allow|max_length[60]'],
+            'account_name' => ['label' => 'Account Name', 'rules' => 'required|only_numeric_not_allow|max_length[60]'],
             'account_no' => ['label' => 'account_no', 'rules' => 'required|is_natural_no_zero|max_length[20]|alpha_numeric_space'],
         ]);
 
@@ -176,19 +178,21 @@ class Bank extends BaseController
 
         $bank_id = $this->request->getPost('bank_id');
         $data['name'] = $this->request->getPost('name');
+        $data['account_name'] = $this->request->getPost('account_name');
         $data['account_no'] = $this->request->getPost('account_no');
         $data['status'] = $this->request->getPost('status');
         $data['updatedBy'] = $userId;
 
         $this->validation->setRules([
             'name' => ['label' => 'Name', 'rules' => 'required|only_numeric_not_allow|max_length[60]'],
+            'account_name' => ['label' => 'Account Name', 'rules' => 'required|only_numeric_not_allow|max_length[60]'],
             'account_no' => ['label' => 'account_no', 'rules' => 'required|is_natural_no_zero|max_length[20]|alpha_numeric_space'],
         ]);
 
         if ($this->validation->run($data) == FALSE) {
             print '<div class="alert alert-danger alert-dismissible" role="alert">' . $this->validation->listErrors() . ' <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         } else {
-            $accCheck = is_unique_update('bank', 'account_no', $data['account_no'], 'name', $data['name']);
+            $accCheck = is_unique_update('bank', 'account_no', $data['account_no'], 'bank_id', $bank_id);
             if ($accCheck == true) {
                 $bankTable = DB()->table('bank');
                 if ($bankTable->where('bank_id', $bank_id)->update($data)) {
@@ -217,6 +221,7 @@ class Bank extends BaseController
         $name = $this->request->getPost('name');
 
         $data['name'] = $this->request->getPost('name');
+        $data['account_name'] = $this->request->getPost('account_name');
         $data['account_no'] = $this->request->getPost('account_no');
         $data['amount'] = $this->request->getPost('amount');
         $data['sch_id'] = $shopId;
@@ -225,6 +230,7 @@ class Bank extends BaseController
 
         $this->validation->setRules([
             'name' => ['label' => 'Name', 'rules' => 'required|only_numeric_not_allow|max_length[60]'],
+            'account_name' => ['label' => 'Account Name', 'rules' => 'required|only_numeric_not_allow|max_length[60]'],
             'account_no' => ['label' => 'account_no', 'rules' => 'required|is_natural_no_zero|max_length[32]|alpha_numeric_space'],
             'amount' => ['label' => 'amount', 'rules' => 'required|max_length[32]'],
         ]);

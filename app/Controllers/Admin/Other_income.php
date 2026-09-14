@@ -319,6 +319,14 @@ class Other_income extends BaseController
             print '<div class="alert alert-success alert-dismissible" role="alert">Update data successfully. <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
     }
+
+    public function delete($account_id){
+        $table = DB()->table('accounts');
+        $table->where('account_id',$account_id)->delete();
+
+        $this->session->setFlashdata('message', '<div class="alert alert-success alert-dismissible" role="alert"> Delete data successfully  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+        return redirect()->to(site_url('Admin/Other_income'));
+    }
     public function type_action(){
         $shopId = $this->session->shopId;
         $data['sch_id'] = $shopId;

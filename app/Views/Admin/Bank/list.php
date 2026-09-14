@@ -53,9 +53,9 @@
                             </div>
                             <div class="col-lg-3">
                                 <?php if (isset($create) && $create == 1){ ?>
-                                <a href="javascript:void(0)"
-                                   onclick="showData('<?php echo site_url('/Admin/Bank_ajax/create/'); ?>','<?php echo '/Admin/Bank/create/'; ?>'),activeTab(this)"
-                                   class="btn btn-block btn-primary"><i class="fa fa-plus"></i> Create Bank</a>
+                                    <a href="javascript:void(0)"
+                                       onclick="showData('<?php echo site_url('/Admin/Bank_ajax/create/'); ?>','<?php echo '/Admin/Bank/create/'; ?>'),activeTab(this)"
+                                       class="btn btn-block btn-primary"><i class="fa fa-plus"></i> Create Bank</a>
                                 <?php } ?>
                             </div>
                             <div class="col-lg-12" style="margin-top: 20px;">
@@ -71,7 +71,8 @@
                             <thead>
                             <tr>
                                 <th>No</th>
-                                <th>Name</th>
+                                <th>Bank Name</th>
+                                <th>Account Name</th>
                                 <th>Account No</th>
                                 <th>Balance</th>
                                 <th>Action</th>
@@ -84,32 +85,34 @@
                                 <tr>
                                     <td width="80px"><?php echo $start++ ?></td>
                                     <td><?php echo $val->name ?></td>
+                                    <td><?php echo $val->account_name ?></td>
                                     <td><?php echo $val->account_no ?></td>
                                     <td><?php echo showWithCurrencySymbol($val->balance) ?></td>
                                     <td width="180px">
+                                        <a href="<?= base_url('Admin/Ledger_bank?bank_id='.$val->bank_id)?>"  class="btn btn-primary btn-xs"><i class="fa fa-book"></i> Ledger </a>
                                         <?php if (isset($update) && $update == 1){ ?>
-                                        <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Bank_ajax/update/'.$val->bank_id); ?>','<?php echo '/Admin/Bank/update/'.$val->bank_id; ?>')"  class="btn btn-xs btn-info">Update</a>
+                                            <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Bank_ajax/update/'.$val->bank_id); ?>','<?php echo '/Admin/Bank/update/'.$val->bank_id; ?>')"  class="btn btn-xs btn-info">Update</a>
                                         <?php } ?>
                                         <?php if (isset($delete) && $delete == 1){ ?>
-                                        <?php if($isDeletable == true){ ?>
-                                            <a href="<?php echo site_url('/Admin/Bank/delete/' . $val->bank_id); ?>" onclick="return confirm('Are you sure you want to delete this item?');"  class="btn btn-danger btn-xs">Delete</a>
-                                        <?php } ?>
+                                            <?php if($isDeletable == true){ ?>
+                                                <a href="<?php echo site_url('/Admin/Bank/delete/' . $val->bank_id); ?>" onclick="return confirm('Are you sure you want to delete this item?');"  class="btn btn-danger btn-xs">Delete</a>
+                                            <?php } ?>
                                         <?php } ?>
                                     </td>
                                 </tr>
-                                <?php } ?>
+                            <?php } ?>
                             </tbody>
                         </table>
                         <div class="row no-print" >
                             <div class="col-xs-12">
                                 <?php if (isset($print) && $print == 1){ ?>
-                                <button onclick="printDiv('ledgPrint')" class="print_line btn btn-primary pull-right" ><i class="fa fa-print "></i> Print Now</button>
+                                    <button onclick="printDiv('ledgPrint')" class="print_line btn btn-primary pull-right" ><i class="fa fa-print "></i> Print Now</button>
                                 <?php } ?>
                                 <?php if (isset($download_PDF) && $download_PDF == 1){ ?>
-                                <button type="button" class="btn btn-info pull-right" style="margin-right: 10px;" onclick="downloadPDF('ledgPrint','sales')"><i class="fa fa-file-pdf-o "></i> Download PDF </button>
+                                    <button type="button" class="btn btn-info pull-right" style="margin-right: 10px;" onclick="downloadPDF('ledgPrint','sales')"><i class="fa fa-file-pdf-o "></i> Download PDF </button>
                                 <?php } ?>
                                 <?php if (isset($download_CSV) && $download_CSV == 1){ ?>
-                                <button type="button" class="btn btn-success pull-right" style="margin-right: 10px;" onclick="downloadCSV('ledgPrint','sales')"><i class="fa fa-file-excel-o "></i> Download CSV</button>
+                                    <button type="button" class="btn btn-success pull-right" style="margin-right: 10px;" onclick="downloadCSV('ledgPrint','sales')"><i class="fa fa-file-excel-o "></i> Download CSV</button>
                                 <?php } ?>
                             </div>
                         </div>
@@ -132,7 +135,8 @@
                                     <thead>
                                     <tr>
                                         <th>No</th>
-                                        <th>Name</th>
+                                        <th>Bank Name</th>
+                                        <th>Account Name</th>
                                         <th>Account No</th>
                                         <th>Balance</th>
                                     </tr>
@@ -142,6 +146,7 @@
                                         <tr>
                                             <td width="80px"><?php echo $start++ ?></td>
                                             <td><?php echo $item->name ?></td>
+                                            <td><?php echo $item->account_name ?></td>
                                             <td><?php echo $item->account_no ?></td>
                                             <td><?php echo showWithCurrencySymbol($item->balance) ?></td>
                                         </tr>

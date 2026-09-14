@@ -199,10 +199,8 @@ class Purchase extends BaseController
             if (empty($this->session->purchaseId)) {
                 return redirect()->to(site_url('Admin/Purchase/create'));
             }
-            if (!empty($this->session->cartType)) {
-                if ($this->session->cartType == 'sale') {
-                    $this->cart->destroy();
-                }
+            if (!empty($this->session->cartType) && $this->session->cartType !== 'purchase') {
+                $this->cart->destroy();
             }
             $table = DB()->table('suppliers');
             $data['supplier'] = $table->where('supplier_id',$this->session->supplierId)->get()->getRow();
@@ -1273,6 +1271,7 @@ class Purchase extends BaseController
         $prod_id = $this->request->getPost('prod_id[]');
         $qty = $this->request->getPost('qty[]');
         $price = $this->request->getPost('price[]');
+        $salePrice = $this->request->getPost('salePrice[]');
         $total_price = $this->request->getPost('total_price[]');
 
 
@@ -1325,7 +1324,7 @@ class Purchase extends BaseController
         // purchase balance update and ledger create (start)
         $purchaseBalanceInfo = $this->transactionLog->get_table_name_by_row_purchase_id_by_colum_name('shops',$purchaseId,'purchase_balance');
         $purchaseBal = get_data_by_id('purchase_balance', 'shops', 'sch_id', $shopId);
-        $restBalPurc = ($purchaseBal - $totalPrice) + $purchaseBalanceInfo->amount;
+        $restBalPurc = ($purchaseBal - $purchaseBalanceInfo->amount) + $totalPrice;
 
 
         $purUpdata = array('purchase_balance' => $restBalPurc);
@@ -1359,9 +1358,9 @@ class Purchase extends BaseController
         $stockAmountInfo = $this->transactionLog->get_table_name_by_row_purchase_id_by_colum_name('shops',$purchaseId,'stockAmount');
         $stockBal = get_data_by_id('stockAmount', 'shops', 'sch_id', $shopId);
         $restBalStock = ($stockBal - $stockAmountInfo->amount) + $totalPrice;
-        $stockUpdata = array('stockAmount' => $restBalStock);
+        $stockUpdate = array('stockAmount' => $restBalStock);
         $shopStoAmTable = DB()->table('shops');
-        $shopStoAmTable->where('sch_id', $shopId)->update($stockUpdata);
+        $shopStoAmTable->where('sch_id', $shopId)->update($stockUpdate);
 
         //transaction edit log data insert
         $this->transactionLog->transaction_log_data_update($stockAmountInfo->transaction_log_id,$totalPrice);
@@ -1698,6 +1697,8 @@ class Purchase extends BaseController
                 $newQty = $purchaseDate->quantity - $purchaseItem->quantity;
                 $dataQty = array(
                     'quantity' => $newQty + $qty[$i],
+                    'purchase_price' => $price[$i],
+                    'selling_price' => $salePrice[$i],
                 );
                 DB()->table('product_stock_relation')->where('product_stock_relation_id', $purchaseItem->product_stock_relation_id)->update($dataQty);
             }
@@ -1913,6 +1914,9 @@ class Purchase extends BaseController
             $shopId = $this->session->shopId;
             $data['action'] = base_url('Admin/Purchase/purchase_product_action');
 
+            if (!empty($this->session->cartType) && $this->session->cartType !== 'purchaseNew') {
+                $this->cart->destroy();
+            }
             // All Permissions
             //$perm = array('create','read','update','delete','mod_access');
             $perm = $this->permission->module_permission_list($role_id, $this->module_name);
@@ -1982,7 +1986,7 @@ class Purchase extends BaseController
             $view .='</div>';
 
             $view .='<div class="col-xs-1" >
-                        <span for="usr">Category:</span><br><h4 style="color:black;">' . get_data_by_id('product_category', 'product_category', 'prod_cat_id', $sval->prod_cat_id) . '</h4>
+                        <span>Category:</span><br><h4 style="color:black;">' . get_data_by_id('product_category', 'product_category', 'prod_cat_id', $sval->prod_cat_id) . '</h4>
                                 <button  type="subbmit" class="add_cart btn btn-success btn-xs" >Add</button>
                             </div></a></div>
                         </form>
@@ -2041,7 +2045,7 @@ class Purchase extends BaseController
             return redirect()->to(site_url('Admin/Purchase/purchase_product'));
         }
 
-        $this->session->set('cartType', 'purchase');
+        $this->session->set('cartType', 'purchaseNew');
         return redirect()->to(site_url('Admin/Purchase/purchase_product'));
     }
 

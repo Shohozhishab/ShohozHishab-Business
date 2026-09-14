@@ -28,7 +28,7 @@ class Return_sale_ajax extends BaseController
      * @description This method provides return sale view
      * @return RedirectResponse|void
      */
-       public function index()
+    public function index()
     {
         $isLoggedIn = $this->session->isLoggedIn;
         $role_id = $this->session->role;

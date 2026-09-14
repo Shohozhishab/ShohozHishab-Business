@@ -41,114 +41,58 @@ class Report extends BaseController
         } else {
             $shopId = $this->session->shopId;
 
+            // Shop balance
+            $shop = DB()->table('shops')->where('sch_id', $shopId)->get()->getRow();
+            $cash          = $shop->cash ?? 0;
+            $stockAmount   = $shop->stockAmount ?? 0;
+            $profit        = $shop->profit ?? 0;
+            $expense       = $shop->expense ?? 0;
+            $capital       = $shop->capital ?? 0;
+            $serviceCharge = $shop->service_charge ?? 0;
 
-            // all debit (start)
+            // Employees
+            $employee = DB()->table('employee')->where('sch_id', $shopId)->get()->getResult();
 
-            // shop balance(start)
-            $shopDeTab = DB()->table('shops');
-            $queryCash = $shopDeTab->where('sch_id', $shopId)->get();
-            if (!empty($queryCash->getRow()->cash)) {
-                $cash = $queryCash->getRow()->cash;
-            } else {
-                $cash = 0;
-            }
-            // $purchasePri = $queryCash->row()->purchase_balance;
-
-            $stockAmount = $queryCash->getRow()->stockAmount;
-            $profit = $queryCash->getRow()->profit;
-            // shop balance(end)
-
-
-            // expence
-            $shopExTab = DB()->table('shops');
-            $expensequ = $shopExTab->where('sch_id', $shopId)->get();
-            $expense = $expensequ->getRow()->expense;
-            // expence
-
-
-
-
-
-            // employe balance calculet(start)
-            $emplTab2 = DB()->table('employee');
-            $employee = $emplTab2->where('sch_id', $shopId)->get()->getResult();
-            // employe balance calculet(start)
-
-
-
-
+            // Accounts (assets & expenses)
             $accountsAssets = DB()->table('accounts')
                 ->join('accounts_account_type_map', 'accounts_account_type_map.account_id = accounts.account_id')
                 ->join('account_type', 'account_type.account_type_id = accounts_account_type_map.account_type_id')
                 ->where('accounts.sch_id', $shopId)
                 ->where('account_type.type_key', 'assets')
-                ->get()
-                ->getResult();
-
-
+                ->get()->getResult();
 
             $accountsExpenses = DB()->table('accounts')
                 ->join('accounts_account_type_map', 'accounts_account_type_map.account_id = accounts.account_id')
                 ->join('account_type', 'account_type.account_type_id = accounts_account_type_map.account_type_id')
                 ->where('accounts.sch_id', $shopId)
                 ->where('account_type.type_key', 'expenses')
-                ->get()
-                ->getResult();
+                ->get()->getResult();
 
+            // VAT
+            $vatEarn = DB()->table('vat_register')->where('sch_id', $shopId)->get()->getRow()->balance ?? 0;
 
+            // Other data
+            $queryBank     = DB()->table('bank')->where('sch_id', $shopId)->get()->getResult();
+            $customerData  = DB()->table('customers')->where('sch_id', $shopId)->get()->getResult();
+            $loanProData   = DB()->table('loan_provider')->where('sch_id', $shopId)->get()->getResult();
+            $supplierData  = DB()->table('suppliers')->where('sch_id', $shopId)->get()->getResult();
 
-
-
-
-
-            // vat amount(start)
-            $vat_registerTable = DB()->table('vat_register');
-            $vatEarn = $vat_registerTable->where('sch_id', $shopId)->get()->getRow()->balance;
-            // vat amount(end)
-
-            // capital
-            $shopsTable2 = DB()->table('shops');
-            $capital = $shopsTable2->where('sch_id', $shopId)->get()->getRow()->capital;
-            $capitalCredit = 0;
-            if ($capital > 0) {
-                $capitalCredit = $capital;
-            }
-            // capital
-
-            //service charge
-            $shopsTable = DB()->table('shops');
-            $serviceCharge = $shopsTable->where('sch_id', $shopId)->get()->getRow()->service_charge;
-            //service charge
-
-            // bank balance(start)
-            $bankTab = DB()->table('bank');
-            $queryBank = $bankTab->where('sch_id', $shopId)->get()->getResult();
-
-            $customersTable = DB()->table('customers');
-            $customerData = $customersTable->where('sch_id', $shopId)->get()->getResult();
-            $loan_providerTable = DB()->table('loan_provider');
-            $loanProData = $loan_providerTable->where('sch_id', $shopId)->get()->getResult();
-            $suppliersTable2 = DB()->table('suppliers');
-            $supplierData = $suppliersTable2->where('sch_id', $shopId)->get()->getResult();
-
-
-            $data = array(
-                'cash' => $cash,
-                'vatEarn' => $vatEarn,
-                'bankData' => $queryBank,
-                'customerData' => $customerData,
-                'loanProData' => $loanProData,
-                'supplierData' => $supplierData,
-                'capitalcr' => $capital,
-                'expensedata' => $expense,
-                'profit' => $profit,
-                'service_charge' => $serviceCharge,
-                'stockAmount' => $stockAmount,
-                'employee' => $employee,
-                'accountsAssets' => $accountsAssets,
+            $data = [
+                'cash'             => $cash,
+                'vatEarn'          => $vatEarn,
+                'bankData'         => $queryBank,
+                'customerData'     => $customerData,
+                'loanProData'      => $loanProData,
+                'supplierData'     => $supplierData,
+                'capitalcr'        => $capital,
+                'expensedata'      => $expense,
+                'profit'           => $profit,
+                'service_charge'   => $serviceCharge,
+                'stockAmount'      => $stockAmount,
+                'employee'         => $employee,
+                'accountsAssets'   => $accountsAssets,
                 'accountsExpenses' => $accountsExpenses,
-
-            );
+            ];
 
 
             // All Permissions

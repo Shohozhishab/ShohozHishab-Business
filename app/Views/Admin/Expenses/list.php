@@ -75,7 +75,9 @@
                             </tr>
                             </thead>
                             <tbody>
-                            <?php $i = 1; foreach ($result as $val) { ?>
+                            <?php $i = 1; foreach ($result as $val) {
+                                $isDeletable = is_deletable('ledger_accounts','account_id',$val->account_id);
+                                ?>
                                 <tr>
                                     <td width="80px"><?php echo $i++ ?></td>
                                     <td><?php echo $val->name ?></td>
@@ -86,6 +88,11 @@
                                         <?php if (isset($update) && $update == 1){ ?>
                                         <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Expenses_ajax/update/' . $val->account_id); ?>','<?php echo '/Admin/Expenses/update/' . $val->account_id; ?>')"
                                            class="btn btn-warning btn-xs">Update</a>
+                                        <?php } ?>
+                                        <?php if (isset($delete) && $delete == 1){ ?>
+                                            <?php if($isDeletable == true){ ?>
+                                                <a href="<?php echo site_url('/Admin/Expenses/delete/' . $val->account_id); ?>" onclick="return confirm('Are you sure you want to delete this item?');"  class="btn btn-danger btn-xs">Delete</a>
+                                            <?php } ?>
                                         <?php } ?>
                                     </td>
                                 </tr>

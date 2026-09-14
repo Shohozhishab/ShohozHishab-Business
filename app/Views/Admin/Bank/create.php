@@ -30,8 +30,13 @@
                                 <form id="geniusform" action="<?php echo $action; ?>" method="post">
                                     <h4>New Bank</h4>
                                     <div class="form-group">
-                                        <label for="varchar">Name</label>
-                                        <input type="text" class="form-control" name="name" id="name" placeholder="Name"  required>
+                                        <label for="varchar">Bank Name</label>
+                                        <input type="text" class="form-control" name="name" id="name" placeholder="Bank Name"  required>
+                                        <div class="error"></div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="varchar">Account Name </label>
+                                        <input type="text" class="form-control" name="account_name" id="account_name" placeholder="Account Name" required/>
                                         <div class="error"></div>
                                     </div>
                                     <div class="form-group">
@@ -52,8 +57,13 @@
                                 <form id="geniusform3" action="<?php echo $action2; ?>" method="post">
                                     <h4>Existing Bank</h4>
                                     <div class="form-group">
-                                        <label for="varchar">Name </label>
-                                        <input type="text" class="form-control" name="name" id="name_ex" placeholder="Name" required/>
+                                        <label for="varchar">Bank Name </label>
+                                        <input type="text" class="form-control" name="name" id="name_ex" placeholder="Bank Name" required/>
+                                        <div class="error"></div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="varchar">Account Name </label>
+                                        <input type="text" class="form-control" name="account_name" id="account_name_ex" placeholder="Account Name" required/>
                                         <div class="error"></div>
                                     </div>
                                     <div class="form-group">
