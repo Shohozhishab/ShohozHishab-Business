@@ -27,6 +27,8 @@
                             <div id="message"></div>
                             <?php if (session()->getFlashdata('message') !== NULL) : echo session()->getFlashdata('message'); endif; ?>
                             <div class="col-lg-6" >
+                                <button type="button" onclick="modalOpen(this)" data-action="<?= base_url('Admin/Bank/csv_action') ?>" class="btn btn-info" style="float: right;"><i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i> CSV Upload</button>
+                                <br><br><a href="<?= base_url('uploads/csv/bank.csv') ?>" style="float: right;">Example</a>
                                 <form id="geniusform" action="<?php echo $action; ?>" method="post">
                                     <h4>New Bank</h4>
                                     <div class="form-group">
@@ -53,6 +55,8 @@
 
 
                             <div class="col-lg-6" style="border-left: 1px solid #cecdcd;">
+                                <button type="button" onclick="modalOpen(this)" data-action="<?= base_url('Admin/Bank/csv_existing_action') ?>" class="btn btn-info" style="float: right;"><i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i> CSV Upload</button>
+                                <br><br><a href="<?= base_url('uploads/csv/bankExisting.csv') ?>" style="float: right;">Example</a>
 
                                 <form id="geniusform3" action="<?php echo $action2; ?>" method="post">
                                     <h4>Existing Bank</h4>
@@ -97,3 +101,36 @@
     </section>
     <!-- /.content -->
 </div>
+
+<div class="modal fade" id="modal-default">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title">File upload</h4>
+            </div>
+            <div class="modal-body">
+                <form id="csvForm" action="" method="post" enctype="multipart/form-data">
+                    <?= csrf_field() ?>
+                    <div class="form-group">
+                        <label for="csv-file">CSV File</label>
+                        <input type="file" class="form-control" id="csv-file" accept=".csv,text/csv" name="file" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Upload</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function modalOpen(item) {
+        var actionUrl = $(item).data('action');
+        if (actionUrl) {
+            $('#csvForm').attr('action', actionUrl);
+        }
+        $('#modal-default').modal('show');
+    }
+</script>

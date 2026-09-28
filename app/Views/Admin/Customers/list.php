@@ -84,6 +84,7 @@
                             <?php $i = 1;
                             foreach ($customer as $val) {
                                 $isDeletable = is_deletable('ledger','customer_id',$val->customer_id);
+                                $isEditable = is_deletable('existing_transaction','customer_id',$val->customer_id);
                                 ?>
                                 <tr>
                                     <td><?php echo $i++ ?></td>
@@ -93,6 +94,9 @@
                                     <td><?php echo showWithCurrencySymbol($val->balance); ?></td>
                                     <td><?php echo $val->address; ?></td>
                                     <td>
+                                        <?php if ($isEditable == false){?>
+                                        <a href="javascript:void(0)" class="btn btn-info btn-xs" onclick="cusTranEdit('<?= $val->customer_id; ?>')" data-toggle="modal" data-target="#modal-default" >Edit</a>
+                                        <?php } ?>
                                         <?php if (isset($return_list) && $return_list == 1){ ?>
                                         <a href="<?= site_url('/Admin/Return_sale?customer=' . $val->customer_id)?>" class="btn btn-warning btn-xs">Return List</a>
                                         <?php } ?>
@@ -184,4 +188,37 @@
 
     </section>
     <!-- /.content -->
+
+    <div class="modal fade" id="modal-default">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">Edit Data</h4>
+                </div>
+                <div class="modal-body" id="formData">
+
+
+                </div>
+            </div>
+            <!-- /.modal-content -->
+        </div>
+        <!-- /.modal-dialog -->
+    </div>
 </div>
+
+<script>
+    function cusTranEdit(customerId) {
+        $.ajax({
+            type: "POST",
+            url: "<?php echo site_url('Admin/Customers/cusDataEdit') ?>",
+            data: {
+                customer_id: customerId
+            },
+            success: function(data) {
+                $('#formData').html(data);
+            }
+        });
+    }
+</script>

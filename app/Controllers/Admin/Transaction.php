@@ -3237,7 +3237,7 @@ class Transaction extends BaseController
                             <label for="int">Amount </label>
                             <input type="hidden" name="trans_id" value="' . $tanId . '"  required/>
                             <input type="number" step=any class="form-control input"
-                                   name="amount" oninput="minusValueCheck(this.value,this)" id="amount" value="' . $result->amount . '" placeholder="Amount"
+                                   name="amount" oninput="minusValueCheck(this.value,this)" id="amount" value="' . (float)$result->amount . '" placeholder="Amount"
                                    required/>
                         </div>';
         $view .= '</div>
@@ -3941,7 +3941,7 @@ class Transaction extends BaseController
                             <label for="int">Amount </label>
                             <input type="hidden" name="trans_id" value="' . $tanId . '"  required/>
                             <input type="number" step=any class="form-control input"
-                                   name="amount" oninput="minusValueCheck(this.value,this)" id="amount" value="' . $result->amount . '" placeholder="Amount"
+                                   name="amount" oninput="minusValueCheck(this.value,this)" id="amount" value="' . (float)$result->amount . '" placeholder="Amount"
                                    required/>
                         </div>';
         $view .= '</div>
@@ -4227,7 +4227,7 @@ class Transaction extends BaseController
                             <label for="int">Amount </label>
                             <input type="hidden" name="trans_id" value="' . $tanId . '"  required/>
                             <input type="number" step=any class="form-control input"
-                                   name="amount" oninput="minusValueCheck(this.value,this)" id="amount" value="' . $result->amount . '" placeholder="Amount"
+                                   name="amount" oninput="minusValueCheck(this.value,this)" id="amount" value="' . (float)$result->amount . '" placeholder="Amount"
                                    required/>
                         </div>';
         $view .= '</div>
@@ -4497,7 +4497,7 @@ class Transaction extends BaseController
                             <label for="int">Amount </label>
                             <input type="hidden" name="trans_id" value="' . $tanId . '"  required/>
                             <input type="number" step=any class="form-control input"
-                                   name="amount" oninput="minusValueCheck(this.value,this)" id="amount" value="' . $result->amount . '" placeholder="Amount"
+                                   name="amount" oninput="minusValueCheck(this.value,this)" id="amount" value="' . (float)$result->amount . '" placeholder="Amount"
                                    required/>
                         </div>';
         $view .= '</div>
@@ -4651,7 +4651,7 @@ class Transaction extends BaseController
                             <label for="int">Amount </label>
                             <input type="hidden" name="trans_id" value="' . $tanId . '"  required/>
                             <input type="number" step=any class="form-control input"
-                                   name="amount" oninput="minusValueCheck(this.value,this)" id="amount" value="' . $result->amount . '" placeholder="Amount"
+                                   name="amount" oninput="minusValueCheck(this.value,this)" id="amount" value="' . (float)$result->amount . '" placeholder="Amount"
                                    required/>
                         </div>';
         $view .= '</div>
@@ -4893,7 +4893,7 @@ class Transaction extends BaseController
                             <label for="int">Amount </label>
                             <input type="hidden" name="trans_id" value="' . $tanId . '"  required/>
                             <input type="number" step=any class="form-control input"
-                                   name="amount" oninput="minusValueCheck(this.value,this)" id="amount" value="' . $result->amount . '" placeholder="Amount"
+                                   name="amount" oninput="minusValueCheck(this.value,this)" id="amount" value="' . (float)$result->amount . '" placeholder="Amount"
                                    required/>
                         </div>';
         $view .= '</div>
@@ -5126,7 +5126,7 @@ class Transaction extends BaseController
                         <div class="form-group databank" id="chaque">
                             <label for="int">Amount </label>
                             <input type="hidden" name="trans_id" value="' . $tanId . '"  required/>
-                            <input type="number" step=any class="form-control input" name="amount" oninput="minusValueCheck(this.value,this)" id="amount" value="' . $result->amount . '" placeholder="Amount" required/>
+                            <input type="number" step=any class="form-control input" name="amount" oninput="minusValueCheck(this.value,this)" id="amount" value="' . (float)$result->amount . '" placeholder="Amount" required/>
                         </div>';
         $view .= '</div>
                     <div class="modal-footer">
@@ -5253,7 +5253,7 @@ class Transaction extends BaseController
                             <label for="int">Amount </label>
                             <input type="hidden" name="trans_id" value="' . $tanId . '"  required/>
                             <input type="number" step=any class="form-control input"
-                                   name="amount" oninput="minusValueCheck(this.value,this)" id="amount" value="' . $result->amount . '" placeholder="Amount"
+                                   name="amount" oninput="minusValueCheck(this.value,this)" id="amount" value="' . (float)$result->amount . '" placeholder="Amount"
                                    required/>
                         </div>';
         $view .= '</div>
@@ -5301,7 +5301,7 @@ class Transaction extends BaseController
                             <label for="int">Amount </label>
                             <input type="hidden" name="trans_id" value="' . $tanId . '"  required/>
                             <input type="number" step=any class="form-control input"
-                                   name="amount" oninput="minusValueCheck(this.value,this)" id="amount" value="' . $result->amount . '" placeholder="Amount"
+                                   name="amount" oninput="minusValueCheck(this.value,this)" id="amount" value="' . (float)$result->amount . '" placeholder="Amount"
                                    required/>
                         </div>';
         $view .= '</div>

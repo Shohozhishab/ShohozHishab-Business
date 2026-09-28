@@ -3,6 +3,7 @@
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
+use App\Libraries\Mycart;
 use App\Libraries\Permission;
 use CodeIgniter\HTTP\RedirectResponse;
 
@@ -14,6 +15,7 @@ class Sales_ajax extends BaseController
     protected $validation;
     protected $session;
     protected $crop;
+    protected $cart;
     private $module_name = 'Sales';
 
     public function __construct()
@@ -22,6 +24,7 @@ class Sales_ajax extends BaseController
         $this->validation = \Config\Services::validation();
         $this->session = \Config\Services::session();
         $this->crop = \Config\Services::image();
+        $this->cart = new Mycart();
     }
 
     /**
@@ -92,7 +95,7 @@ class Sales_ajax extends BaseController
             $salesTable = DB()->table('sales');
             $data['sales'] = $salesTable->where('sch_id', $shopId)->where('deleted IS NULL')->get()->getResult();
 
-            $data['salesSave'] = DB()->table('sale_save')->where('sale_save_id',$sale_save_id)->get()->getRow();
+            $data['salesSave'] = DB()->table('sale_save')->where('sale_save_id', $sale_save_id)->get()->getRow();
 
             if (!empty($this->session->cartType) && $this->session->cartType !== 'sale') {
                 $this->cart->destroy();

@@ -143,7 +143,7 @@
                                         <label>Payment</label>
                                         <div class="col-xs-12" style="border:1px dashed #D0D3D8 ; padding:5px;">
                                             <label>Cash</label>
-                                            <input type="number" step=any class="form-control nagod" oninput="minusValueCheck(this.value,this)" name="nagod" id="nagod" placeholder="Input Cash Amount" value="<?= $invoice->nagad_paid?>">
+                                            <input type="number" step=any class="form-control nagod" oninput="minusValueCheck(this.value,this)" name="nagod" id="nagod" placeholder="Input Cash Amount" value="<?= (float)$invoice->nagad_paid ?>">
                                         </div>
                                         <div class="col-xs-12" style="border:1px dashed #D0D3D8 ; padding:5px;">
                                             <div class="col-xs-6" style="border:1px dashed #D0D3D8 ; padding:5px;">
@@ -156,7 +156,7 @@
                                             <div class="col-xs-6" style="border:1px dashed #D0D3D8 ; padding:5px;">
                                                 <label>Bank Amount</label>
                                                 <input type="number" step=any onchange="checkBankId()" class="form-control bankAmount"
-                                                       name="bankAmount" id="bankAmount" oninput="minusValueCheck(this.value,this)" placeholder="input Bank Amount" value="<?= $invoice->bank_paid?>">
+                                                       name="bankAmount" id="bankAmount" oninput="minusValueCheck(this.value,this)" placeholder="input Bank Amount" value="<?= (float)$invoice->bank_paid?>">
                                                 <b id="Bank_valid"></b>
                                             </div>
                                         </div>
@@ -169,7 +169,7 @@
                                             <div class="col-xs-6" style="border:1px dashed #D0D3D8 ; padding:5px;">
                                                 <label>Cheque Amount</label>
                                                 <input type="number" step=any onchange="cheque()" class="form-control chequeAmount"
-                                                       name="chequeAmount" oninput="minusValueCheck(this.value,this)" id="chequeAmount" placeholder="Input Cheque Amount " value="<?= $invoice->chaque_paid?>">
+                                                       name="chequeAmount" oninput="minusValueCheck(this.value,this)" id="chequeAmount" placeholder="Input Cheque Amount " value="<?= (float)$invoice->chaque_paid?>">
                                                 <b id="cheque_valid"></b>
                                             </div>
                                         </div>
@@ -177,7 +177,7 @@
                                     <div class="col-xs-6" style="border:1px dashed #D0D3D8 ;padding:5px;">
                                         <label>Total Amount </label>
                                         <input type="text"  class="form-control " name="grandtotallast" readonly
-                                               id="grandtotallast" value="<?= number_format($invoice->final_amount) ?>">
+                                               id="grandtotallast" value="<?= (float)$invoice->final_amount ?>">
 
                                     </div>
                                     <div class="col-xs-6" style="border:1px dashed #D0D3D8; padding:5px;">
@@ -224,27 +224,33 @@
             let subTotal = Math.max(total - discount, 0);
 
             $(this).find("input[name='subTotal[]']").val(subTotal.toFixed(8));
-            $(this).find(".subTotal").text("৳ " + subTotal.toFixed(8));
+            // $(this).find(".subTotal").text("৳ " + subTotal.toFixed(8));
 
+            $(this).find(".subTotal").text(
+                subTotal !== 0 ? "৳ " + subTotal : ""
+            );
             grandTotal += subTotal;
         });
 
         let saleDisc = parseFloat($("#saleDisc").val()) || 0;
         let saleDiscAmount = grandTotal * saleDisc / 100;
 
-        $("#saleDiscshow").val(saleDiscAmount.toFixed(8));
+        // $("#saleDiscshow").val(saleDiscAmount.toFixed(8));
+        $("#saleDiscshow").val(saleDiscAmount !== 0 ? saleDiscAmount : "");
 
         let afterDiscount = grandTotal - saleDiscAmount;
 
         let vat = parseFloat($("#vat").val()) || 0;
         let vatAmount = afterDiscount * vat / 100;
 
-        $("#vatAmount").val(vatAmount.toFixed(8));
+        // $("#vatAmount").val(vatAmount.toFixed(8));
+        $("#vatAmount").val(vatAmount !== 0 ? vatAmount : "");
 
         let finalTotal = afterDiscount + vatAmount;
 
-        $("#grandtotal").val(finalTotal.toFixed(8));
-        $("#grandtotal2").val(finalTotal.toFixed(8));
+        // $("#grandtotal").val(finalTotal.toFixed(8));
+        $("#grandtotal").val(finalTotal !== 0 ? finalTotal : "");
+        $("#grandtotal2").val(finalTotal !== 0 ? finalTotal : "");
 
         let paid =
             (parseFloat($("#nagod").val()) || 0) +
@@ -256,8 +262,8 @@
         } else {
             $('#dueBtn').prop('disabled', false);
         }
-
-        $("#grandtotaldue").val((finalTotal - paid).toFixed(8));
+        var totaldue = finalTotal - paid;
+        $("#grandtotaldue").val(totaldue !== 0 ? totaldue : "");
     }
 
     // Global function

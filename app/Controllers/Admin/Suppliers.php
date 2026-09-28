@@ -184,10 +184,21 @@ class Suppliers extends BaseController
                         $this->suppliersModel->insert($data);
                         $supplierId = $this->suppliersModel->getInsertID();
 
+                        // Existing transaction data insert
+                        DB()->table('existing_transaction')->insert([
+                            'sch_id' => $shopId,
+                            'supplier_id' => $supplierId,
+                            'trangaction_type' => 'Dr.',
+                            'amount' => $amount,
+                            'createdBy' => $userId,
+                            'createdDtm' => date('Y-m-d h:i:s')
+                        ]);
+                        $existing_trans_id = DB()->insertID();
 
                         //insert Supplier ledger table (start)
                         $supLedgdata = array(
                             'sch_id' => $shopId,
+                            'existing_trans_id' => $existing_trans_id,
                             'supplier_id' => $supplierId,
                             'particulars' => 'Supplier last balance ',
                             'trangaction_type' => 'Dr.',
@@ -213,6 +224,7 @@ class Suppliers extends BaseController
 
                         $capLedgdata = array(
                             'sch_id' => $shopId,
+                            'existing_trans_id' => $existing_trans_id,
                             'particulars' => 'Existing supplier (' . $name . ') is added with existing balance',
                             'trangaction_type' => 'Cr.',
                             'amount' => $amount,
@@ -243,10 +255,21 @@ class Suppliers extends BaseController
                             $this->suppliersModel->insert($data);
                             $supplierId = $this->suppliersModel->getInsertID();
 
+                            // Existing transaction data insert
+                            DB()->table('existing_transaction')->insert([
+                                'sch_id' => $shopId,
+                                'customer_id' => $supplierId,
+                                'trangaction_type' => 'Cr.',
+                                'amount' => $amount,
+                                'createdBy' => $userId,
+                                'createdDtm' => date('Y-m-d h:i:s')
+                            ]);
+                            $existing_trans_id = DB()->insertID();
 
                             //insert Supplier ledger table (start)
                             $supLedgdata = array(
                                 'sch_id' => $shopId,
+                                'existing_trans_id' => $existing_trans_id,
                                 'supplier_id' => $supplierId,
                                 'particulars' => 'Supplier last balance ',
                                 'trangaction_type' => 'Cr.',
@@ -272,6 +295,7 @@ class Suppliers extends BaseController
 
                             $capLedgdata = array(
                                 'sch_id' => $shopId,
+                                'existing_trans_id' => $existing_trans_id,
                                 'particulars' => 'Existing supplier (' . $name . ') is added with existing balance',
                                 'trangaction_type' => 'Dr.',
                                 'amount' => $amount,
@@ -739,5 +763,458 @@ class Suppliers extends BaseController
         return redirect()->to(site_url('Admin/Suppliers/create'));
     }
 
+    public function supDataEdit()
+    {
+        $supplierId = $this->request->getPost('supplier_id');
+
+        $query = DB()->table('existing_transaction')
+            ->where('supplier_id', $supplierId)
+            ->get()
+            ->getRow();
+
+        if (!$query) {
+            print '<div class="alert alert-danger">No existing transaction found for this supplier.</div>';
+            return;
+        }
+
+        $name   = get_data_by_id('name', 'suppliers', 'supplier_id', $supplierId);
+        $action = base_url('Admin/Suppliers/supEditAction');   // adjust controller path if needed
+
+        $view  = '<form action="'.$action.'" method="post">';
+        $view .= '<div class="form-group">
+                <label for="supplier_name_ex">Supplier Name</label>
+                <input type="text" class="form-control" name="name" id="supplier_name_ex" 
+                       value="' . htmlspecialchars($name) . '" readonly />
+                <input type="hidden" name="supplier_id" value="'.$supplierId.'">
+                <div class="error"></div>
+              </div>';
+
+        $view .= '<div class="form-group">
+                <label for="transaction_type">Transaction Type</label>
+                <select class="form-control input" name="trangaction_type" id="trangaction_type" required>
+                    <option value="">Please Select</option>
+                    <option value="1" ' . (($query->trangaction_type == "Cr.") ? "selected" : "") . '>খরচ (Cr.) / পাওনাদার</option>
+                    <option value="2" ' . (($query->trangaction_type == "Dr.") ? "selected" : "") . '>জমা (Dr.) / দেনাদার</option>
+                </select>
+                <div class="error"></div>
+              </div>';
+
+        $view .= '<div class="form-group">
+                <label for="amount">Amount</label>
+                <input type="number" class="form-control input" name="amount" id="amount" 
+                       placeholder="Amount" oninput="minusValueCheck(this.value,this)" 
+                       value="' . htmlspecialchars($query->amount) . '" required />
+                <div class="error"></div>
+              </div>';
+
+        $view .= '<div class="form-group">
+                <button type="submit" class="btn btn-success">Submit</button>
+              </div>';
+
+        $view .= '</form>';
+
+        print $view;
+    }
+
+    public function supEditAction()
+    {
+        $shopId = $this->session->shopId;
+        $userId = $this->session->userId;
+
+        $supplier_id      = $this->request->getPost('supplier_id');
+        $amount           = (float) $this->request->getPost('amount');
+        $transaction_type = $this->request->getPost('trangaction_type'); // 1 or 2
+
+        $data = [
+            'trangaction_type' => $transaction_type,
+            'amount'           => $amount,
+        ];
+
+        $this->validation->setRules([
+            'trangaction_type' => ['label' => 'Transaction Type', 'rules' => 'required|in_list[1,2]'],
+            'amount'           => ['label' => 'Amount', 'rules' => 'required|greater_than[0]'],
+        ]);
+
+        if ($this->validation->run($data) === false) {
+            $this->session->setFlashdata('message',
+                '<div class="alert alert-danger alert-dismissible" role="alert">' .
+                $this->validation->listErrors() .
+                '<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>'
+            );
+            return redirect()->to(site_url('Admin/Suppliers'));
+        }
+
+        // Get old transaction
+        $transaction = DB()->table('existing_transaction')
+            ->where('sch_id', $shopId)
+            ->where('supplier_id', $supplier_id)
+            ->get()
+            ->getRow();
+
+        if (!$transaction) {
+            $this->session->setFlashdata('message', '<div class="alert alert-danger">Existing transaction not found.</div>');
+            return redirect()->to(site_url('Admin/Suppliers'));
+        }
+
+        $oldAmount = (float) $transaction->amount;
+        $oldType   = $transaction->trangaction_type; // "Dr." or "Cr."
+        $newType   = ($transaction_type == '2') ? 'Dr.' : 'Cr.';
+
+        // Current capital
+        $oldCap = (float) get_data_by_id('capital', 'shops', 'sch_id', $shopId);
+
+        // ========== Capital check (only when new type is Cr.) ==========
+        if ($newType === 'Cr.') {
+            $tempCap = $oldCap;
+
+            // Reverse old effect
+            if ($oldType === 'Dr.') {
+                $tempCap += $oldAmount;
+            } else {
+                $tempCap -= $oldAmount;
+            }
+
+            // Apply new Cr. effect
+            $tempCap += $amount;
+
+
+            if ( -$tempCap < 0) {
+                $this->session->setFlashdata('message',
+                    '<div class="alert alert-danger alert-dismissible" role="alert">Need to update capital for this transaction<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>'
+                );
+                return redirect()->to(site_url('Admin/Suppliers'));
+            }
+        }
+
+        // ========== Start DB transaction ==========
+        DB()->transStart();
+
+        // ---------- 1. Supplier balance ----------
+        $supplierOldBalance = (float) get_data_by_id('balance', 'suppliers', 'supplier_id', $supplier_id);
+
+        // Reverse old effect
+        if ($oldType === 'Dr.') {
+            $supplierOldBalance -= $oldAmount;
+        } else {
+            $supplierOldBalance += $oldAmount;
+        }
+
+        // Apply new effect
+        if ($newType === 'Dr.') {
+            $newBalance = $supplierOldBalance + $amount;
+        } else {
+            $newBalance = $supplierOldBalance - $amount;
+        }
+
+        DB()->table('suppliers')
+            ->where('supplier_id', $supplier_id)
+            ->update(['balance' => $newBalance]);
+
+        // ---------- 2. Supplier ledger ----------
+        $ledger = DB()->table('ledger_suppliers')
+            ->where('supplier_id', $supplier_id)
+            ->where('existing_trans_id', $transaction->existing_trans_id)
+            ->get()
+            ->getRow();
+
+        if ($ledger) {
+            DB()->table('ledger_suppliers')
+                ->where('ledg_sup_id', $ledger->ledg_sup_id)   // change if your PK is different
+                ->update([
+                    'trangaction_type' => $newType,
+                    'amount'           => $amount,
+                    'rest_balance'     => abs($newBalance),
+                    'particulars'      => 'Supplier last balance',
+                ]);
+        }
+
+        // ---------- 3. Capital ----------
+        // Reverse old effect
+        if ($oldType === 'Dr.') {
+            $oldCap += $oldAmount;
+        } else {
+            $oldCap -= $oldAmount;
+        }
+
+        // Apply new effect
+        if ($newType === 'Dr.') {
+            $newCap = $oldCap - $amount;
+        } else {
+            $newCap = $oldCap + $amount;
+        }
+
+        DB()->table('shops')
+            ->where('sch_id', $shopId)
+            ->update(['capital' => $newCap]);
+
+        // ---------- 4. Capital ledger (UPDATE) ----------
+        $ledgerCapital = DB()->table('ledger_capital')
+            ->where('existing_trans_id', $transaction->existing_trans_id)
+            ->get()
+            ->getRow();
+
+        if ($ledgerCapital) {
+            DB()->table('ledger_capital')
+                ->where('capital_id', $ledgerCapital->capital_id) // change if your PK is different
+                ->update([
+                    'trangaction_type' => ($newType === 'Dr.') ? 'Cr.' : 'Dr.',
+                    'amount'           => $amount,
+                    'rest_balance'     => $newCap,
+                    'particulars'      => 'Existing supplier (' . get_data_by_id('name', 'suppliers', 'supplier_id', $supplier_id) . ') is added with existing balance',
+                ]);
+        }
+
+        // ---------- 5. Update existing_transaction ----------
+        DB()->table('existing_transaction')
+            ->where('existing_trans_id', $transaction->existing_trans_id)
+            ->update([
+                'amount'           => $amount,
+                'trangaction_type' => $newType,
+            ]);
+
+        DB()->transComplete();
+
+        if (DB()->transStatus() === false) {
+            $this->session->setFlashdata('message',
+                '<div class="alert alert-danger">Something went wrong. Please try again.</div>'
+            );
+        } else {
+            $this->session->setFlashdata('message',
+                '<div class="alert alert-success alert-dismissible" role="alert">Update Record Success<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>'
+            );
+        }
+
+        return redirect()->to(site_url('Admin/Suppliers'));
+    }
+
+    public function csv_existing_action()
+    {
+        // 1. Validate
+        $validationRule = [
+            'file' => [
+                'label' => 'CSV File',
+                'rules' => 'uploaded[file]|ext_in[file,csv]|max_size[file,2048]',
+            ],
+        ];
+
+        if (!$this->validate($validationRule)) {
+            $this->session->setFlashdata('message','<div class="alert alert-danger alert-dismissible" role="alert">'. $this->validator->listErrors(). '<button type="button" class="close" data-dismiss="alert"><span>&times;</span></button></div>');
+            return redirect()->to(site_url('Admin/Suppliers/create'));
+        }
+
+        $file = $this->request->getFile('file');
+
+        if (!$file->isValid() || $file->hasMoved()) {
+            $this->session->setFlashdata('message','<div class="alert alert-danger alert-dismissible" role="alert">Invalid file upload <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button></div>');
+            return redirect()->to(site_url('Admin/Suppliers/create'));
+        }
+
+        // 2. Move file
+        $newName  = $file->getRandomName();
+        $file->move(WRITEPATH . 'uploads', $newName);
+        $filePath = WRITEPATH . 'uploads/' . $newName;
+
+        // 3. Process CSV
+        $handle = fopen($filePath, 'r');
+        if ($handle === false) {
+            @unlink($filePath);
+            $this->session->setFlashdata('message', '<div class="alert alert-danger">Unable to open the CSV file.</div>');
+            return redirect()->to(site_url('Admin/Suppliers/create'));
+        }
+
+        $db       = DB();
+        $builder  = $db->table('suppliers');
+        $shopId   = $this->session->shopId;
+        $userId   = $this->session->userId;
+        $now      = date('Y-m-d H:i:s');
+
+        $header   = null;
+        $inserted = 0;
+        $skipped  = 0;
+        $errors   = [];
+
+        while (($row = fgetcsv($handle, 0, ',')) !== false) {
+
+            // Skip completely empty rows
+            if (count(array_filter($row, fn($v) => trim($v) !== '')) === 0) {
+                continue;
+            }
+
+            // Header row
+            if ($header === null) {
+                $header = array_map(fn($h) => strtolower(trim($h)), $row);
+                // Optional: enforce required columns
+                $required = ['name', 'phone', 'type', 'amount'];
+                foreach ($required as $col) {
+                    if (!in_array($col, $header, true)) {
+                        fclose($handle);
+                        @unlink($filePath);
+                        $this->session->setFlashdata('message','<div class="alert alert-danger">CSV must contain columns: ' . implode(', ', $required) . '</div>');
+                        return redirect()->to(site_url('Admin/Suppliers/create'));
+                    }
+                }
+                continue;
+            }
+
+            $data = array_combine($header, $row);
+            if ($data === false) {
+                $skipped++;
+                continue;
+            }
+
+            $name   = trim($data['name']   ?? '');
+            $mobile = trim($data['phone']  ?? '');
+            $type   = trim($data['type']   ?? '');
+            $address = trim($data['address'] ?? '');
+            $amount = trim($data['amount'] ?? '');
+
+
+            // Must have at least one identifying field
+            if ($name === '' && $mobile === '') {
+                $skipped++;
+                continue;
+            }
+
+            // Amount must be numeric
+            if (!is_numeric($amount) || (float)$amount < 0) {
+                $errors[] = "Invalid amount for {$name}/{$mobile}";
+                $skipped++;
+                continue;
+            }
+            $amount = (float)$amount;
+
+            // Normalize type
+            $type = strtoupper(rtrim($type, '.')); // "Dr." / "Cr." → "DR" / "CR"
+            if (!in_array($type, ['DR', 'CR'], true)) {
+                $errors[] = "Invalid type '{$data['type']}' for {$name}";
+                $skipped++;
+                continue;
+            }
+
+            // Check duplicate by phone (preferred) or name
+            $existing = null;
+            if ($mobile !== '') {
+                $existing = $builder->where('phone', $mobile)
+                    ->where('sch_id', $shopId)
+                    ->get()
+                    ->getRow();
+            }
+            if (!$existing && $name !== '') {
+                $existing = $builder->where('name', $name)
+                    ->where('sch_id', $shopId)
+                    ->get()
+                    ->getRow();
+            }
+
+            if ($existing) {
+                $skipped++;
+                continue; // or implement update logic if you want
+            }
+            if ($type == 'DR'){
+                $balance = $amount;
+            }else{
+                $balance = -$amount;
+            }
+            // ---------- Transaction per row ----------
+            $db->transStart();
+
+            try {
+                // Insert supplier
+                $saveData = [
+                    'sch_id'     => $shopId,
+                    'name'       => $name ?: null,
+                    'phone'      => $mobile ?: null,
+                    'address'      => $address ?: null,
+                    'balance'    => $balance,
+                    'createdBy'  => $userId,
+                    'createdDtm' => $now,
+                ];
+                $builder->insert($saveData);
+                $supplierId = $db->insertID();
+
+                // Existing transaction
+                $db->table('existing_transaction')->insert([
+                    'sch_id'           => $shopId,
+                    'supplier_id'      => $supplierId,
+                    'trangaction_type' => $type === 'DR' ? 'Dr.' : 'Cr.',
+                    'amount'           => $amount,
+                    'createdBy'        => $userId,
+                    'createdDtm'       => $now,
+                ]);
+                $existing_trans_id = $db->insertID();
+
+                // Supplier ledger
+                $db->table('ledger_suppliers')->insert([
+                    'sch_id'           => $shopId,
+                    'existing_trans_id'=> $existing_trans_id,
+                    'supplier_id'      => $supplierId,
+                    'particulars'      => 'Supplier last balance',
+                    'trangaction_type' => $type === 'DR' ? 'Dr.' : 'Cr.',
+                    'amount'           => $amount,
+                    'rest_balance'     => $amount,
+                    'createdBy'        => $userId,
+                    'createdDtm'       => $now,
+                ]);
+
+                // Capital update
+                $oldCap = (float) get_data_by_id('capital', 'shops', 'sch_id', $shopId);
+
+                if ($type === 'DR') {
+                    // Debit supplier → capital decreases
+                    $newCap = $oldCap - $amount;
+                    $capType = 'Cr.';
+                } else {
+                    // Credit supplier → capital increases
+                    // Optional safety check (adjust logic to your business rule)
+                    if ($oldCap >= $amount) { throw new \Exception('Insufficient capital'); }
+                    $newCap = $oldCap + $amount;
+                    $capType = 'Dr.';
+                }
+
+                $db->table('shops')
+                    ->where('sch_id', $shopId)
+                    ->update(['capital' => $newCap]);
+
+                $db->table('ledger_capital')->insert([
+                    'sch_id'           => $shopId,
+                    'existing_trans_id'=> $existing_trans_id,
+                    'particulars'      => "Existing supplier ({$name}) added with existing balance",
+                    'trangaction_type' => $capType,
+                    'amount'           => $amount,
+                    'rest_balance'     => $newCap,
+                    'createdBy'        => $userId,
+                    'createdDtm'       => $now,
+                ]);
+
+                $db->transComplete();
+
+                if ($db->transStatus() === false) {
+                    throw new \Exception('Transaction failed');
+                }
+
+                $inserted++;
+
+            } catch (\Throwable $e) {
+                $db->transRollback();
+                $errors[] = "Failed for {$name}/{$mobile}: " . $e->getMessage();
+                $skipped++;
+            }
+        }
+
+        fclose($handle);
+        @unlink($filePath);
+
+        // 5. Result message
+        $msg = "CSV processed. Inserted: {$inserted}, Skipped: {$skipped}";
+        if (!empty($errors)) {
+            $msg .= '<br><strong>Errors:</strong><ul><li>' . implode('</li><li>', $errors) . '</li></ul>';
+            $alertClass = 'alert-warning';
+        } else {
+            $alertClass = 'alert-success';
+        }
+
+        $this->session->setFlashdata('message','<div class="alert ' . $alertClass . ' alert-dismissible" role="alert">'. $msg . '<button type="button" class="close" data-dismiss="alert"><span>&times;</span></button></div>');
+        return redirect()->to(site_url('Admin/Suppliers/create'));
+    }
 
 }

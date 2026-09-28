@@ -188,11 +188,22 @@ class Customers extends BaseController
                         $this->customersModel->insert($cusdata);
                         $customerId = $this->customersModel->getInsertID();
 
+                        // Existing transaction data insert
+                        DB()->table('existing_transaction')->insert([
+                            'sch_id' => $shopId,
+                            'customer_id' => $customerId,
+                            'trangaction_type' => 'Dr.',
+                            'amount' => $amount,
+                            'createdBy' => $userId,
+                            'createdDtm' => date('Y-m-d h:i:s')
+                        ]);
+                        $existing_trans_id = DB()->insertID();
 
                         //insert customer ledger table (start)
                         $cusLedgdata = array(
                             'sch_id' => $shopId,
                             'customer_id' => $customerId,
+                            'existing_trans_id' => $existing_trans_id,
                             'particulars' => 'Customer last balance ',
                             'trangaction_type' => 'Dr.',
                             'amount' => $amount,
@@ -217,6 +228,7 @@ class Customers extends BaseController
 
                         $capLedgdata = array(
                             'sch_id' => $shopId,
+                            'existing_trans_id' => $existing_trans_id,
                             'particulars' => 'Existing customer (' . $name . ') is added with existing balance',
                             'trangaction_type' => 'Cr.',
                             'amount' => $amount,
@@ -227,6 +239,8 @@ class Customers extends BaseController
                         $ledger_capitalTable = DB()->table('ledger_capital');
                         $ledger_capitalTable->insert($capLedgdata);
                         //update capital (end)
+
+
 
                         print '<div class="alert alert-success alert-dismissible" role="alert">Create Record Success<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
 
@@ -247,11 +261,22 @@ class Customers extends BaseController
                             $this->customersModel->insert($cusdata2);
                             $customerId = $this->customersModel->getInsertID();
 
+                            // Existing transaction data insert
+                            DB()->table('existing_transaction')->insert([
+                                'sch_id' => $shopId,
+                                'customer_id' => $customerId,
+                                'trangaction_type' => 'Cr.',
+                                'amount' => $amount,
+                                'createdBy' => $userId,
+                                'createdDtm' => date('Y-m-d h:i:s')
+                            ]);
+                            $existing_trans_id = DB()->insertID();
 
                             //insert customer ledger table (start)
                             $cusLedgdata = array(
                                 'sch_id' => $shopId,
                                 'customer_id' => $customerId,
+                                'existing_trans_id' => $existing_trans_id,
                                 'particulars' => 'Customer last balance ',
                                 'trangaction_type' => 'Cr.',
                                 'amount' => $amount,
@@ -275,6 +300,7 @@ class Customers extends BaseController
 
                             $capLedgdata = array(
                                 'sch_id' => $shopId,
+                                'existing_trans_id' => $existing_trans_id,
                                 'particulars' => 'Existing customer (' . $name . ') is added with existing balance',
                                 'trangaction_type' => 'Dr.',
                                 'amount' => $amount,
@@ -861,6 +887,500 @@ class Customers extends BaseController
         $this->session->setFlashdata('message', '<div class="alert alert-success alert-dismissible" role="alert">'.$message.'<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
         return redirect()->to(site_url('Admin/Customers/create'));
     }
+
+    public function cusDataEdit()
+    {
+        $customerId = $this->request->getPost('customer_id');
+
+        $query = DB()->table('existing_transaction')
+            ->where('customer_id', $customerId)
+            ->get()
+            ->getRow();
+
+        // Safety check
+        if (!$query) {
+            print '<div class="alert alert-danger">No existing transaction found for this customer.</div>';
+            return;
+        }
+
+        $name = get_data_by_id('customer_name', 'customers', 'customer_id', $customerId);
+        $action = base_url('Admin/Customers/cusEditAction');
+
+        $view  = '<form action="'.$action.'" method="post">';
+        $view .= '<div class="form-group">
+                <label for="customer_name_ex">Customer Name</label>
+                <input type="text" class="form-control" name="customer_name" id="customer_name_ex" 
+                       placeholder="Customer Name" value="' . htmlspecialchars($name) . '" readonly />
+                       <input type="hidden" name="customer_id" value="'.$customerId.'">
+                <div class="error"></div>
+              </div>';
+
+        $view .= '<div class="form-group">
+                <label for="transaction_type">Transaction Type</label>
+                <select class="form-control input" name="trangaction_type" id="trangaction_type" required>
+                    <option value="">Please Select</option>
+                    <option value="1" ' . (($query->trangaction_type == "Cr.") ? "selected" : "") . '>খরচ (Cr.) / পাওনাদার</option>
+                    <option value="2" ' . (($query->trangaction_type == "Dr.") ? "selected" : "") . '>জমা (Dr.) / দেনাদার</option>
+                </select>
+                <div class="error"></div>
+              </div>';
+
+        $view .= '<div class="form-group databank" id="chaque">
+                    <label for="amount">Amount</label>
+                    <input type="number" class="form-control input" name="amount" id="amount" 
+                           placeholder="Amount" oninput="minusValueCheck(this.value,this)" 
+                           value="' . htmlspecialchars($query->amount) . '" required />
+                    <div class="error"></div>
+                  </div>';
+        $view .='<div class="form-group">
+                    <button type="submit" class="btn btn-success">Submit</button>
+                </div>';
+
+        $view .= '</form>';
+
+        print $view;
+    }
+
+    public function cusEditAction()
+    {
+        $shopId     = $this->session->shopId;
+        $userId     = $this->session->userId;
+
+        $customer_id      = $this->request->getPost('customer_id');
+        $amount           = (float) $this->request->getPost('amount');
+        $transaction_type = $this->request->getPost('trangaction_type'); // 1 or 2
+
+        $data = [
+            'trangaction_type' => $transaction_type,
+            'amount'           => $amount,
+        ];
+
+        $this->validation->setRules([
+            'trangaction_type' => ['label' => 'Transaction Type', 'rules' => 'required|in_list[1,2]'],
+            'amount'           => ['label' => 'Amount', 'rules' => 'required|greater_than[0]'],
+        ]);
+
+        if ($this->validation->run($data) === false) {
+            $this->session->setFlashdata('message','<div class="alert alert-danger alert-dismissible" role="alert">' . $this->validation->listErrors() . '<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>'
+            );
+            return redirect()->to(site_url('Admin/Customers'));
+        }
+
+        // Get old transaction
+        $transaction = DB()->table('existing_transaction')
+            ->where('sch_id', $shopId)
+            ->where('customer_id', $customer_id)
+            ->get()
+            ->getRow();
+
+        if (!$transaction) {
+            $this->session->setFlashdata('message','<div class="alert alert-danger">Existing transaction not found.</div>');
+            return redirect()->to(site_url('Admin/Customers'));
+        }
+
+        $oldAmount = (float) $transaction->amount;
+        $oldType   = $transaction->trangaction_type; // "Dr." or "Cr."
+
+        // New type as string
+        $newType = ($transaction_type == '2') ? 'Dr.' : 'Cr.';
+
+        // Current capital
+        $oldCap = (float) get_data_by_id('capital', 'shops', 'sch_id', $shopId);
+
+        // ========== Capital check (only needed when new type is Cr. / পাওনাদার) ==========
+        if ($newType === 'Cr.') {
+            // After reversing old effect, can we support the new Cr. amount?
+            $tempCap = $oldCap;
+
+            // Reverse old effect
+            if ($oldType === 'Dr.') {
+                $tempCap += $oldAmount;   // was reduced, so add back
+            } else {
+                $tempCap -= $oldAmount;   // was increased, so subtract
+            }
+
+            // Apply new Cr. effect
+            $tempCap += $amount;
+
+            if ($tempCap < 0 && abs($tempCap) < $amount) {
+                // still not enough capital
+                $this->session->setFlashdata('message','<div class="alert alert-danger alert-dismissible" role="alert">Need to update capital for this transaction<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+                return redirect()->to(site_url('Admin/Customers'));
+            }
+        }
+
+        // ========== Start transaction ==========
+        DB()->transStart();
+
+        // ---------- 1. Customer balance ----------
+        $customerOldBalance = (float) get_data_by_id('balance', 'customers', 'customer_id', $customer_id);
+
+        // Reverse old effect
+        if ($oldType === 'Dr.') {
+            $customerOldBalance -= $oldAmount;   // was +amount, reverse
+        } else {
+            $customerOldBalance += $oldAmount;   // was -amount, reverse
+        }
+
+        // Apply new effect
+        if ($newType === 'Dr.') {
+            $newBalance = $customerOldBalance + $amount;
+        } else {
+            $newBalance = $customerOldBalance - $amount;
+        }
+
+        DB()->table('customers')
+            ->where('customer_id', $customer_id)
+            ->update(['balance' => $newBalance]);
+
+        // ---------- 2. Customer ledger ----------
+        $ledger = DB()->table('ledger')
+            ->where('customer_id', $customer_id)
+            ->where('existing_trans_id', $transaction->existing_trans_id)
+            ->get()
+            ->getRow();
+
+        if ($ledger) {
+            $newRestBalance = $newBalance; // rest_balance should match current customer balance
+
+            DB()->table('ledger')
+                ->where('ledg_id', $ledger->ledg_id)
+                ->update([
+                    'trangaction_type' => $newType,
+                    'amount'           => $amount,
+                    'rest_balance'     => abs($newRestBalance), // usually stored positive
+                    'particulars'      => 'Customer last balance',
+                ]);
+        }
+
+        // ---------- 3. Capital ----------
+        // Reverse old effect on capital
+        if ($oldType === 'Dr.') {
+            $oldCap += $oldAmount;   // was capital - amount
+        } else {
+            $oldCap -= $oldAmount;   // was capital + amount
+        }
+
+        // Apply new effect
+        if ($newType === 'Dr.') {
+            $newCap = $oldCap - $amount;
+        } else {
+            $newCap = $oldCap + $amount;
+        }
+
+        DB()->table('shops')
+            ->where('sch_id', $shopId)
+            ->update(['capital' => $newCap]);
+
+        // ---------- 4. Capital ledger (UPDATE, do not insert) ----------
+        $ledgerCapital = DB()->table('ledger_capital')
+            ->where('existing_trans_id', $transaction->existing_trans_id)
+            ->get()
+            ->getRow();
+
+        if ($ledgerCapital) {
+            DB()->table('ledger_capital')
+                ->where('capital_id', $ledgerCapital->capital_id) // adjust primary key name if different
+                ->update([
+                    'trangaction_type' => ($newType === 'Dr.') ? 'Cr.' : 'Dr.', // opposite of customer
+                    'amount'           => $amount,
+                    'rest_balance'     => $newCap,
+                    'particulars'      => 'Existing customer (' . get_data_by_id('customer_name', 'customers', 'customer_id', $customer_id) . ') is added with existing balance',
+                ]);
+        }
+
+        // ---------- 5. Update existing_transaction ----------
+        DB()->table('existing_transaction')
+            ->where('existing_trans_id', $transaction->existing_trans_id)
+            ->update([
+                'amount'           => $amount,
+                'trangaction_type' => $newType,
+            ]);
+
+        DB()->transComplete();
+
+        if (DB()->transStatus() === false) {
+            $this->session->setFlashdata('message',
+                '<div class="alert alert-danger">Something went wrong. Please try again.</div>'
+            );
+        } else {
+            $this->session->setFlashdata('message',
+                '<div class="alert alert-success alert-dismissible" role="alert">Update Record Success<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>'
+            );
+        }
+
+        return redirect()->to(site_url('Admin/Customers'));
+    }
+
+    public function csv_existing_action()
+    {
+        // 1. Validate file
+        $validationRule = [
+            'file' => [
+                'label' => 'CSV File',
+                'rules' => 'uploaded[file]|ext_in[file,csv]|max_size[file,2048]',
+            ],
+        ];
+
+        if (!$this->validate($validationRule)) {
+            $this->session->setFlashdata('message','<div class="alert alert-danger alert-dismissible" role="alert">' . $this->validator->listErrors() . '<button type="button" class="close" data-dismiss="alert">&times;</button></div>');
+            return redirect()->to(site_url('Admin/Customers/create'));
+        }
+
+        $file = $this->request->getFile('file');
+
+        if (!$file->isValid() || $file->hasMoved()) {
+            $this->session->setFlashdata('message','<div class="alert alert-danger">Invalid file upload.</div>');
+            return redirect()->to(site_url('Admin/Customers/create'));
+        }
+
+        // 2. Move file
+        $newName  = $file->getRandomName();
+        $file->move(WRITEPATH . 'uploads', $newName);
+        $filePath = WRITEPATH . 'uploads/' . $newName;
+
+        // 3. Open CSV
+        $handle = fopen($filePath, 'r');
+        if ($handle === false) {
+            @unlink($filePath);
+            $this->session->setFlashdata('message', '<div class="alert alert-danger">Unable to open CSV file.</div>');
+            return redirect()->to(site_url('Admin/Customers/create'));
+        }
+
+        $db      = DB();
+        $builder = $db->table('customers');
+        $shopId  = $this->session->shopId;
+        $userId  = $this->session->userId;
+        $now     = date('Y-m-d H:i:s');
+
+        $header   = null;
+        $inserted = 0;
+        $skipped  = 0;
+        $errors   = [];
+
+        // Cache customer types
+        $typeCache = [];
+        $types = $db->table('customer_type')->where('sch_id', $shopId)->get()->getResultArray();
+        foreach ($types as $t) {
+            $typeCache[strtolower(trim($t['type_name']))] = $t['cus_type_id'];
+        }
+
+        while (($row = fgetcsv($handle, 0, ',')) !== false) {
+
+            if (count(array_filter($row, fn($v) => trim($v) !== '')) === 0) {
+                continue;
+            }
+
+            if ($header === null) {
+                $header = array_map(fn($h) => strtolower(trim($h)), $row);
+
+                $required = ['customer_name', 'mobile', 'type_name', 'type', 'amount'];
+                foreach ($required as $col) {
+                    if (!in_array($col, $header, true)) {
+                        fclose($handle);
+                        @unlink($filePath);
+                        $this->session->setFlashdata('message','<div class="alert alert-danger">CSV must contain: ' . implode(', ', $required) . '</div>');
+                        return redirect()->to(site_url('Admin/Customers/create'));
+                    }
+                }
+                continue;
+            }
+
+            $data = array_combine($header, $row);
+            if ($data === false) {
+                $skipped++;
+                continue;
+            }
+
+            $customerName     = trim($data['customer_name'] ?? '');
+            $mobile           = trim($data['mobile'] ?? '');
+            $typeName         = trim($data['type_name'] ?? '');
+            $transaction_type = trim($data['type'] ?? '');
+            $amount           = trim($data['amount'] ?? '');
+
+            if ($customerName === '' && $mobile === '') {
+                $skipped++;
+                continue;
+            }
+
+            if (!is_numeric($amount) || (float)$amount <= 0) {
+                $errors[] = "Invalid amount for {$customerName} / {$mobile}";
+                $skipped++;
+                continue;
+            }
+            $amount = (float)$amount;
+
+            $isDebit = in_array(strtoupper(rtrim($transaction_type, '.')), ['2', 'DR'], true);
+
+            // Customer Type
+            $cusTypeId = 0;
+            if ($typeName !== '') {
+                $key = strtolower($typeName);
+                if (isset($typeCache[$key])) {
+                    $cusTypeId = $typeCache[$key];
+                } else {
+                    $db->table('customer_type')->insert([
+                        'sch_id'    => $shopId,
+                        'type_name' => $typeName,
+                    ]);
+                    $cusTypeId = $db->insertID();
+                    $typeCache[$key] = $cusTypeId;
+                }
+            }
+
+            // Duplicate check
+            $existing = null;
+            if ($mobile !== '') {
+                $existing = $builder->where('mobile', $mobile)
+                    ->where('sch_id', $shopId)
+                    ->get()
+                    ->getRow();
+            }
+            if ($existing) {
+                $errors[] = "Mobile already exists: {$mobile}";
+                $skipped++;
+                continue;
+            }
+
+            $db->transStart();
+
+            try {
+                if ($isDebit) {
+                    // Debit
+                    $builder->insert([
+                        'sch_id'        => $shopId,
+                        'customer_name' => $customerName,
+                        'mobile'        => $mobile,
+                        'cus_type_id'   => $cusTypeId,
+                        'balance'       => $amount,
+                        'createdBy'     => $userId,
+                        'createdDtm'    => $now,
+                    ]);
+                    $customerId = $db->insertID();
+
+                    $db->table('existing_transaction')->insert([
+                        'sch_id'           => $shopId,
+                        'customer_id'      => $customerId,
+                        'trangaction_type' => 'Dr.',
+                        'amount'           => $amount,
+                        'createdBy'        => $userId,
+                        'createdDtm'       => $now,
+                    ]);
+                    $existing_trans_id = $db->insertID();
+
+                    $db->table('ledger')->insert([
+                        'sch_id'            => $shopId,
+                        'customer_id'       => $customerId,
+                        'existing_trans_id' => $existing_trans_id,
+                        'particulars'       => 'Customer last balance',
+                        'trangaction_type'  => 'Dr.',
+                        'amount'            => $amount,
+                        'rest_balance'      => $amount,
+                        'createdBy'         => $userId,
+                        'createdDtm'        => $now,
+                    ]);
+
+                    $oldCap = (float) get_data_by_id('capital', 'shops', 'sch_id', $shopId);
+                    $newCap = $oldCap - $amount;
+                    $db->table('shops')->where('sch_id', $shopId)->update(['capital' => $newCap]);
+
+                    $db->table('ledger_capital')->insert([
+                        'sch_id'            => $shopId,
+                        'existing_trans_id' => $existing_trans_id,
+                        'particulars'       => "Existing customer ({$customerName}) is added with existing balance",
+                        'trangaction_type'  => 'Cr.',
+                        'amount'            => $amount,
+                        'rest_balance'      => $newCap,
+                        'createdBy'         => $userId,
+                        'createdDtm'        => $now,
+                    ]);
+
+                } else {
+                    // Credit
+                    $oldCap = (float) get_data_by_id('capital', 'shops', 'sch_id', $shopId);
+                    if (-$oldCap < $amount) {
+                        throw new \Exception("Need to update capital ({$customerName})");
+                    }
+
+                    $builder->insert([
+                        'sch_id'        => $shopId,
+                        'customer_name' => $customerName,
+                        'mobile'        => $mobile,
+                        'cus_type_id'   => $cusTypeId,
+                        'balance'       => -$amount,
+                        'createdBy'     => $userId,
+                        'createdDtm'    => $now,
+                    ]);
+                    $customerId = $db->insertID();
+
+                    $db->table('existing_transaction')->insert([
+                        'sch_id'           => $shopId,
+                        'customer_id'      => $customerId,
+                        'trangaction_type' => 'Cr.',
+                        'amount'           => $amount,
+                        'createdBy'        => $userId,
+                        'createdDtm'       => $now,
+                    ]);
+                    $existing_trans_id = $db->insertID();
+
+                    $db->table('ledger')->insert([
+                        'sch_id'            => $shopId,
+                        'customer_id'       => $customerId,
+                        'existing_trans_id' => $existing_trans_id,
+                        'particulars'       => 'Customer last balance',
+                        'trangaction_type'  => 'Cr.',
+                        'amount'            => $amount,
+                        'rest_balance'      => $amount,
+                        'createdBy'         => $userId,
+                        'createdDtm'        => $now,
+                    ]);
+
+                    $newCap = $oldCap + $amount;
+                    $db->table('shops')->where('sch_id', $shopId)->update(['capital' => $newCap]);
+
+                    $db->table('ledger_capital')->insert([
+                        'sch_id'            => $shopId,
+                        'existing_trans_id' => $existing_trans_id,
+                        'particulars'       => "Existing customer ({$customerName}) is added with existing balance",
+                        'trangaction_type'  => 'Dr.',
+                        'amount'            => $amount,
+                        'rest_balance'      => $newCap,
+                        'createdBy'         => $userId,
+                        'createdDtm'        => $now,
+                    ]);
+                }
+
+                $db->transComplete();
+                if ($db->transStatus() === false) {
+                    throw new \Exception('Transaction failed');
+                }
+
+                $inserted++;
+
+            } catch (\Throwable $e) {
+                $db->transRollback();
+                $errors[] = $e->getMessage();
+                $skipped++;
+            }
+        }
+
+        fclose($handle);
+        @unlink($filePath);
+
+        $msg = "CSV processed. Inserted: {$inserted}, Skipped: {$skipped}";
+        if (!empty($errors)) {
+            $msg .= '<br><strong>Errors:</strong><ul><li>' . implode('</li><li>', $errors) . '</li></ul>';
+            $alert = 'alert-warning';
+        } else {
+            $alert = 'alert-success';
+        }
+
+        $this->session->setFlashdata('message','<div class="alert ' . $alert . ' alert-dismissible">' . $msg . '<button type="button" class="close" data-dismiss="alert">&times;</button></div>');
+        return redirect()->to(site_url('Admin/Customers/create'));
+    }
+
+
+
 
 
 }

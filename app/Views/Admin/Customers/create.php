@@ -22,8 +22,7 @@
                 <div class="box">
                     <div class="box-header">
                         <h3 class="box-title">Customer Create</h3>
-                        <button  data-toggle="modal" data-target="#modal-default" class="btn btn-info " style="float: right;"><i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i> CSV Upload</button>
-                        <br><br><a href="<?= base_url('uploads/csv/customer.csv')?>" style="float: right;">Example</a>
+
                     </div>
                     <!-- /.box-header -->
                     <div class="box-body">
@@ -31,6 +30,8 @@
                             <div id="message"></div>
                             <?php if (session()->getFlashdata('message') !== NULL) : echo session()->getFlashdata('message'); endif; ?>
                             <div class="col-lg-6" >
+                                <button  onclick="modalOpen(this)" data-action="<?= base_url('Admin/Customers/csv_action')?>" class="btn btn-info " style="float: right;"><i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i> CSV Upload</button>
+                                <br><br><a href="<?= base_url('uploads/csv/customer.csv')?>" style="float: right;">Example</a>
                                 <form id="geniusform" action="<?php echo $action; ?>" method="post">
                                     <h4>New Customer</h4>
                                     <div class="form-group">
@@ -61,6 +62,8 @@
 
 
                             <div class="col-lg-6" style="border-left: 1px solid #cecdcd;">
+                                <button  onclick="modalOpen(this)" data-action="<?= base_url('Admin/Customers/csv_existing_action')?>" class="btn btn-info " style="float: right;"><i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i> CSV Upload</button>
+                                <br><br><a href="<?= base_url('uploads/csv/customerExisting.csv')?>" style="float: right;">Example</a>
                                 <form id="geniusform3" action="<?php echo $action2; ?>" method="post">
                                     <h4>Existing Customer</h4>
                                     <div class="form-group">
@@ -131,7 +134,7 @@
             </div>
             <div class="modal-body">
 
-                <form action="<?= base_url('Admin/Customers/csv_action')?>" method="post" enctype="multipart/form-data" >
+                <form id="csvForm" action="" method="post" enctype="multipart/form-data" >
                     <div class="form-group">
                         <label for="varchar">CSV File </label>
                         <input type="file" class="form-control" accept=".csv,text/csv" name="file" required />
@@ -145,3 +148,16 @@
     </div>
     <!-- /.modal-dialog -->
 </div>
+
+<script>
+    function modalOpen(item) {
+        // Get action URL from clicked button
+        var actionUrl = $(item).data('action');
+        // Set form action
+        if (actionUrl) {
+            $('#csvForm').attr('action', actionUrl);
+        }
+        // Open modal
+        $('#modal-default').modal('show');
+    }
+</script>

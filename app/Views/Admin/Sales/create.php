@@ -114,7 +114,7 @@
                                                 <input type="hidden" name="suballtotal[]" id="subtl2_<?php print $k++; ?>" value="<?php echo $row['subtotal']; ?>">
                                                 <span id="subtl_<?php print $l++; ?>">
                                                     <span id="subtl_<?php print $j++; ?>">
-                                                     <?php echo number_format($row['subtotal']); ?>
+                                                     <?php echo (float)$row['subtotal']; ?>
                                                     </span>
                                                 </span>
 
@@ -318,7 +318,7 @@
                     <div class="col-xs-6" style="border:1px dashed #D0D3D8 ;padding:5px;">
                         <label>Total Amount </label>
                         <input type="text"  class="form-control " name="grandtotallast" readonly
-                               id="grandtotallast" value="<?php echo number_format(Cart()->total()) ?>">
+                               id="grandtotallast" value="<?php echo (float)Cart()->total() ?>">
 
                     </div>
                     <div class="col-xs-6" style="border:1px dashed #D0D3D8; padding:5px;">
