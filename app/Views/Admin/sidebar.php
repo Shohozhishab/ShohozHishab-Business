@@ -87,6 +87,7 @@
                 </a>
                 <ul class="treeview-menu">
                     <?php echo add_main_ajax_based_menu_with_permission('Purchase', '/Admin/Purchase', $role_id, 'fa fa-briefcase', '/Admin/Purchase_ajax','Purchase'); ?>
+                    <?php echo add_main_ajax_based_menu_with_permission('Return Purchase', '/Admin/Return_purchase', $role_id, 'fa fa-briefcase', '/Admin/Return_purchase_ajax','Return_purchase'); ?>
                 </ul>
             </li>
 

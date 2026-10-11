@@ -193,6 +193,8 @@ class Shops extends BaseController
                     ),
                     array('sch_id' => $shopsId, 'label' => 'edit_permission_expire', 'value' => '10'
                     ),
+                    array('sch_id' => $shopsId, 'label' => 'invoice', 'value' => 'default.php'
+                    ),
 
                 );
                 $this->gen_settingsModel->insertBatch($gen_settingsData);

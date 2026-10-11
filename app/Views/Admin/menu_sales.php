@@ -36,3 +36,4 @@ if (($uri == 'Return_sale_ajax') && ($uri2 == 'invoice_search') || ($uri2 == 're
 
 
 <a href="#" onclick="showData('<?php echo site_url('/Admin/Return_sale_ajax'); ?>','<?php echo '/Admin/Return_sale';?>')" class="btn btn-default" style="<?php echo $retSale;?>" >Return Sale</a>
+<a href="<?= base_url('Admin/Purchase/purchase_product')?>"  class="btn btn-default" style="<?php echo $retSale;?>" >Purchase</a>

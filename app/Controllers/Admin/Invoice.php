@@ -93,7 +93,7 @@ class Invoice extends BaseController
             echo view('Admin/header');
             echo view('Admin/sidebar');
             if (isset($data['mod_access']) and $data['read'] == 1) {
-                echo view('Admin/Invoice/view', $data);
+                echo view('Admin/Invoice/templete/'.get_gen_settings_by_lavel('invoice'), $data);
             } else {
                 echo view('no_permission');
             }

@@ -65,6 +65,12 @@
                                                 <textarea class="form-control" rows="3" name="comment" id="comment" placeholder="Comment"><?php echo $stores->comment; ?></textarea>
                                             </div>
 
+                                            <div class="form-group">
+                                                <label for="enum">Invoice Template</label>
+                                                <select name="invoice" id="invoice" class="form-control">
+                                                    <?php print available_invoice(get_gen_settings_by_lavel('invoice')); ?>
+                                                </select>
+                                            </div>
 
                                             <div class="form-group">
                                                 <label for="enum">Status</label>
