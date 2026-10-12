@@ -515,5 +515,182 @@ class Assets extends BaseController
         return redirect()->to(site_url('Admin/Assets'));
     }
 
+    public function csv_existing_action()
+    {
+        $redirectUrl = site_url('Admin/Assets/create');
+        $validationRule = [
+            'file' => [
+                'label' => 'CSV File',
+                'rules' => 'uploaded[file]|ext_in[file,csv]|max_size[file,2048]',
+            ],
+        ];
+
+        if (!$this->validate($validationRule)) {
+            $this->session->setFlashdata('message', '<div class="alert alert-danger">' . $this->validator->listErrors() . '</div>');
+            return redirect()->to($redirectUrl);
+        }
+
+        $file = $this->request->getFile('file');
+        if (!$file || !$file->isValid() || $file->hasMoved()) {
+            $this->session->setFlashdata('message', '<div class="alert alert-danger">Invalid file upload.</div>');
+            return redirect()->to($redirectUrl);
+        }
+
+        $handle = fopen($file->getTempName(), 'r');
+        if ($handle === false) {
+            $this->session->setFlashdata('message', '<div class="alert alert-danger">Unable to open CSV file.</div>');
+            return redirect()->to($redirectUrl);
+        }
+
+        $db = DB();
+        $shopId = $this->session->shopId;
+        $userId = $this->session->userId;
+        $now = date('Y-m-d H:i:s');
+        $mainType = get_data_by_id('account_type_id', 'account_type', 'type_key', 'assets');
+        $typeCache = [];
+        foreach ($db->table('account_type')->where('sch_id', $shopId)->where('parent_account_type_id', $mainType)->get()->getResultArray() as $type) {
+            $typeCache[strtolower(trim($type['type_name']))] = $type['account_type_id'];
+        }
+
+        $header = null;
+        $required = ['name', 'type_name', 'amount'];
+        $inserted = 0;
+        $skipped = 0;
+        $errors = [];
+
+        while (($row = fgetcsv($handle, 0, ',')) !== false) {
+            if (count(array_filter($row, static fn($value) => trim((string) $value) !== '')) === 0) {
+                continue;
+            }
+            if ($header === null) {
+                $header = array_map(static fn($value) => strtolower(trim((string) $value)), $row);
+                if (isset($header[0])) {
+                    $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]);
+                }
+                foreach ($required as $column) {
+                    if (!in_array($column, $header, true)) {
+                        fclose($handle);
+                        $this->session->setFlashdata('message', '<div class="alert alert-danger">CSV must contain columns: ' . implode(', ', $required) . '</div>');
+                        return redirect()->to($redirectUrl);
+                    }
+                }
+                continue;
+            }
+            if (count($row) !== count($header)) {
+                $errors[] = 'A row has a different number of columns than the header.';
+                $skipped++;
+                continue;
+            }
+
+            $data = array_combine($header, $row);
+            $name = trim($data['name'] ?? '');
+            $typeName = trim($data['type_name'] ?? '');
+            $amount = trim($data['amount'] ?? '');
+            if ($name === '') {
+                $errors[] = 'Asset name is required.';
+                $skipped++;
+                continue;
+            }
+            if (!is_numeric($amount) || (float) $amount <= 0) {
+                $errors[] = 'Invalid amount for ' . esc($name) . '.';
+                $skipped++;
+                continue;
+            }
+
+            $amount = (float) $amount;
+            $typeKey = strtolower($typeName);
+            $newType = false;
+            try {
+                $db->transBegin();
+                $subTypeId = $typeName !== '' ? ($typeCache[$typeKey] ?? null) : null;
+                if ($typeName !== '' && $subTypeId === null) {
+                    if (!$db->table('account_type')->insert([
+                        'sch_id' => $shopId,
+                        'parent_account_type_id' => $mainType,
+                        'type_name' => $typeName,
+                    ])) {
+                        throw new \RuntimeException('Could not save asset subtype.');
+                    }
+                    $subTypeId = $db->insertID();
+                    $newType = true;
+                }
+
+                if (!$db->table('accounts')->insert([
+                    'sch_id' => $shopId,
+                    'name' => $name,
+                    'balance' => $amount,
+                    'createdBy' => $userId,
+                    'createdDtm' => $now,
+                ])) {
+                    throw new \RuntimeException('Could not save asset.');
+                }
+                $accountId = $db->insertID();
+                foreach (array_filter([$mainType, $subTypeId]) as $typeId) {
+                    if (!$db->table('accounts_account_type_map')->insert([
+                        'sch_id' => $shopId,
+                        'account_id' => $accountId,
+                        'account_type_id' => $typeId,
+                    ])) {
+                        throw new \RuntimeException('Could not map asset type.');
+                    }
+                }
+
+                if (!$db->table('ledger_accounts')->insert([
+                    'sch_id' => $shopId,
+                    'account_id' => $accountId,
+                    'particulars' => 'Assets last balance',
+                    'trangaction_type' => 'Dr.',
+                    'amount' => $amount,
+                    'rest_balance' => $amount,
+                    'createdBy' => $userId,
+                    'createdDtm' => $now,
+                ])) {
+                    throw new \RuntimeException('Could not save asset ledger.');
+                }
+
+                $newCapital = (float) get_data_by_id('capital', 'shops', 'sch_id', $shopId) - $amount;
+                if (!$db->table('shops')->where('sch_id', $shopId)->update(['capital' => $newCapital])) {
+                    throw new \RuntimeException('Could not update shop capital.');
+                }
+                if (!$db->table('ledger_capital')->insert([
+                    'sch_id' => $shopId,
+                    'particulars' => 'Existing Assets (' . $name . ') is added with existing balance',
+                    'trangaction_type' => 'Cr.',
+                    'amount' => $amount,
+                    'rest_balance' => $newCapital,
+                    'createdBy' => $userId,
+                    'createdDtm' => $now,
+                ])) {
+                    throw new \RuntimeException('Could not save capital ledger.');
+                }
+
+                if (!$db->transCommit()) {
+                    throw new \RuntimeException('Database transaction failed.');
+                }
+                if ($newType) {
+                    $typeCache[$typeKey] = $subTypeId;
+                }
+                $inserted++;
+            } catch (\Throwable $exception) {
+                $db->transRollback();
+                $errors[] = 'Could not import ' . esc($name) . '.';
+                $skipped++;
+            }
+        }
+
+        fclose($handle);
+        if ($header === null) {
+            $this->session->setFlashdata('message', '<div class="alert alert-danger">CSV file is empty.</div>');
+            return redirect()->to($redirectUrl);
+        }
+        $message = 'CSV processed. Inserted: ' . $inserted . ', Skipped: ' . $skipped;
+        $alert = $errors ? 'alert-warning' : 'alert-success';
+        if ($errors) {
+            $message .= '<br><strong>Errors:</strong><ul><li>' . implode('</li><li>', $errors) . '</li></ul>';
+        }
+        $this->session->setFlashdata('message', '<div class="alert ' . $alert . ' alert-dismissible">' . $message . '<button type="button" class="close" data-dismiss="alert">&times;</button></div>');
+        return redirect()->to($redirectUrl);
+    }
+
 
 }

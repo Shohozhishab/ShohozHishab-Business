@@ -78,6 +78,7 @@
                             <tbody>
                             <?php $start = 1; foreach ($loan_provider as $val) {
                                 $isDeletable = is_deletable('ledger_loan','loan_pro_id',$val->loan_pro_id);
+                                $isEditable = is_deletable('existing_transaction','loan_pro_id',$val->loan_pro_id);
                                 ?>
                                 <tr>
                                     <td width="80px"><?php echo $start++ ?></td>
@@ -87,7 +88,9 @@
                                     <td><?php echo showWithCurrencySymbol($val->balance) ?></td>
                                     <td><?php echo $val->address ?></td>
                                     <td>
-<!--                                        <a href="javascript:void(0)" onclick="showData('<?php //echo site_url('/Admin/Loan_provider_ajax/transaction/' . $val->loan_pro_id); ?>','<?php //echo '/Admin/Loan_provider/transaction/' . $val->loan_pro_id; ?>')" class="btn btn-primary btn-xs">Transaction</a>-->
+                                        <?php if ($isEditable == false){?>
+                                            <a href="javascript:void(0)" class="btn btn-info btn-xs" onclick="accountTranEdit('<?= $val->loan_pro_id; ?>')" data-toggle="modal" data-target="#modal-default" >Edit</a>
+                                        <?php } ?>
                                         <?php if (isset($update) && $update == 1){ ?>
                                         <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Loan_provider_ajax/update/' . $val->loan_pro_id); ?>','<?php echo '/Admin/Loan_provider/update/' . $val->loan_pro_id; ?>')"
                                            class="btn btn-warning btn-xs">Update</a>
@@ -166,6 +169,39 @@
         </div>
         <!-- /.row -->
 
+        <div class="modal fade" id="modal-default">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title">Edit Data</h4>
+                    </div>
+                    <div class="modal-body" id="formData">
+
+
+                    </div>
+                </div>
+                <!-- /.modal-content -->
+            </div>
+            <!-- /.modal-dialog -->
+        </div>
+
     </section>
     <!-- /.content -->
 </div>
+
+<script>
+    function accountTranEdit(loanProId) {
+        $.ajax({
+            type: "POST",
+            url: "<?php echo site_url('Admin/Loan_provider/loanProDataEdit') ?>",
+            data: {
+                loan_pro_id: loanProId
+            },
+            success: function(data) {
+                $('#formData').html(data);
+            }
+        });
+    }
+</script>

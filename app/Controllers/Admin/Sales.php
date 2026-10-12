@@ -1555,7 +1555,9 @@ class Sales extends BaseController
     {
         $customerId = $this->request->getPost('customer_id');
         $balance = get_data_by_id('balance', 'customers', 'customer_id', $customerId);
-        return $balance;
+        return $this->response->setJSON([
+            'balance' => (float) ($balance ?? 0)
+        ]);
     }
 
     public function salesEdit()

@@ -236,6 +236,20 @@
                                         <td><?php echo showWithCurrencySymbol(-$totalCredit); ?></td>
                                     </tr>
                                 </table>
+
+                                <?php $grossProfit = -$saleBalance - $purchaseBalance;?>
+                                <table class="table table-bordered table-striped" id="">
+                                    <tr>
+                                        <td style="width: 50%;">Gross Profit/Loss</td>
+                                        <td><?php echo showWithCurrencySymbol($grossProfit) ?></td>
+                                    </tr>
+                                </table>
+                                <table class="table table-bordered table-striped" id="">
+                                    <tr>
+                                        <td style="width: 50%;">Net Profit/Loss</td>
+                                        <td><?php echo showWithCurrencySymbol($grossProfit - $expensedata) ?></td>
+                                    </tr>
+                                </table>
                             </div>
                         </div>
                     </div>

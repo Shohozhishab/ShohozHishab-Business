@@ -880,11 +880,11 @@
         $("#subtl2_" + i).val(dicprice);
       }
       $("#totalamount").val(itemPrice);
-      $("#grandtotaldue").val(itemPrice.toFixed(2));
-      $("#grandtotal").val(itemPrice.toFixed(2));
-      $("#grandtotal2").val(itemPrice.toFixed(2));
-      $("#grandtotallast").val(itemPrice.toFixed(2));
-      $("#granddiscountlast").val(dicprice2.toFixed(2));
+      $("#grandtotaldue").val(itemPrice !== 0 ? itemPrice : "");
+      $("#grandtotal").val(itemPrice !== 0 ? itemPrice : "");
+      $("#grandtotal2").val(itemPrice !== 0 ? itemPrice : "");
+      $("#grandtotallast").val(itemPrice !== 0 ? itemPrice : "");
+      $("#granddiscountlast").val(dicprice2 !== 0 ? dicprice2 : "");
     }
   }
   $(document).on('input', '.disc', function() {
@@ -902,18 +902,18 @@
       total = (+$("#saleDisc").val() * +$("#totalamount").val()) / 100;
       totalprice = +$("#totalamount").val() - total;
       // yourFloatVarHere.toFixed(2)
-      $("#grandtotal").val(totalprice.toFixed(2));
-      $("#grandtotaldue").val(totalprice.toFixed(2));
-      $("#grandtotallast").val(totalprice.toFixed(2));
-      $("#vatTotallast").val(totalprice.toFixed(2));
-      $("#saleDiscshow").val(total.toFixed(2));
+      $("#grandtotal").val(totalprice !== 0 ? totalprice : "");
+      $("#grandtotaldue").val(totalprice !== 0 ? totalprice : "");
+      $("#grandtotallast").val(totalprice !== 0 ? totalprice : "");
+      $("#vatTotallast").val(totalprice !== 0 ? totalprice : "");
+      $("#saleDiscshow").val(total !== 0 ? total : "");
     } else {
       totalprice = +$("#totalamount").val() + total;
-      $("#grandtotal").val(totalprice.toFixed(2));
-      $("#grandtotaldue").val(totalprice.toFixed(2));
-      $("#grandtotallast").val(totalprice.toFixed(2));
-      $("#vatTotallast").val(totalprice.toFixed(2));
-      $("#saleDiscshow").val(total.toFixed(2));
+      $("#grandtotal").val(totalprice !== 0 ? totalprice : "");
+      $("#grandtotaldue").val(totalprice !== 0 ? totalprice : "");
+      $("#grandtotallast").val(totalprice !== 0 ? totalprice : "");
+      $("#vatTotallast").val(totalprice !== 0 ? totalprice : "");
+      $("#saleDiscshow").val(total !== 0 ? total : "");
     }
   }
   $(document).on('input', '.saleDisc', function() {
@@ -927,16 +927,16 @@
     if ($("#vat").val()) {
       total = (+$("#vat").val() * +$("#vatTotallast").val()) / 100;
       grandtotalaftervat = +$("#vatTotallast").val() + total;
-      $("#grandtotal").val(grandtotalaftervat.toFixed(2));
-      $("#grandtotaldue").val(grandtotalaftervat.toFixed(2));
-      $("#grandtotallast").val(grandtotalaftervat.toFixed(2));
-      $("#vatAmount").val(total.toFixed(2));
+      $("#grandtotal").val(grandtotalaftervat !== 0 ? grandtotalaftervat : "");
+      $("#grandtotaldue").val(grandtotalaftervat !== 0 ? grandtotalaftervat : "");
+      $("#grandtotallast").val(grandtotalaftervat !== 0 ? grandtotalaftervat : "");
+      $("#vatAmount").val(total !== 0 ? total : "");
     } else {
       grandtotalaftervat = +$("#vatTotallast").val() - total;
-      $("#grandtotal").val(grandtotalaftervat.toFixed(2));
-      $("#grandtotaldue").val(grandtotalaftervat.toFixed(2));
-      $("#grandtotallast").val(grandtotalaftervat.toFixed(2));
-      $("#vatAmount").val(total.toFixed(2));
+      $("#grandtotal").val(grandtotalaftervat !== 0 ? grandtotalaftervat : "");
+      $("#grandtotaldue").val(grandtotalaftervat !== 0 ? grandtotalaftervat : "");
+      $("#grandtotallast").val(grandtotalaftervat !== 0 ? grandtotalaftervat : "");
+      $("#vatAmount").val(total !== 0 ? total : "");
     }
   }
   $(document).on('input', '.vat', function() {
@@ -965,11 +965,11 @@
           $("#subt_" + i).val(itemPrice);
           $("#subtl2_" + i).val(itemPrice);
         }
-        $("#totalamount").val(total.toFixed(2));
-        $("#grandtotaldue").val(total.toFixed(2));
-        $("#grandtotal").val(total.toFixed(2));
-        $("#grandtotal2").val(total.toFixed(2));
-        $("#grandtotallast").val(total.toFixed(2));
+        $("#totalamount").val(total !== 0 ? total : "");
+        $("#grandtotaldue").val(total !== 0 ? total : "");
+        $("#grandtotal").val(total !== 0 ? total : "");
+        $("#grandtotal2").val(total !== 0 ? total : "");
+        $("#grandtotallast").val(total !== 0 ? total : "");
   }
   $(document).on('input', '.upprice', function() {
         priceUpCalculate();
@@ -1037,7 +1037,7 @@
       },
       success: function(data) {
         $("#loading-image").hide();
-        $('#balance').html('Balance: ৳ ' + data + '/-');
+        $('#balance').html('Balance: ৳ ' + data.balance + '/-');
       }
     });
   }

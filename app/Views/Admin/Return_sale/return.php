@@ -55,7 +55,7 @@
                                                    name="quantity[]" placeholder="Quantity" min="<?= empty($availableReturnQty)?0:1;?>" max="<?= $availableReturnQty;?>"
                                                    value="<?= $availableReturnQty ?>"> </td>
                                         <td><input type="text" class="purchase_priceReturn form-control" id="searchColumn"
-                                                   name="purchase_price[]" value="<?php echo $row->price ?>" readonly></td>
+                                                   name="purchase_price[]" value="<?php echo (float)$row->price ?>" readonly></td>
                                     </tr>
                                 <?php } ?>
                                 </tbody>
@@ -287,9 +287,9 @@
         // Set values
         $("#vatAmount").val(vatAmount.toFixed(8));
         $("#discountAmount").val(discountAmount.toFixed(8));
-
-        $("#totalAmount").val(finalAmount.toFixed(8));
-        $("#totalDueAmount").val(finalAmount.toFixed(8));
+        
+        $("#totalAmount").val(finalAmount !== 0 ? finalAmount : "");
+        $("#totalDueAmount").val(finalAmount !== 0 ? finalAmount : "");
     }
 
 </script>

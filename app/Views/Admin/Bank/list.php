@@ -81,6 +81,7 @@
                             <tbody>
                             <?php $start=1; foreach ($bank as $val) {
                                 $isDeletable = is_deletable('ledger_bank','bank_id',$val->bank_id);
+                                $isEditable = is_deletable('existing_transaction','bank_id',$val->bank_id);
                                 ?>
                                 <tr>
                                     <td width="80px"><?php echo $start++ ?></td>
@@ -89,6 +90,9 @@
                                     <td><?php echo $val->account_no ?></td>
                                     <td><?php echo showWithCurrencySymbol($val->balance) ?></td>
                                     <td width="180px">
+                                        <?php if ($isEditable == false){?>
+                                            <a href="javascript:void(0)" class="btn btn-info btn-xs" onclick="bankTranEdit('<?= $val->bank_id; ?>')" data-toggle="modal" data-target="#modal-default" >Edit</a>
+                                        <?php } ?>
                                         <a href="<?= base_url('Admin/Ledger_bank?bank_id='.$val->bank_id)?>"  class="btn btn-primary btn-xs"><i class="fa fa-book"></i> Ledger </a>
                                         <?php if (isset($update) && $update == 1){ ?>
                                             <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Bank_ajax/update/'.$val->bank_id); ?>','<?php echo '/Admin/Bank/update/'.$val->bank_id; ?>')"  class="btn btn-xs btn-info">Update</a>
@@ -164,6 +168,38 @@
         </div>
         <!-- /.row -->
 
+        <div class="modal fade" id="modal-default">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title">Edit Data</h4>
+                    </div>
+                    <div class="modal-body" id="formData">
+
+
+                    </div>
+                </div>
+                <!-- /.modal-content -->
+            </div>
+            <!-- /.modal-dialog -->
+        </div>
+
     </section>
     <!-- /.content -->
 </div>
+<script>
+    function bankTranEdit(bankId) {
+        $.ajax({
+            type: "POST",
+            url: "<?php echo site_url('Admin/Bank/bankDataEdit') ?>",
+            data: {
+                bank_id: bankId
+            },
+            success: function(data) {
+                $('#formData').html(data);
+            }
+        });
+    }
+</script>

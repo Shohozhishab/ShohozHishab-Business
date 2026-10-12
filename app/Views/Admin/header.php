@@ -19,15 +19,15 @@
          folder instead of downloading all of them to reduce the load. -->
     <link rel="stylesheet" href="<?php echo base_url()?>/dist/css/skins/_all-skins.min.css">
     <!-- Morris chart -->
-    <link rel="stylesheet" href="<?php echo base_url()?>/bower_components/morris.js/morris.css">
+<!--    <link rel="stylesheet" href="--><?php //echo base_url()?><!--/bower_components/morris.js/morris.css">-->
     <!-- jvectormap -->
-    <link rel="stylesheet" href="<?php echo base_url()?>/bower_components/jvectormap/jquery-jvectormap.css">
+<!--    <link rel="stylesheet" href="--><?php //echo base_url()?><!--/bower_components/jvectormap/jquery-jvectormap.css">-->
     <!-- Date Picker -->
     <link rel="stylesheet" href="<?php echo base_url()?>/bower_components/bootstrap-datepicker/dist/css/bootstrap-datepicker.min.css">
     <!-- Daterange picker -->
     <link rel="stylesheet" href="<?php echo base_url()?>/bower_components/bootstrap-daterangepicker/daterangepicker.css">
     <!-- bootstrap wysihtml5 - text editor -->
-    <link rel="stylesheet" href="<?php echo base_url()?>/plugins/bootstrap-wysihtml5/bootstrap3-wysihtml5.min.css">
+<!--    <link rel="stylesheet" href="--><?php //echo base_url()?><!--/plugins/bootstrap-wysihtml5/bootstrap3-wysihtml5.min.css">-->
 
     <link rel="stylesheet" href="<?php print base_url(); ?>/bower_components/select2/dist/css/select2.min.css">
 
@@ -113,12 +113,24 @@
     </header>
 
     <div id="loading-image" style="background-color: #000;width: 100%;height: 100%;display: block;z-index: 3000;position: fixed;opacity: 0.6; display: none; " >
-        <img style="position: absolute;z-index: 5000;top: 200px;left: 606px;"  src="<?php echo base_url() ?>/uploads/loading.gif" />
-        <p style="    position: absolute;
-    z-index: 5000;
-    top: 150px;
-    left: 562px;
-    font-size: 25px;
-    color: #fff;"><?php echo get_sup_settings_by_lavel('loading_message')?></p>
+<!--        <img style="position: absolute;z-index: 5000;top: 200px;left: 606px;"  src="--><?php //echo base_url() ?><!--/uploads/loading.gif" />-->
+        <div class="loading-wrapper">
+            <div class="loading-spinner">
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+<!--        <p style="    position: absolute;-->
+<!--    z-index: 5000;-->
+<!--    top: 150px;-->
+<!--    left: 562px;-->
+<!--    font-size: 25px;-->
+<!--    color: #fff;">--><?php //echo get_sup_settings_by_lavel('loading_message')?><!--</p>-->
     </div>
 

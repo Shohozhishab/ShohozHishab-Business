@@ -514,4 +514,162 @@ class Expenses extends BaseController
         return redirect()->to(site_url('Admin/Expenses'));
     }
 
+    public function csv_existing_action()
+    {
+        $validationRule = [
+            'file' => [
+                'label' => 'CSV File',
+                'rules' => 'uploaded[file]|ext_in[file,csv]|max_size[file,2048]',
+            ],
+        ];
+
+        if (!$this->validate($validationRule)) {
+            $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">' . implode(', ', $this->validator->getErrors()) . '<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+            return redirect()->to(site_url('Admin/Expenses/create'));
+        }
+
+        $file = $this->request->getFile('file');
+        if (!$file->isValid() || $file->hasMoved()) {
+            $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">Invalid file upload.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+            return redirect()->to(site_url('Admin/Expenses/create'));
+        }
+
+        $newName = $file->getRandomName();
+        $file->move(WRITEPATH . 'uploads', $newName);
+        $filePath = WRITEPATH . 'uploads/' . $newName;
+        $handle = fopen($filePath, 'r');
+        if ($handle === false) {
+            @unlink($filePath);
+            $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">Unable to open the CSV file.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+            return redirect()->to(site_url('Admin/Expenses/create'));
+        }
+
+        $db = DB();
+        $shopId = $this->session->shopId;
+        $userId = $this->session->userId;
+        $mainType = get_data_by_id('account_type_id', 'account_type', 'type_key', 'expenses');
+        $oldCap = get_data_by_id('capital', 'shops', 'sch_id', $shopId);
+        $newCap = $oldCap;
+        $header = null;
+        $inserted = 0;
+        $skipped = 0;
+        $typeCache = [];
+
+        $types = $db->table('account_type')
+            ->where('sch_id', $shopId)
+            ->where('parent_account_type_id', $mainType)
+            ->get()
+            ->getResultArray();
+        foreach ($types as $type) {
+            $typeCache[strtolower(trim($type['type_name']))] = $type['account_type_id'];
+        }
+
+        $db->transStart();
+        while (($row = fgetcsv($handle, 1000, ',')) !== false) {
+            if (count(array_filter($row, 'strlen')) === 0) {
+                continue;
+            }
+
+            if ($header === null) {
+                $header = array_map('strtolower', array_map('trim', $row));
+                continue;
+            }
+
+            if (count($header) !== count($row)) {
+                $skipped++;
+                continue;
+            }
+
+            $data = array_combine($header, $row);
+            $name = trim($data['name'] ?? '');
+            $typeName = trim($data['type_name'] ?? '');
+            $amount = trim($data['amount'] ?? '');
+
+            if ($name === '' || !is_numeric($amount) || (float) $amount <= 0) {
+                $skipped++;
+                continue;
+            }
+
+            $typeId = null;
+            if ($typeName !== '') {
+                $typeKey = strtolower($typeName);
+                if (isset($typeCache[$typeKey])) {
+                    $typeId = $typeCache[$typeKey];
+                } else {
+                    $db->table('account_type')->insert([
+                        'sch_id' => $shopId,
+                        'parent_account_type_id' => $mainType,
+                        'type_name' => $typeName,
+                    ]);
+                    $typeId = $db->insertID();
+                    $typeCache[$typeKey] = $typeId;
+                }
+            }
+
+            $amount = (float) $amount;
+            $db->table('accounts')->insert([
+                'sch_id' => $shopId,
+                'name' => $name,
+                'balance' => $amount,
+                'createdBy' => $userId,
+                'createdDtm' => date('Y-m-d H:i:s'),
+            ]);
+            $accountId = $db->insertID();
+
+            $db->table('accounts_account_type_map')->insert([
+                'sch_id' => $shopId,
+                'account_id' => $accountId,
+                'account_type_id' => $mainType,
+            ]);
+            if (!empty($typeId)) {
+                $db->table('accounts_account_type_map')->insert([
+                    'sch_id' => $shopId,
+                    'account_id' => $accountId,
+                    'account_type_id' => $typeId,
+                ]);
+            }
+
+            $createdDtm = date('Y-m-d H:i:s');
+            $db->table('ledger_accounts')->insert([
+                'sch_id' => $shopId,
+                'account_id' => $accountId,
+                'particulars' => 'Expenses last balance',
+                'trangaction_type' => 'Dr.',
+                'amount' => $amount,
+                'rest_balance' => $amount,
+                'createdBy' => $userId,
+                'createdDtm' => $createdDtm,
+            ]);
+
+            $newCap -= $amount;
+            $db->table('shops')->where('sch_id', $shopId)->update(['capital' => $newCap]);
+            $db->table('ledger_capital')->insert([
+                'sch_id' => $shopId,
+                'particulars' => 'Existing Expenses (' . $name . ') is added with existing balance',
+                'trangaction_type' => 'Cr.',
+                'amount' => $amount,
+                'rest_balance' => $newCap,
+                'createdBy' => $userId,
+                'createdDtm' => $createdDtm,
+            ]);
+
+            $inserted++;
+        }
+
+        fclose($handle);
+        @unlink($filePath);
+        $db->transComplete();
+
+        if ($db->transStatus() === false) {
+            $message = 'CSV import failed. No changes were saved.';
+            $class = 'danger';
+        } else {
+            $message = "CSV processed successfully. Inserted: {$inserted}, Skipped: {$skipped}";
+            $class = 'success';
+        }
+
+        $this->session->setFlashdata('message', '<div class="alert alert-' . $class . ' alert-dismissible" role="alert">' . $message . '<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+        return redirect()->to(site_url('Admin/Expenses'));
+    }
+
 }

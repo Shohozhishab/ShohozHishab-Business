@@ -627,6 +627,7 @@ class Shops extends BaseController
 
         DB()->table('sale_save')->where('sch_id', $id)->delete();
         DB()->table('sale_save_item')->where('sch_id', $id)->delete();
+        DB()->table('existing_transaction')->where('sch_id', $id)->delete();
 
 
         $cash = array(

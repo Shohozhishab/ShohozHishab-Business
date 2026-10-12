@@ -384,6 +384,7 @@ class Products extends BaseController
                 'purchase_price' => $purchasePrice,
                 'selling_price' => $salePrice,
             ]);
+            $product_stock_relation_id = DB()->insertID();
 
             //total amount product
             $totalAmountPro = $purchasePrice * $totalQty;

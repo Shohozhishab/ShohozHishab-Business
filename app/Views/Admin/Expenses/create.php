@@ -18,8 +18,7 @@
                 <div class="box">
                     <div class="box-header">
                         <h3 class="box-title">Expenses Create </h3>
-                        <button  data-toggle="modal" data-target="#modalDefault" class="btn btn-info " style="float: right;"><i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i> CSV Upload</button>
-                        <br><br><a href="<?= base_url('uploads/csv/expenses.csv')?>" style="float: right;">Example</a>
+                        
                     </div>
                     <!-- /.box-header -->
                     <div class="box-body">
@@ -27,6 +26,8 @@
                             <div id="message"></div>
                             <?php if (session()->getFlashdata('message') !== NULL) : echo session()->getFlashdata('message'); endif; ?>
                             <div class="col-lg-6" >
+                                <button  data-toggle="modal" data-target="#modalDefault" class="btn btn-info " style="float: right;"><i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i> CSV Upload</button>
+                        <br><br><a href="<?= base_url('uploads/csv/expenses.csv')?>" style="float: right;">Example</a>
                                 <form id="geniusform" action="<?php echo $action; ?>" method="post">
                                     <h4>New Expenses</h4>
                                     <div class="form-group">
@@ -51,6 +52,8 @@
 
 
                             <div class="col-lg-6" style="border-left: 1px solid #cecdcd;">
+                                <button type="button" data-toggle="modal" data-target="#existingExpensesCsvModal" class="btn btn-info" style="float: right;"><i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i> CSV Upload</button>
+                                <br><br><a href="<?= base_url('uploads/csv/expenseExisting.csv') ?>" style="float: right;">Example</a>
                                 <form id="geniusform3" action="<?php echo $actionExisting; ?>" method="post">
                                     <h4>Existing Expenses</h4>
                                     <div class="form-group">
@@ -147,6 +150,28 @@
                 <!-- /.modal-content -->
             </div>
             <!-- /.modal-dialog -->
+        </div>
+        <div class="modal fade" id="existingExpensesCsvModal">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                        <h4 class="modal-title">Upload Existing Expenses CSV</h4>
+                    </div>
+                    <div class="modal-body">
+                        <form action="<?= base_url('Admin/Expenses/csv_existing_action') ?>" method="post" enctype="multipart/form-data">
+                            <?= csrf_field() ?>
+                            <div class="form-group">
+                                <label for="existing-expenses-csv">CSV File</label>
+                                <input type="file" class="form-control" id="existing-expenses-csv" accept=".csv,text/csv" name="file" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Upload</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
 
     </section>
