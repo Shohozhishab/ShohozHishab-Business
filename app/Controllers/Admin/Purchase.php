@@ -1948,7 +1948,8 @@ class Purchase extends BaseController
             ->join('product_stock_relation', 'product_stock_relation.product_id = products.prod_id')
             ->where('products.sch_id', $shopId)
             ->where('product_stock_relation.store_id', $store->store_id)
-            ->where('product_stock_relation.is_default', '1')
+//            ->where('product_stock_relation.is_default', '1')
+            ->groupBy('products.prod_id')
             ->groupStart()
             ->like('products.name', $keyWord)
             ->orLike('products.prod_id', $keyWord)
@@ -1961,8 +1962,7 @@ class Purchase extends BaseController
         foreach ($data as $sval) {
             $image = ($sval->picture == NULL) ? 'no_image.jpg' : $sval->picture;
             $unit = $sval->unit;
-            $qty = totalProductInStoreByProductIdOrStoreId($sval->prod_id,$store->store_id);
-
+            $qty = $sval->quantity;
             $availQty = unitOrQtyByUnitQty($unit,$qty);
             $purchasePrice = unitOrBasePriceByUnitPrice($unit,$sval->purchase_price);
 
@@ -1975,7 +1975,7 @@ class Purchase extends BaseController
                             <div class="col-xs-2">
                                 <img class="img-circle" src="' . base_url() . '/uploads/product_image/' . $image . '" width="60" height="60">
                             </div>
-                            <div class="col-xs-4"><label for="usr">Name /Price:</label><h4 style="color:black;">' . $sval->name . '/' . showWithCurrencySymbol($purchasePrice) . 'Tk.</h4><p>Available Quantity: '.$availQty.'/'.showUnitName($unit).'</p><input class="form-control" type="hidden" readonly id="name" name="name" value="' . $sval->name . '"><input class="form-control" type="hidden" readonly id="price" name="price" value="' . $sval->purchase_price . '"><input class="form-control" type="hidden" readonly id="sale_price" name="sale_price" value="' . $sval->selling_price . '"><input class="form-control" type="hidden" readonly id="prod_id" name="prod_id" value="' . $sval->prod_id . '"></div>
+                            <div class="col-xs-4"><label for="usr">Name /Price:</label><h4 style="color:black;">' . $sval->name . '/' . showWithCurrencySymbol($purchasePrice) . 'Tk. </h4><p>Available Quantity: '.$availQty.'/'.showUnitName($unit).'</p><input class="form-control" type="hidden" readonly id="name" name="name" value="' . $sval->name . '"><input class="form-control" type="hidden" readonly id="price" name="price" value="' . $sval->purchase_price . '"><input class="form-control" type="hidden" readonly id="sale_price" name="sale_price" value="' . $sval->selling_price . '"><input class="form-control" type="hidden" readonly id="prod_id" name="prod_id" value="' . $sval->prod_id . '"></div>
                             <div class="col-md-5 row">';
             foreach ($unitsArray as $val){
                 $view .='<div class="form-group col-xs-6">

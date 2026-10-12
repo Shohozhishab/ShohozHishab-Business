@@ -117,6 +117,7 @@ class Settings extends BaseController
         $data['status'] = $this->request->getPost('status');
         $data['updatedBy'] = $userId;
         $data['updatedDtm'] = date('Y-m-d h:i:s');
+        $invoice = $this->request->getPost('invoice');
 
         $this->validation->setRules([
             'name' => ['label' => 'Name', 'rules' => 'required|only_numeric_not_allow|validusername'],
@@ -128,6 +129,7 @@ class Settings extends BaseController
         if ($this->validation->run($data) == FALSE) {
             print '<div class="alert alert-danger alert-dismissible" role="alert">' . $this->validation->listErrors() . ' <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         } else {
+            DB()->table('gen_settings')->where('sch_id', $shopId)->where('label', 'invoice')->update(['value' => $invoice]);
             $shopTable = DB()->table('shops');
 
             if ($shopTable->where('sch_id', $shopId)->update($data)) {
