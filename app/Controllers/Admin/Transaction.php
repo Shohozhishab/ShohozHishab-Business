@@ -159,27 +159,10 @@ class Transaction extends BaseController
             $data['actionVatPay'] = base_url('Admin/Transaction/vat_pay_action');
             $data['actionAssetsPay'] = base_url('Admin/Transaction/assets_pay_action');
 
-            $data['assets'] = DB()->table('accounts')
+            $data['account'] = DB()->table('accounts')
                 ->join('accounts_account_type_map', 'accounts_account_type_map.account_id = accounts.account_id')
                 ->join('account_type', 'account_type.account_type_id = accounts_account_type_map.account_type_id')
                 ->where('accounts.sch_id', $shopId)
-                ->where('account_type.type_key', 'assets')
-                ->get()
-                ->getResult();
-
-            $data['expenses'] = DB()->table('accounts')
-                ->join('accounts_account_type_map', 'accounts_account_type_map.account_id = accounts.account_id')
-                ->join('account_type', 'account_type.account_type_id = accounts_account_type_map.account_type_id')
-                ->where('accounts.sch_id', $shopId)
-                ->where('account_type.type_key', 'expenses')
-                ->get()
-                ->getResult();
-
-            $data['otherIncome'] = DB()->table('accounts')
-                ->join('accounts_account_type_map', 'accounts_account_type_map.account_id = accounts.account_id')
-                ->join('account_type', 'account_type.account_type_id = accounts_account_type_map.account_type_id')
-                ->where('accounts.sch_id', $shopId)
-                ->where('account_type.type_key', 'other_income')
                 ->get()
                 ->getResult();
 

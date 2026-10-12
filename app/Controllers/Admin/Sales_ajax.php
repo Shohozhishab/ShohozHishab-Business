@@ -94,6 +94,10 @@ class Sales_ajax extends BaseController
 
             $data['salesSave'] = DB()->table('sale_save')->where('sale_save_id',$sale_save_id)->get()->getRow();
 
+            if (!empty($this->session->cartType) && $this->session->cartType !== 'sale') {
+                $this->cart->destroy();
+            }
+
             $data['action'] = base_url('Admin/Sales/create_action');
             $data['menu'] = view('Admin/menu_sales', $data);
             // All Permissions

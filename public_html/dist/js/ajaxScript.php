@@ -2216,77 +2216,100 @@
     }
   }
 
-  function bankValidat() {
-    var name = $('#name').val();
-    var account_no = $('#account_no').val();
+  function bankValidat(){
+      var name = $('#name').val();
+      var accountName = $('#account_name').val();
+      var account_no = $('#account_no').val();
 
-    if (required(name) == false) {
-      $('#name').parent().find('.error').html('<div style="color:red;" id="mesWrong">This field cannot be empty</div>');
-    } else if (numericOrStringCheck(name) == false) {
-      $('#name').parent().find('.error').html('<div style="color:red;" id="mesWrong">Only numeric not allow!</div>');
-    } else if (lengthValidation(name) == false) {
-      $('#name').parent().find('.error').html('<div style="color:red;" id="mesWrong">maximum length of 32 characters</div>');
-    } else {
-      $('#name').parent().find('.error').html('<div style="color:green;" id="mesWrong">Success</div>');
-      var name_validation = true;
-    }
+      if (required(name) == false){
+          $('#name').parent().find('.error').html('<div style="color:red;" id="mesWrong">This field cannot be empty</div>');
+      }else if(numericOrStringCheck(name) == false){
+          $('#name').parent().find('.error').html('<div style="color:red;" id="mesWrong">Only numeric not allow!</div>');
+      }else if (lengthValidation(name) == false){
+          $('#name').parent().find('.error').html('<div style="color:red;" id="mesWrong">maximum length of 32 characters</div>');
+      }else{
+          $('#name').parent().find('.error').html('<div style="color:green;" id="mesWrong">Success</div>');
+          var name_validation = true;
+      }
 
-    if (required(account_no) == false) {
-      $('#account_no').parent().find('.error').html('<div style="color:red;" id="mesWrong">This field cannot be empty</div>');
-    } else if (notNumericCheck(account_no) == false) {
-      $('#account_no').parent().find('.error').html('<div style="color:red;" id="mesWrong">Only numeric allow!</div>');
-    } else if (lengthValidation(account_no) == false) {
-      $('#account_no').parent().find('.error').html('<div style="color:red;" id="mesWrong">maximum length of 32 characters</div>');
-    } else {
-      $('#account_no').parent().find('.error').html('<div style="color:green;" id="mesWrong">Success</div>');
-      var account_no_validation = true;
-    }
+      if (required(accountName) == false){
+          $('#account_name').parent().find('.error').html('<div style="color:red;" id="mesWrong">This field cannot be empty</div>');
+      }else if(numericOrStringCheck(accountName) == false){
+          $('#account_name').parent().find('.error').html('<div style="color:red;" id="mesWrong">Only numeric not allow!</div>');
+      }else if (lengthValidation(accountName) == false){
+          $('#account_name').parent().find('.error').html('<div style="color:red;" id="mesWrong">maximum length of 32 characters</div>');
+      }else{
+          $('#account_name').parent().find('.error').html('<div style="color:green;" id="mesWrong">Success</div>');
+          var accountName_validation = true;
+      }
 
-    if ((name_validation == true) && (account_no_validation == true)) {
-      $('#geniusform').submit();
-    }
+      if (required(account_no) == false){
+          $('#account_no').parent().find('.error').html('<div style="color:red;" id="mesWrong">This field cannot be empty</div>');
+      }else if(notNumericCheck(account_no) == false){
+          $('#account_no').parent().find('.error').html('<div style="color:red;" id="mesWrong">Only numeric allow!</div>');
+      }else if (lengthValidation(account_no) == false){
+          $('#account_no').parent().find('.error').html('<div style="color:red;" id="mesWrong">maximum length of 32 characters</div>');
+      }else{
+          $('#account_no').parent().find('.error').html('<div style="color:green;" id="mesWrong">Success</div>');
+          var account_no_validation = true;
+      }
+
+      if ((name_validation == true) && (account_no_validation == true) && (accountName_validation == true)){
+          $('#geniusform').submit();
+      }
   }
 
-  function bankExValidat() {
-    var name = $('#name_ex').val();
-    var account_no = $('#account_no_ex').val();
-    var amount_ex = $('#amount_ex').val();
+  function bankExValidat(){
+      var name = $('#name_ex').val();
+      var accountName = $('#account_name_ex').val();
+      var account_no = $('#account_no_ex').val();
+      var amount_ex = $('#amount_ex').val();
 
-    if (required(name) == false) {
-      $('#name_ex').parent().find('.error').html('<div style="color:red;" id="mesWrong">This field cannot be empty</div>');
-    } else if (numericOrStringCheck(name) == false) {
-      $('#name_ex').parent().find('.error').html('<div style="color:red;" id="mesWrong">Only numeric not allow!</div>');
-    } else if (lengthValidation(name) == false) {
-      $('#name_ex').parent().find('.error').html('<div style="color:red;" id="mesWrong">maximum length of 32 characters</div>');
-    } else {
-      // $('#name_ex').parent().find('.error').html('<div style="color:green;" id="mesWrong">Success</div>');
-      var name_validation = true;
-    }
+      if (required(name) == false){
+          $('#name_ex').parent().find('.error').html('<div style="color:red;" id="mesWrong">This field cannot be empty</div>');
+      }else if(numericOrStringCheck(name) == false){
+          $('#name_ex').parent().find('.error').html('<div style="color:red;" id="mesWrong">Only numeric not allow!</div>');
+      }else if (lengthValidation(name) == false){
+          $('#name_ex').parent().find('.error').html('<div style="color:red;" id="mesWrong">maximum length of 32 characters</div>');
+      }else{
+          // $('#name_ex').parent().find('.error').html('<div style="color:green;" id="mesWrong">Success</div>');
+          var name_validation = true;
+      }
 
-    if (required(account_no) == false) {
-      $('#account_no_ex').parent().find('.error').html('<div style="color:red;" id="mesWrong">This field cannot be empty</div>');
-    } else if (notNumericCheck(account_no) == false) {
-      $('#account_no_ex').parent().find('.error').html('<div style="color:red;" id="mesWrong">Only numeric allow!</div>');
-    } else if (lengthValidation(account_no) == false) {
-      $('#account_no_ex').parent().find('.error').html('<div style="color:red;" id="mesWrong">maximum length of 32 characters</div>');
-    } else {
-      // $('#account_no_ex').parent().find('.error').html('<div style="color:green;" id="mesWrong">Success</div>');
-      var account_no_validation = true;
-    }
+      if (required(accountName) == false){
+          $('#account_name_ex').parent().find('.error').html('<div style="color:red;" id="mesWrong">This field cannot be empty</div>');
+      }else if(numericOrStringCheck(accountName) == false){
+          $('#account_name_ex').parent().find('.error').html('<div style="color:red;" id="mesWrong">Only numeric not allow!</div>');
+      }else if (lengthValidation(accountName) == false){
+          $('#account_name_ex').parent().find('.error').html('<div style="color:red;" id="mesWrong">maximum length of 32 characters</div>');
+      }else{
+          var accountName_validation = true;
+      }
 
-    if (required(amount_ex) == false) {
-      $('#amount_ex').parent().find('.error').html('<div style="color:red;" id="mesWrong">This field cannot be empty</div>');
-    } else if (notNumericCheck(amount_ex) == false) {
-      $('#amount_ex').parent().find('.error').html('<div style="color:red;" id="mesWrong">Only numeric allow!</div>');
-    } else {
-      // $('#amount_ex').parent().find('.error').html('<div style="color:green;" id="mesWrong">Success</div>');
-      var amount_ex_validation = true;
-    }
+      if (required(account_no) == false){
+          $('#account_no_ex').parent().find('.error').html('<div style="color:red;" id="mesWrong">This field cannot be empty</div>');
+      }else if(notNumericCheck(account_no) == false){
+          $('#account_no_ex').parent().find('.error').html('<div style="color:red;" id="mesWrong">Only numeric allow!</div>');
+      }else if (lengthValidation(account_no) == false){
+          $('#account_no_ex').parent().find('.error').html('<div style="color:red;" id="mesWrong">maximum length of 32 characters</div>');
+      }else{
+          // $('#account_no_ex').parent().find('.error').html('<div style="color:green;" id="mesWrong">Success</div>');
+          var account_no_validation = true;
+      }
+
+      if (required(amount_ex) == false){
+          $('#amount_ex').parent().find('.error').html('<div style="color:red;" id="mesWrong">This field cannot be empty</div>');
+      }else if(notNumericCheck(amount_ex) == false){
+          $('#amount_ex').parent().find('.error').html('<div style="color:red;" id="mesWrong">Only numeric allow!</div>');
+      }else{
+          // $('#amount_ex').parent().find('.error').html('<div style="color:green;" id="mesWrong">Success</div>');
+          var amount_ex_validation = true;
+      }
 
 
-    if ((name_validation == true) && (account_no_validation == true) && (amount_ex_validation == true)) {
-      $('#geniusform3').submit();
-    }
+      if ((name_validation == true) && (account_no_validation == true) && (amount_ex_validation == true) && (accountName_validation == true)){
+          $('#geniusform3').submit();
+      }
   }
 
   function bankDepositValidat() {
@@ -2400,8 +2423,8 @@
     }
 
     if ((name_validation == true) && (phone_validation == true)) {
-      $('#name').parent().find('.error').html('<div style="color:green;" id="mesWrong">success</div>');
-      $('#phone').parent().find('.error').html('<div style="color:green;" id="mesWrong">success</div>');
+      $('#name').parent().find('.error').html('<div style="color:green;" id="mesWrong">Success</div>');
+      $('#phone').parent().find('.error').html('<div style="color:green;" id="mesWrong">Success</div>');
       $('#geniusform').submit();
       $('#supplierform').submit();
     }

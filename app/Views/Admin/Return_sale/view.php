@@ -84,12 +84,11 @@
                                 $category = get_data_by_id('product_category','product_category','prod_cat_id',$parent_pro_cat);
                                 $subCategory = get_data_by_id('product_category','product_category','prod_cat_id',$catId);
                                 $productName =  get_data_by_id('name','products','prod_id',$row->prod_id);
-                                $unit =  get_data_by_id('unit','products','prod_id',$row->prod_id);
 
                                 echo $productName.'<br> <small>('.$category.' > '.$subCategory .')</small>';
                                 ?></td>
                             <td><?php echo showWithCurrencySymbol($row->price);?></td>
-                            <td><?php echo $row->quantity;?>/<?php echo showUnitName($unit) ?></td>
+                            <td><?php echo $row->quantity;?></td>
                             <td><?php echo showWithCurrencySymbol($row->total_price);?></td>
                         </tr>
                     <?php } ?>

@@ -164,9 +164,6 @@ class Service extends BaseController
         $dueAmount = $this->request->getPost('grandtotaldue');
         $sms = $this->request->getPost('sms');
 
-//        $data['sch_id'] = $shopId;
-//        $data['createdBy'] = $userId;
-//        $data['createdDtm'] = date('Y-m-d h:i:s');
 
         $this->validation->setRules([
             'title' => ['label' => 'title', 'rules' => 'required|only_numeric_not_allow|max_length[60]'],

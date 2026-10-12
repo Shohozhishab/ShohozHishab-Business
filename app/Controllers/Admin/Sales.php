@@ -102,6 +102,10 @@ class Sales extends BaseController
 
             $data['salesSave'] = DB()->table('sale_save')->where('sale_save_id', $sale_save_id)->get()->getRow();
 
+            if (!empty($this->session->cartType) && $this->session->cartType !== 'sale') {
+                $this->cart->destroy();
+            }
+
             $data['action'] = base_url('Admin/Sales/create_action');
             $data['menu'] = view('Admin/menu_sales', $data);
             // All Permissions
@@ -131,7 +135,6 @@ class Sales extends BaseController
 
         $keyWord = $this->request->getPost("keyWord");
         $sale_save_id = $this->request->getPost("sale_save_id");
-//        $keyWord = 'a';
 
         $storeTab = DB()->table('stores');
         $store = $storeTab->where('sch_id', $shopId)->where('is_default', 1)->get()->getRow();
@@ -147,8 +150,6 @@ class Sales extends BaseController
             ->like('products.name', $keyWord)
             ->orLike('products.prod_id', $keyWord)
             ->groupEnd()
-//            ->orderBy('product_stock_relation.createdDtm', 'ASC')
-//            ->groupBy('products.prod_id')
             ->get()
             ->getResult();
 
@@ -157,7 +158,6 @@ class Sales extends BaseController
         foreach ($data as $sval) {
             $image = ($sval->picture == NULL) ? 'no_image.jpg' : $sval->picture;
             $unit = $sval->unit;
-//            $qty = totalProductInStoreByProductIdOrStoreId($sval->prod_id,$store->store_id);
             $qty = $sval->quantity;
 
             $availQty = unitOrQtyByUnitQty($unit, $qty);

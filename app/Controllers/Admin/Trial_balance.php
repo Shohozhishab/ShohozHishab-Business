@@ -54,8 +54,13 @@ class Trial_balance extends BaseController
             }
             // $purchasePri = $queryCash->row()->purchase_balance;
 
-            $stockAmount = $queryCash->getRow()->stockAmount;
-            $profit = $queryCash->getRow()->profit;
+//            $stockAmount = $queryCash->getRow()->stockAmount;
+//            $profit = $queryCash->getRow()->profit;
+            $stockAmount = 0;
+            $profit = 0;
+
+            $purchaseBalance = $queryCash->getRow()->purchase_balance;
+            $saleBalance = $queryCash->getRow()->sale_balance;
             // shop balance(end)
 
 
@@ -160,7 +165,7 @@ class Trial_balance extends BaseController
             $totalDue = $customerCash + $loanCash + $supplierCash + $assets + $expenses;
 
 
-            $totalDebit = $totalDue + $cash + $bankCash + $stockAmount + $emplBal + $expense;
+            $totalDebit = $totalDue + $cash + $bankCash + $emplBal + $purchaseBalance;
             // all debit (end)
 
 
@@ -237,7 +242,7 @@ class Trial_balance extends BaseController
                 ->where('account_type.type_key', 'other_income')
                 ->get()->getRow()->balance;
 
-            $totalCredit = $totalAmo + $capital + $profit + $vatEarn + $serviceCharge + $otherIncome;
+            $totalCredit = $totalAmo + $capital + $vatEarn + $serviceCharge + $otherIncome + $saleBalance;
 
             // all Credit(end)
 
@@ -270,6 +275,8 @@ class Trial_balance extends BaseController
                 'accountsAssets' => $accountsAssets,
                 'accountsExpenses' => $accountsExpenses,
                 'otherIncome' => $otherIncomeData,
+                'saleBalance' => $saleBalance,
+                'purchaseBalance' => $purchaseBalance,
 
             );
 

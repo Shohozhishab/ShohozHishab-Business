@@ -26,6 +26,7 @@
                                     <th>Product</th>
                                     <th>Quantity </th>
                                     <th>Purchase Price</th>
+                                    <th>Sale Price</th>
                                     <th>Total Price</th>
                                 </tr>
                             </thead>
@@ -34,6 +35,7 @@
                                 $unit = productIdByDefaultStoreUnit($item->prod_id);
                                 $conversion_factor = get_data_by_id('conversion_factor', 'units', 'units_id', $unit);
                                 $jsonArray = get_data_by_id('purchase_units', 'products', 'prod_id', $item->prod_id);
+                                $salePrice = get_data_by_id('selling_price', 'product_stock_relation', 'product_stock_relation_id', $item->product_stock_relation_id);
                                 ?>
                                 <tr>
                                     <td width="80px"><?= $i++ ?></td>
@@ -43,21 +45,26 @@
                                     </td>
                                     <td><input type="hidden" name="qty[]" id="qtyUp_<?= $item->prod_id ?>" value="<?= $item->quantity; ?>">
                                         <div style="display: flex;">
-                                        <?php $unitsArray = convertRevertToArray($item->quantity,json_decode($jsonArray));
-                                            foreach ($unitsArray as $input){
-                                        ?>
-                                                    <div style="margin-right: 10px;">
-                                                         <label for="int" class="text-capitalize"><?= $input['name'];?></label>
-                                                        <input type="text" oninput="qtyMakeBaseUnit('<?= $item->prod_id ?>')" data-factor="<?= $input['conversion_factor']?>"  style="width: 50px;" value="<?= $input['qty']; ?>">
-                                                    </div>
-                                        <?php } ?>
+                                            <?php $unitsArray = convertRevertToArray($item->quantity,json_decode($jsonArray));
+                                                foreach ($unitsArray as $input){
+                                            ?>
+                                                <div style="margin-right: 10px;">
+                                                     <label for="int" class="text-capitalize"><?= $input['name'];?></label>
+                                                    <input type="text" oninput="qtyMakeBaseUnit('<?= $item->prod_id ?>')" data-factor="<?= $input['conversion_factor']?>"  style="width: 50px;" value="<?= $input['qty']; ?>">
+                                                </div>
+                                            <?php } ?>
                                         </div>
                                     </td>
                                     <td>
                                         <input type="hidden" name="price[]" id="priceUp_<?= $item->prod_id; ?>" value="<?= $item->purchase_price?>">
                                         <label for="int"><?= showUnitName($unit);?></label>
                                         <input type="text" name="priceUnit[]" style="width: 100px;" oninput="priceMakeBaseUnit(this.value,'<?= $conversion_factor;?>','<?= $item->prod_id;?>' )" value="<?= unitOrBasePriceByUnitPrice($unit,$item->purchase_price)?>">
+                                    </td>
 
+                                    <td>
+                                        <input type="hidden" name="salePrice[]" id="salePriceUp_<?= $item->prod_id; ?>" value="<?= $salePrice;?>">
+                                        <label for="int"><?= showUnitName($unit);?></label>
+                                        <input type="text" name="salePriceUnit[]" oninput="salePriceMakeBaseUnit(this.value,'<?= $conversion_factor;?>','<?= $item->prod_id;?>' )" value="<?= unitOrBasePriceByUnitPrice($unit,$salePrice)?>" >
                                     </td>
                                     <td><input type="text" name="total_price[]" value="<?= $item->total_price?>" readonly></td>
                                 </tr>
@@ -140,15 +147,15 @@
             }
 
             function calculateGrandTotal() {
-            let grandTotal = 0;
+                let grandTotal = 0;
 
-            $('tbody tr').each(function () {
-            grandTotal += calculateRow(this);
-        });
+                $('tbody tr').each(function () {
+                    grandTotal += calculateRow(this);
+                });
 
-        $('#totalPrice').val(grandTotal.toFixed(8));
-            calculateDueTotal();
-        }
+                $('#totalPrice').val(grandTotal.toFixed(8));
+                calculateDueTotal();
+            }
 
         window.calculateDueTotal = function () {
             let total = parseFloat($('#totalPrice').val()) || 0;
@@ -188,6 +195,15 @@
             calculateGrandTotal();
         };
 
+        window.salePriceMakeBaseUnit = function(val, key, printId) {
+            val = parseFloat(val) || 0;
+            key = parseFloat(key) || 1;
+
+            var total = val / key;
+
+            $("#salePriceUp_" + printId).val(total.toFixed(8));
+        };
+
         window.qtyMakeBaseUnit = function (printId) {
 
             let row = $("#qtyUp_" + printId).closest("td");
@@ -208,56 +224,4 @@
         calculateGrandTotal();
     });
 
-
-    // function calculateDueTotal(){
-    //     let totalDue = $('#totaldue').val();
-    //     if (totalDue >= 0 ){
-    //         // $('#createBtn').hide();
-    //         document.getElementById("dueBtn").disabled = false;
-    //     }else{
-    //         // $('#createBtn').show();
-    //         document.getElementById("dueBtn").disabled = true;
-    //     }
-    // }
-    // function calculateGrandTotal() {
-    //     let grandTotal = 0;
-    //
-    //     $('input[name="total_price[]"]').each(function () {
-    //         grandTotal += parseFloat($(this).val()) || 0;
-    //     });
-    //
-    //     $('#totalPrice').val(grandTotal);
-    //
-    //
-    //     let oldDue = $('#totalDue2').val();
-    //
-    //     $('#totalDue2').val(grandTotal);
-    //
-    //     let dueTotal = grandTotal - oldDue;
-    //     $('#totaldue').val(dueTotal);
-    //
-    //     if (dueTotal >= 0 ){
-    //         // $('#createBtn').hide();
-    //         document.getElementById("dueBtn").disabled = false;
-    //     }else{
-    //         // $('#createBtn').show();
-    //         document.getElementById("dueBtn").disabled = true;
-    //     }
-    //
-    // }
-    // // Update row total + grand total
-    // $(document).on('input', 'input[name="qty[]"], input[name="price[]"]', function () {
-    //
-    //     let row   = $(this).closest('tr');
-    //     let qty   = row.find('input[name="qty[]"]').val() || 0;
-    //     let price = row.find('input[name="price[]"]').val() || 0;
-    //
-    //     row.find('input[name="total_price[]"]').val(qty * price);
-    //
-    //     calculateGrandTotal();
-    // });
-    // // Initial load
-    // $(document).ready(function () {
-    //     // calculateGrandTotal();
-    // });
 </script>

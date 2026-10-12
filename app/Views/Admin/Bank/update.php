@@ -34,6 +34,11 @@
                                         <input type="hidden" name="bank_id"  value="<?php echo $bank->bank_id?>" >
                                     </div>
                                     <div class="form-group">
+                                        <label for="varchar">Account Name </label>
+                                        <input type="text" class="form-control" name="account_name" id="account_name" placeholder="Account Name" value="<?php echo $bank->account_name;?>" required/>
+
+                                    </div>
+                                    <div class="form-group">
                                         <label for="varchar">Account No </label>
                                         <input type="number" class="form-control" name="account_no" oninput="minusValueCheck(this.value,this)" id="account_no" placeholder="Account No" value="<?php echo $bank->account_no?>" >
                                     </div>

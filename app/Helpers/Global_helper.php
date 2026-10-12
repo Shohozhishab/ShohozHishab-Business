@@ -2039,3 +2039,45 @@ function getUnitCategoriesWithUnits(){
     ];
     return $units;
 }
+
+function get_available_quantity_to_return($invoiceId,$prod_id,$invQuantity){
+    $table = DB()->table('return_sale');
+    $returnData = $table->selectSum('quantity')->join('return_sale_item','return_sale_item.rtn_sale_id = return_sale.rtn_sale_id' )->where('return_sale.invoice_id',$invoiceId)->where('return_sale_item.prod_id',$prod_id)->get()->getRow();
+
+    $result = $invQuantity - $returnData->quantity;
+    return $result ?? 0;
+}
+
+function get_return_status_by_invoice_id($invoiceId){
+
+    $db = DB();
+
+    $builder = $db->table('invoice');
+    $invoiceData = $builder->select('prod_id, quantity')->join('invoice_item', 'invoice_item.invoice_id = invoice.invoice_id')->where('invoice.invoice_id',$invoiceId)->get()->getResult();
+
+
+    $table = DB()->table('return_sale');
+    $returnData = $table->select('prod_id, quantity')->join('return_sale_item','return_sale_item.rtn_sale_id = return_sale.rtn_sale_id' )->where('return_sale.invoice_id',$invoiceId)->get()->getResult();
+
+    $returnMap = [];
+    foreach ($returnData as $row) {
+        $returnMap[$row->prod_id] = $row->quantity;
+    }
+
+    $totalInvoiceQty = 0;
+    $totalReturnQty  = 0;
+
+    foreach ($invoiceData as $item) {
+        $inv_qty = (int)$item->quantity;
+        $ret_qty = $returnMap[$item->prod_id] ?? 0;
+
+        $ret_qty = min($ret_qty, $inv_qty);
+
+        $totalInvoiceQty += $inv_qty;
+        $totalReturnQty  += $ret_qty;
+    }
+
+    $status = ($totalReturnQty == $totalInvoiceQty)?1:0;
+    return $status;
+
+}

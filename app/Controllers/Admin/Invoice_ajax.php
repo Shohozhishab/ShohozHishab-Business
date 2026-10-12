@@ -75,35 +75,9 @@ class Invoice_ajax extends BaseController
             $data['invoiceItame'] = $invoice_itemTable->where('invoice_id', $id)->get()->getResult();
 
 
-            //Due calculation (start)
             $invoiceTable = DB()->table('invoice');
             $invoiceDueData = $invoiceTable->where('invoice_id', $id)->get()->getRow();
-            $invoiceDue = !empty($invoiceDueData)?$invoiceDueData->due:0;
-
-            $ledgerTable = DB()->table('ledger');
-            $rest_balance_count = $ledgerTable->where('invoice_id', $id)->where('trangaction_type', 'Cr.')->countAllResults();
-
-            if (!empty($rest_balance_count)) {
-                $ledgerTab = DB()->table('ledger');
-                $rest_balance_query = $ledgerTab->where('invoice_id', $id)->where('trangaction_type', 'Cr.')->get();
-                $rest_balance = $rest_balance_query->getRow()->rest_balance;
-            } else {
-                $rest_balance = 0;
-            }
-
-            $ledgerT = DB()->table('ledger');
-            $amount_query = $ledgerT->where('invoice_id', $id)->where('trangaction_type', 'Cr.')->countAllResults();
-            if (!empty($amount_query)) {
-                $ledgerTC = DB()->table('ledger');
-                $amount_queryT = $ledgerTC->where('invoice_id', $id)->where('trangaction_type', 'Cr.')->get();
-                $amount = $amount_queryT->getRow()->amount;
-            } else {
-                $amount = 0;
-            }
-
-            $data['oldDue'] = $rest_balance - $amount;
-            $data['totalDue'] = $data['oldDue'] + $invoiceDue;
-            //Due calculation (end)
+            $data['invoiceData'] = $invoiceDueData;
 
             $data['menu'] = view('Admin/menu_report', $data);
             // All Permissions
