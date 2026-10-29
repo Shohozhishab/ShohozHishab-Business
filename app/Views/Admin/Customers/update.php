@@ -37,6 +37,7 @@
                                                                                                                                                    data-toggle="tab">Personal</a></li>
                                     <li role="presentation" ><a href="#messages" aria-controls="messages" role="tab"
                                                                                                                                                 data-toggle="tab">Photo</a></li>
+                                    <li role="presentation" ><a href="#note" aria-controls="note" role="tab" data-toggle="tab">Note</a></li>
                                 </ul>
                             </div>
 
@@ -65,6 +66,12 @@
                                                 <select class="form-control" name="status" >
                                                     <?php echo globalStatus($customer->status)?>
                                                 </select>
+                                            </div>
+
+                                            <div class="form-group">
+                                                <label>Balance Limit</label>
+                                                <input type="number" class="form-control" name="balance_limit" step="0.01" min="0"
+                                                       value="<?php echo number_format((float)$customer->balance_limit, 2, '.', ''); ?>" />
                                             </div>
 
                                             <input type="hidden" name="customer_id" value="<?php echo $customer->customer_id; ?>" />
@@ -127,6 +134,27 @@
                                                 <span class="help-block"><b>Max. file size 1024KB and (width=300px) x (height=300px)</b></span>
                                             </div>
 
+                                            <input type="hidden" name="customer_id" value="<?php echo $customer->customer_id; ?>" />
+                                            <button type="submit" class="btn btn-primary geniusSubmit-btn">Update</button>
+                                            <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Customers_ajax/'); ?>','<?php echo '/Admin/Customers/'; ?>')" class="btn btn-default">Cancel</a>
+                                        </form>
+                                    </div>
+                                    <div class="col-lg-6"></div>
+                                </div>
+
+                                <div role="tabpanel" class="tab-pane " id="note">
+                                    <div class="col-lg-6">
+                                        <form id="geniusformUpdate" action="<?php echo base_url('Admin/Customers/note_update'); ?>" method="post">
+                                            <div class="form-group">
+                                                <label>Notification Date </label>
+                                                <input type="date" class="form-control" name="notification_date" id="NotificationDate"
+                                                       value="<?php echo !empty($customer->notification_date) ? $customer->notification_date : ''; ?>" />
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Note </label>
+                                                <textarea class="form-control" name="note" id="Note" rows="6"
+                                                          placeholder="Note"><?php echo !empty($customer->note) ? $customer->note : ''; ?></textarea>
+                                            </div>
                                             <input type="hidden" name="customer_id" value="<?php echo $customer->customer_id; ?>" />
                                             <button type="submit" class="btn btn-primary geniusSubmit-btn">Update</button>
                                             <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Customers_ajax/'); ?>','<?php echo '/Admin/Customers/'; ?>')" class="btn btn-default">Cancel</a>

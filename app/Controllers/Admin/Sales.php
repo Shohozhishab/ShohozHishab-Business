@@ -107,6 +107,7 @@ class Sales extends BaseController
             }
 
             $data['action'] = base_url('Admin/Sales/create_action');
+            $data['saleSerials'] = $this->saleSerialData();
             $data['menu'] = view('Admin/menu_sales', $data);
             // All Permissions
             //$perm = array('create','read','update','delete','mod_access');
@@ -133,26 +134,52 @@ class Sales extends BaseController
     {
         $shopId = $this->session->shopId;
 
-        $keyWord = $this->request->getPost("keyWord");
+        $keyWord = trim((string)$this->request->getPost("keyWord"));
         $sale_save_id = $this->request->getPost("sale_save_id");
 
         $storeTab = DB()->table('stores');
         $store = $storeTab->where('sch_id', $shopId)->where('is_default', 1)->get()->getRow();
 
+        if (empty($store)) {
+            return;
+        }
+
+        // Stock rows that own a serial matching the keyword (serial number or warranty date).
+        $matchedSerialsByPsr = array();
+        if ($keyWord !== '') {
+            $serialSearch = DB()->table('product_serial')
+                ->select('product_serial.product_stock_relation_id, product_serial.serial_number')
+                ->join('product_stock_relation', 'product_stock_relation.product_stock_relation_id = product_serial.product_stock_relation_id')
+                ->where('product_stock_relation.sch_id', $shopId)
+                ->where('product_serial.status', 'in_stock')
+                ->groupStart()
+                ->like('product_serial.serial_number', $keyWord)
+                ->orLike('product_serial.company_warranty_end_date', $keyWord)
+                ->orLike('product_serial.customer_warranty_end_date', $keyWord)
+                ->groupEnd()
+                ->get()
+                ->getResultArray();
+
+            foreach ($serialSearch as $serialRow) {
+                $matchedSerialsByPsr[$serialRow['product_stock_relation_id']][] = $serialRow['serial_number'];
+            }
+        }
 
         $proTable = DB()->table('products');
-        $data = $proTable
+        $proTable
             ->join('product_stock_relation', 'product_stock_relation.product_id = products.prod_id')
             ->where('products.sch_id', $shopId)
             ->where('product_stock_relation.store_id', $store->store_id)
             ->where('product_stock_relation.quantity >', 0)
             ->groupStart()
             ->like('products.name', $keyWord)
-            ->orLike('products.prod_id', $keyWord)
-            ->groupEnd()
-            ->get()
-            ->getResult();
+            ->orLike('products.prod_id', $keyWord);
 
+        if (!empty($matchedSerialsByPsr)) {
+            $proTable->orWhereIn('product_stock_relation.product_stock_relation_id', array_keys($matchedSerialsByPsr));
+        }
+
+        $data = $proTable->groupEnd()->get()->getResult();
 
         $view = '';
         foreach ($data as $sval) {
@@ -163,21 +190,53 @@ class Sales extends BaseController
             $availQty = unitOrQtyByUnitQty($unit, $qty);
             $SalePrice = unitOrBasePriceByUnitPrice($unit, $sval->selling_price);
 
+            $psrId = $sval->product_stock_relation_id;
+            $serialStatus = ($sval->serial_status == 1) ? '1' : '0';
+            $warrantyStatus = ($sval->warranty_status == 1) ? '1' : '0';
+
+            // In stock serial numbers of this stock row (only needed for serialized products).
+            $inStockSerialCount = 0;
+            if ($serialStatus == '1') {
+                $inStockSerialCount = DB()->table('product_serial')
+                    ->where('product_stock_relation_id', $psrId)
+                    ->where('status', 'in_stock')
+                    ->countAllResults();
+            }
+
+            $flagView = '<span class="label label-primary">Serial Status: ' . ($serialStatus == '1' ? 'ON' : 'OFF') . '</span> ';
+            $flagView .= '<span class="label label-warning">Warranty Status: ' . ($warrantyStatus == '1' ? 'ON' : 'OFF') . '</span>';
+
+            $serialView = '';
+            if ($serialStatus == '1') {
+                $serialView .= '<p style="margin:0;">Available Serial Numbers: <b>' . (int)$inStockSerialCount . '</b></p>';
+            }
+            if (!empty($matchedSerialsByPsr[$psrId])) {
+                $matchedNames = array_map(function ($serialNumber) {
+                    return htmlspecialchars((string)$serialNumber, ENT_QUOTES, 'UTF-8');
+                }, array_slice($matchedSerialsByPsr[$psrId], 0, 5));
+
+                $serialView .= '<p style="margin:0;color:#3c8dbc;">Matched Serial: <b>' . implode(', ', $matchedNames) . '</b></p>';
+            }
+
             $units_id = json_decode($sval->sale_units);
             $unitsArray = DB()->table('units')->whereIn('units_id', $units_id)->orderBy('conversion_factor', 'DESC')->get()->getResult();
 
             $view .= '<li>
-                        <form action="' . site_url('Admin/Sales/add_cart') . '" method="post">
+                        <form action="' . site_url('Admin/Sales/add_cart') . '" method="post" onsubmit="return saleAddCartCheck(this)"
+                            data-serial-status="' . $serialStatus . '"
+                            data-serial-available="' . (int)$inStockSerialCount . '"
+                            data-product-name="' . htmlspecialchars($sval->name, ENT_QUOTES) . '">
                             <div class="col-xs-12" style="padding:15px; border-bottom: 1px solid;color: #d2d6de;" ><a>
                             <div class="col-xs-2">
                                 <img class="img-circle" src="' . base_url() . '/uploads/product_image/' . $image . '" width="60" height="60">
                             </div>
-                            <div class="col-xs-4"><label for="usr">Name /Price:</label><h4 style="color:black;">' . $sval->name . '/' . showWithCurrencySymbol($SalePrice) . 'Tk.</h4><p>Available Quantity: ' . $availQty . '/' . showUnitName($unit) . '</p><input class="form-control" type="hidden" readonly id="name" name="name" value="' . $sval->name . '"><input class="form-control" type="hidden" readonly id="price" name="price" value="' . $sval->selling_price . '"><input class="form-control" type="hidden" readonly id="prod_id" name="prod_id" value="' . $sval->prod_id . '"></div>
-                            <div class="col-md-5 row">';
+                            <div class="col-xs-4"><label for="usr">Name /Price:</label><h4 style="color:black;">' . $sval->name . '/' . showWithCurrencySymbol($SalePrice) . 'Tk.</h4><p>Available Quantity: ' . $availQty . '/' . showUnitName($unit) . '</p>
+                            <p style="margin:0 0 5px 0;">' . $flagView . '</p>' . $serialView . '<input class="form-control" type="hidden" readonly id="name" name="name" value="' . $sval->name . '"><input class="form-control" type="hidden" readonly id="price" name="price" value="' . $sval->selling_price . '"><input class="form-control" type="hidden" readonly id="prod_id" name="prod_id" value="' . $sval->prod_id . '"><input type="hidden" name="serial_status" value="' . $serialStatus . '"><input type="hidden" name="warranty_status" value="' . $warrantyStatus . '"></div>
+                            <div class="col-md-5 row"><label class="col-xs-12" style="font-weight:bold;">Quantity <small>(enter how many you are selling)</small></label>';
             foreach ($unitsArray as $val) {
                 $view .= '<div class="form-group col-xs-6">
                         <label for="int" class="text-capitalize">' . $val->name . ' </label>
-                        <input type="text" class="form-control" name="' . strtolower(str_replace(' ', '_', $val->name)) . '" placeholder="' . $val->name . '" value="" >
+                        <input type="text" class="form-control unit-qty" data-factor="' . $val->conversion_factor . '" name="' . strtolower(str_replace(' ', '_', $val->name)) . '" placeholder="' . $val->name . '" value="" >
                         <input type="hidden" name="sale_save_id" value="' . $sale_save_id . '" >
                         <input type="hidden" name="product_stock_relation_id" value="' . $sval->product_stock_relation_id . '" >
                      </div>';
@@ -245,14 +304,42 @@ class Sales extends BaseController
         $totalquantity = $unitQty + $qty;
         if ($productQnt >= $totalquantity) {
             if ($totalquantity > 0) {
+                // Product level serial / warranty tracking.
+                $productFlags = DB()->table('products')
+                    ->select('serial_status, warranty_status')
+                    ->where('prod_id', $proId)
+                    ->get()->getRow();
+                $serialStatus = (isset($productFlags->serial_status) && $productFlags->serial_status == 1) ? '1' : '0';
+                $warrantyStatus = (isset($productFlags->warranty_status) && $productFlags->warranty_status == 1) ? '1' : '0';
+
+                // Serialized products need one serial number per unit, so stock must cover it.
+                if ($serialStatus == '1') {
+                    $inStockSerialCount = DB()->table('product_serial')
+                        ->where('product_stock_relation_id', $product_stock_relation_id)
+                        ->where('status', 'in_stock')
+                        ->countAllResults();
+
+                    if ($inStockSerialCount < round($totalquantity)) {
+                        $this->session->setFlashdata('message', '<div class="alert alert-warning alert-dismissible" role="alert">Warning: Only ' . (int)$inStockSerialCount . ' serial number(s) are available in stock for this product.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+                        return redirect()->to(site_url('Admin/Sales/create' . $urlGet));
+                    }
+                }
+
                 $data = array(
                     'id' => $product_stock_relation_id,
                     'prod_id' => $proId,
                     'name' => strval($proName),
                     'qty' => $totalquantity,
-                    'price' => $proPrice
+                    'price' => $proPrice,
+                    'options' => array(
+                        'serial_status' => $serialStatus,
+                        'warranty_status' => $warrantyStatus,
+                    )
                 );
                 $this->cart->insert($data);
+
+                // Quantity changed, so previously selected serial numbers no longer match.
+                $this->resetSaleSerialsByQty($product_stock_relation_id, $totalquantity);
             } else {
                 $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert"> Invalid Quantity  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
                 return redirect()->to(site_url('Admin/Sales/create' . $urlGet));
@@ -272,6 +359,7 @@ class Sales extends BaseController
     {
 
         $this->cart->destroy();
+        $this->session->remove('saleSerials');
         return redirect()->to(site_url('Admin/Sales/create'));
 
     }
@@ -289,8 +377,245 @@ class Sales extends BaseController
             $getUrl = '?sale_save_id=' . $sale_save_id;
         }
 
+        // Forget the serial selection that belonged to the removed line.
+        $cartItem = $this->cart->getItem($id);
+        if (!empty($cartItem['id'])) {
+            $saleSerials = $this->saleSerialData();
+            unset($saleSerials[(string)$cartItem['id']]);
+            $this->session->set(['saleSerials' => $saleSerials]);
+        }
+
         $this->cart->remove($id);
         return redirect()->to(site_url('Admin/Sales/create' . $getUrl));
+    }
+
+    /**
+     * @description Serial numbers + customer warranty selected for the current sale cart
+     * @return array
+     */
+    private function saleSerialData()
+    {
+        $saleSerials = $this->session->get('saleSerials');
+        return is_array($saleSerials) ? $saleSerials : array();
+    }
+
+    /**
+     * @description Drop the saved serial selection of a line when its quantity changed
+     * @param int|string $product_stock_relation_id
+     * @param float $qty
+     * @return void
+     */
+    private function resetSaleSerialsByQty($product_stock_relation_id, $qty)
+    {
+        $psrKey = (string)$product_stock_relation_id;
+        $saleSerials = $this->saleSerialData();
+
+        if (isset($saleSerials[$psrKey]) && (int)($saleSerials[$psrKey]['qty'] ?? 0) !== (int)round((float)$qty)) {
+            unset($saleSerials[$psrKey]);
+            $this->session->set(['saleSerials' => $saleSerials]);
+        }
+    }
+
+    /**
+     * @description Cart quantity of a stock line (0 when the line is not in the cart)
+     * @param int|string $product_stock_relation_id
+     * @return float
+     */
+    private function cartQtyByStockRelation($product_stock_relation_id)
+    {
+        foreach ($this->cart->contents() as $row) {
+            if (isset($row['id']) && (string)$row['id'] === (string)$product_stock_relation_id) {
+                return (float)$row['qty'];
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * @description In stock serial numbers of a cart line for the serial picker
+     * @return \CodeIgniter\HTTP\ResponseInterface
+     */
+    public function serial_list()
+    {
+        $shopId = $this->session->shopId;
+        $psrId = (int)$this->request->getPost('product_stock_relation_id');
+        $filter = trim((string)$this->request->getPost('filter'));
+
+        $stock = DB()->table('product_stock_relation')
+            ->where('product_stock_relation_id', $psrId)
+            ->where('sch_id', $shopId)
+            ->get()->getRow();
+
+        if (empty($stock)) {
+            return $this->response->setJSON(array('status' => 0, 'message' => 'Invalid product.'));
+        }
+
+        $product = DB()->table('products')
+            ->select('name, serial_status, warranty_status')
+            ->where('prod_id', $stock->product_id)
+            ->get()->getRow();
+
+        // Serial numbers reserved by other cart lines are not offered again.
+        $saleSerials = $this->saleSerialData();
+        $lockedIds = array();
+        foreach ($saleSerials as $key => $entry) {
+            if ((string)$key === (string)$psrId || empty($entry['ids'])) {
+                continue;
+            }
+            $lockedIds = array_merge($lockedIds, (array)$entry['ids']);
+        }
+
+        $availableQuery = DB()->table('product_serial')
+            ->where('product_stock_relation_id', $psrId)
+            ->where('status', 'in_stock');
+
+        if (!empty($lockedIds)) {
+            $availableQuery->whereNotIn('product_serial_id', $lockedIds);
+        }
+
+        $availableCount = $availableQuery->countAllResults();
+
+        $serialQuery = DB()->table('product_serial')
+            ->select('product_serial_id, serial_number, company_warranty_end_date')
+            ->where('product_stock_relation_id', $psrId)
+            ->where('status', 'in_stock');
+
+        if (!empty($lockedIds)) {
+            $serialQuery->whereNotIn('product_serial_id', $lockedIds);
+        }
+
+        if ($filter !== '') {
+            $serialQuery->groupStart()
+                ->like('serial_number', $filter)
+                ->orLike('company_warranty_end_date', $filter)
+                ->orLike('customer_warranty_end_date', $filter)
+                ->groupEnd();
+        }
+
+        $serials = $serialQuery->orderBy('product_serial_id', 'ASC')->get()->getResult();
+
+        $selected = $saleSerials[(string)$psrId] ?? array('ids' => array(), 'warranty' => '');
+
+        return $this->response->setJSON(array(
+            'status'          => 1,
+            'product_name'    => $product->name ?? '',
+            'serial_status'   => (isset($product->serial_status) && $product->serial_status == 1) ? '1' : '0',
+            'warranty_status' => (isset($product->warranty_status) && $product->warranty_status == 1) ? '1' : '0',
+            'qty'             => (int)round($this->cartQtyByStockRelation($psrId)),
+            'available'       => (int)$availableCount,
+            'serials'         => $serials,
+            'selected'        => array_values(array_map('intval', (array)($selected['ids'] ?? array()))),
+            'warranty'        => $selected['warranty'] ?? '',
+        ));
+    }
+
+    /**
+     * @description Store the serial numbers / customer warranty end date of a cart line
+     * @return \CodeIgniter\HTTP\ResponseInterface
+     */
+    public function save_serials()
+    {
+        $shopId = $this->session->shopId;
+        $psrId = (int)$this->request->getPost('product_stock_relation_id');
+        $warrantyDate = trim((string)$this->request->getPost('customer_warranty_end_date'));
+
+        $serialIds = $this->request->getPost('serials') ?? array();
+        $serialIds = is_array($serialIds) ? array_values(array_unique(array_map('intval', $serialIds))) : array();
+        $serialIds = array_values(array_filter($serialIds));
+
+        $fail = function ($message) {
+            return $this->response->setJSON(array('status' => 0, 'message' => $message));
+        };
+
+        $stock = DB()->table('product_stock_relation')
+            ->where('product_stock_relation_id', $psrId)
+            ->where('sch_id', $shopId)
+            ->get()->getRow();
+
+        if (empty($stock)) {
+            return $fail('Invalid product.');
+        }
+
+        $product = DB()->table('products')
+            ->select('name, serial_status, warranty_status')
+            ->where('prod_id', $stock->product_id)
+            ->get()->getRow();
+
+        $serialOn = (isset($product->serial_status) && $product->serial_status == 1);
+        $warrantyOn = (isset($product->warranty_status) && $product->warranty_status == 1);
+
+        $cartQty = $this->cartQtyByStockRelation($psrId);
+        if ($cartQty <= 0) {
+            return $fail('This product is not in the cart list.');
+        }
+        $needQty = (int)round($cartQty);
+
+        if ($serialOn) {
+            if (count($serialIds) !== $needQty) {
+                return $fail('Please select exactly ' . $needQty . ' serial number(s) for the quantity ' . $needQty . '.');
+            }
+
+            // Every selected serial must be an in stock serial of this stock line.
+            $foundIds = DB()->table('product_serial')
+                ->select('product_serial_id')
+                ->whereIn('product_serial_id', $serialIds)
+                ->where('product_stock_relation_id', $psrId)
+                ->where('status', 'in_stock')
+                ->get()
+                ->getResultArray();
+            $foundIds = array_column($foundIds, 'product_serial_id');
+
+            if (count($foundIds) !== count($serialIds)) {
+                return $fail('One or more serial numbers are not available in stock.');
+            }
+
+            // No serial may already be selected on another cart line.
+            foreach ($this->saleSerialData() as $key => $entry) {
+                if ((string)$key === (string)$psrId || empty($entry['ids'])) {
+                    continue;
+                }
+                if (array_intersect($serialIds, array_map('intval', (array)$entry['ids']))) {
+                    return $fail('A selected serial number is already used by another product line.');
+                }
+            }
+        } else {
+            $serialIds = array();
+        }
+
+        if ($warrantyOn && $serialOn && $warrantyDate === '') {
+            return $fail('Customer Warranty End Date is required for this product.');
+        }
+        if ($warrantyDate !== '' && strtotime($warrantyDate) === false) {
+            return $fail('Please enter a valid Customer Warranty End Date.');
+        }
+        $warrantyDate = $warrantyDate !== '' ? date('Y-m-d', strtotime($warrantyDate)) : '';
+
+        $serialNumbers = array();
+        if (!empty($serialIds)) {
+            $serialRows = DB()->table('product_serial')
+                ->select('serial_number')
+                ->whereIn('product_serial_id', $serialIds)
+                ->get()
+                ->getResultArray();
+            $serialNumbers = array_column($serialRows, 'serial_number');
+        }
+
+        $saleSerials = $this->saleSerialData();
+        $saleSerials[(string)$psrId] = array(
+            'ids'            => $serialIds,
+            'serial_numbers' => $serialNumbers,
+            'warranty'       => $warrantyDate,
+            'qty'            => $needQty,
+        );
+        $this->session->set(['saleSerials' => $saleSerials]);
+
+        return $this->response->setJSON(array(
+            'status'          => 1,
+            'message'         => 'Serial numbers saved.',
+            'serial_numbers'  => $serialNumbers,
+            'warranty'        => $warrantyDate,
+            'qty'             => $needQty,
+        ));
     }
 
     /**
@@ -387,6 +712,68 @@ class Sales extends BaseController
             $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">Please enter valid amount!<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
             return redirect()->to(site_url('Admin/Sales/create'));
         }
+
+        // -------------------- Serial & Warranty Validation --------------------
+        // Selected serial numbers live in the session (picked on the cart list).
+        $saleSerials = $this->saleSerialData();
+        $claimedIds = array();
+
+        for ($i = 0; $i < $number; $i++) {
+            $product = DB()->table('products')
+                ->select('name, serial_status, warranty_status')
+                ->where('prod_id', $proId[$i])
+                ->where('sch_id', $shopId)
+                ->get()->getRow();
+
+            if (empty($product)) {
+                continue;
+            }
+
+            $serialOn = ($product->serial_status == 1);
+            $warrantyOn = ($product->warranty_status == 1);
+
+            if (!$serialOn) {
+                continue;
+            }
+
+            $psrKey = (string)$product_stock_relation_id[$i];
+            $needQty = (int)round((float)$quantity[$i]);
+            $selectedIds = array_map('intval', (array)($saleSerials[$psrKey]['ids'] ?? array()));
+            $warrantyEnd = trim((string)($saleSerials[$psrKey]['warranty'] ?? ''));
+
+            if (count($selectedIds) !== $needQty) {
+                $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">' . $product->name . ': ' . $needQty . ' serial number(s) must be added (quantity is ' . $needQty . ').<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+                return redirect()->to(site_url('Admin/Sales/create'));
+            }
+
+            if (count(array_unique($selectedIds)) !== count($selectedIds)) {
+                $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">' . $product->name . ': duplicate serial numbers are not allowed.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+                return redirect()->to(site_url('Admin/Sales/create'));
+            }
+
+            if (!empty(array_intersect($selectedIds, $claimedIds))) {
+                $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">' . $product->name . ': the same serial number cannot be sold twice in one sale.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+                return redirect()->to(site_url('Admin/Sales/create'));
+            }
+            $claimedIds = array_merge($claimedIds, $selectedIds);
+
+            $validCount = DB()->table('product_serial')
+                ->whereIn('product_serial_id', $selectedIds)
+                ->where('product_stock_relation_id', $product_stock_relation_id[$i])
+                ->where('status', 'in_stock')
+                ->countAllResults();
+
+            if ($validCount !== count($selectedIds)) {
+                $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">' . $product->name . ': one or more serial numbers are no longer in stock.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+                return redirect()->to(site_url('Admin/Sales/create'));
+            }
+
+            if ($warrantyOn && $warrantyEnd === '') {
+                $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">' . $product->name . ': Customer Warranty End Date is required.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+                return redirect()->to(site_url('Admin/Sales/create'));
+            }
+        }
+        // -------------------- Serial & Warranty Validation (end) --------------------
 
         // -------------------- Calculations --------------------
         $discountAmount = $amount - $finalAmount;
@@ -536,6 +923,25 @@ class Sales extends BaseController
             DB()->table('product_stock_relation')
                 ->where('product_stock_relation_id', $product_stock_relation_id[$i])
                 ->update(['quantity' => $newQty]);
+
+            // ---- Mark the selected serial numbers as sold (start) ----
+            $psrKey = (string)$product_stock_relation_id[$i];
+            if (!empty($saleSerials[$psrKey]['ids'])) {
+                $warrantyEnd = trim((string)($saleSerials[$psrKey]['warranty'] ?? ''));
+
+                DB()->table('product_serial')
+                    ->whereIn('product_serial_id', $saleSerials[$psrKey]['ids'])
+                    ->update([
+                        'status'                     => 'sold',
+                        'customer_warranty_end_date' => $warrantyEnd !== '' ? $warrantyEnd : null,
+                        'invoice_id'                 => $invoiceId,
+                        'customer_id'                => !empty($customerId) ? $customerId : null,
+                        'sold_date'                  => $date,
+                        'updatedBy'                  => $userId,
+                        'updatedDtm'                 => date('Y-m-d H:i:s'),
+                    ]);
+            }
+            // ---- Mark the selected serial numbers as sold (end) ----
 
             $this->transactionLog->insert_log_data('products', $proId[$i], '', $quantity[$i], '', '', $invoiceId, '', 'quantity');
         }
@@ -813,6 +1219,8 @@ class Sales extends BaseController
         DB()->transComplete();
 
         $this->cart->destroy();
+        $this->session->remove('saleSerials');
+
         return redirect()->to(site_url('Admin/Invoice/view/' . $invoiceId));
     }
 
@@ -1554,26 +1962,246 @@ class Sales extends BaseController
     public function customerBalance()
     {
         $customerId = $this->request->getPost('customer_id');
-        $balance = get_data_by_id('balance', 'customers', 'customer_id', $customerId);
+        $balance      = get_data_by_id('balance', 'customers', 'customer_id', $customerId);
+        $balanceLimit = get_data_by_id('balance_limit', 'customers', 'customer_id', $customerId);
         return $this->response->setJSON([
-            'balance' => (float) ($balance ?? 0)
+            'balance'       => (float) ($balance ?? 0),
+            'balance_limit' => (float) ($balanceLimit ?? 0)
         ]);
     }
 
     public function salesEdit()
     {
+        $shopId = $this->session->shopId;
         $salesId = $this->request->getPost('id');
 
         $salesTable = DB()->table('sales');
-        $data['sales'] = $salesTable->where('sales_id', $salesId)->get()->getRow();
+        $data['sales'] = $salesTable->where('sales_id', $salesId)->where('sch_id', $shopId)->get()->getRow();
+
+        if (empty($data['sales'])) {
+            echo '<div class="alert alert-danger alert-dismissible" role="alert">Sale not found.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+            return;
+        }
 
         $invoiceTable = DB()->table('invoice');
-        $data['invoice'] = $invoiceTable->where('invoice_id', $data['sales']->invoice_id)->get()->getRow();
+        $data['invoice'] = $invoiceTable->where('invoice_id', $data['sales']->invoice_id)->where('sch_id', $shopId)->get()->getRow();
 
         $invoiceItemTable = DB()->table('invoice_item');
         $data['invoiceItem'] = $invoiceItemTable->where('invoice_id', $data['sales']->invoice_id)->get()->getResult();
 
+        // Serial / warranty tracking data for the product cards.
+        $data['serialMap'] = $this->saleEditSerialMap($data['invoiceItem'], $shopId);
+
+        // Currency symbol prefix for the live JS totals on the cards.
+        $curBefore = DB()->table('gen_settings')
+            ->where('sch_id', $shopId)
+            ->where('label', 'currency_before_symbol')
+            ->get()->getRow();
+        $data['editCurrencySymbol'] = (!empty($curBefore) && !empty($curBefore->value))
+            ? trim((string)$curBefore->value) . ' ' : '৳ ';
+
         echo view('Admin/Sales/edit', $data);
+    }
+
+    /**
+     * @description Serial tracking flags + already sold serial numbers of the invoice lines
+     * @param array $invoiceItem
+     * @param int|string $shopId
+     * @return array indexed by invoice_item key
+     */
+    private function saleEditSerialMap($invoiceItem, $shopId)
+    {
+        $map = array();
+        if (empty($invoiceItem)) {
+            return $map;
+        }
+
+        $psrIds = array();
+        foreach ($invoiceItem as $item) {
+            if (!empty($item->product_stock_relation_id)) {
+                $psrIds[] = (int)$item->product_stock_relation_id;
+            }
+        }
+        $psrIds = array_values(array_unique($psrIds));
+
+        // Tracking flags come from the stock row of the sold product.
+        $flags = array();
+        if (!empty($psrIds)) {
+            $rows = DB()->table('product_stock_relation')
+                ->select('product_stock_relation_id, products.serial_status, products.warranty_status')
+                ->join('products', 'products.prod_id = product_stock_relation.product_id')
+                ->whereIn('product_stock_relation.product_stock_relation_id', $psrIds)
+                ->where('product_stock_relation.sch_id', $shopId)
+                ->get()
+                ->getResultArray();
+
+            foreach ($rows as $row) {
+                $flags[(string)$row['product_stock_relation_id']] = $row;
+            }
+        }
+
+        // Serial numbers that are already sold on this invoice.
+        $invoiceId = $invoiceItem[0]->invoice_id ?? 0;
+        $assigned = array();
+        if (!empty($invoiceId) && !empty($psrIds)) {
+            $rows = DB()->table('product_serial')
+                ->select('product_serial_id, product_stock_relation_id, serial_number, company_warranty_end_date, customer_warranty_end_date')
+                ->whereIn('product_stock_relation_id', $psrIds)
+                ->where('invoice_id', $invoiceId)
+                ->whereIn('status', array('sold', 'returned'))
+                ->orderBy('product_serial_id', 'ASC')
+                ->get()
+                ->getResultArray();
+
+            foreach ($rows as $row) {
+                $assigned[(string)$row['product_stock_relation_id']][] = $row;
+            }
+        }
+
+        foreach ($invoiceItem as $key => $item) {
+            $psrKey = (string)($item->product_stock_relation_id ?? '');
+            $serialOn = (isset($flags[$psrKey]) && $flags[$psrKey]['serial_status'] == 1);
+            $warrantyOn = (isset($flags[$psrKey]) && $flags[$psrKey]['warranty_status'] == 1);
+
+            $serials = $assigned[$psrKey] ?? array();
+
+            $warranty = '';
+            foreach ($serials as $serial) {
+                if (!empty($serial['customer_warranty_end_date'])) {
+                    $warranty = $serial['customer_warranty_end_date'];
+                    break;
+                }
+            }
+
+            $inStockCount = 0;
+            if ($serialOn) {
+                $inStockCount = DB()->table('product_serial')
+                    ->where('product_stock_relation_id', $psrKey)
+                    ->where('status', 'in_stock')
+                    ->countAllResults();
+            }
+
+            $map[$item->inv_item ?? $key] = array(
+                'serial_status'   => $serialOn,
+                'warranty_status' => $warrantyOn,
+                'serials'         => $serials,
+                'warranty'        => $warranty,
+                'available'       => $inStockCount,
+            );
+        }
+
+        return $map;
+    }
+
+    /**
+     * @description Serial numbers offered on the sale edit screen (in stock + this invoice's own)
+     * @return \CodeIgniter\HTTP\ResponseInterface
+     */
+    public function edit_serial_list()
+    {
+        $shopId = $this->session->shopId;
+        $psrId = (int)$this->request->getPost('product_stock_relation_id');
+        $invoiceId = (int)$this->request->getPost('invoice_id');
+        $filter = trim((string)$this->request->getPost('filter'));
+        $needQty = max(0, (int)round((float)$this->request->getPost('qty')));
+
+        $stock = DB()->table('product_stock_relation')
+            ->where('product_stock_relation_id', $psrId)
+            ->where('sch_id', $shopId)
+            ->get()->getRow();
+
+        if (empty($stock)) {
+            return $this->response->setJSON(array('status' => 0, 'message' => 'Invalid product.'));
+        }
+
+        $product = DB()->table('products')
+            ->select('name, serial_status, warranty_status')
+            ->where('prod_id', $stock->product_id)
+            ->get()->getRow();
+
+        $serialOn = (isset($product->serial_status) && $product->serial_status == 1);
+        $warrantyOn = (isset($product->warranty_status) && $product->warranty_status == 1);
+
+        // Serial numbers claimed by the other lines of the same invoice.
+        $claimedIds = array();
+        $postedIds = $this->request->getPost('current_serials');
+        if (is_array($postedIds)) {
+            foreach ($postedIds as $linePsr => $lineIds) {
+                if ((string)$linePsr === (string)$psrId || empty($lineIds)) {
+                    continue;
+                }
+                $claimedIds = array_merge($claimedIds, array_map('intval', (array)$lineIds));
+            }
+        }
+
+        $serialQuery = function () use ($psrId, $invoiceId, $claimedIds, $filter) {
+            $query = DB()->table('product_serial')
+                ->where('product_stock_relation_id', $psrId);
+
+            $query->groupStart();
+            $query->where('status', 'in_stock');
+            if (!empty($invoiceId)) {
+                $query->orGroupStart()
+                    ->whereIn('status', array('sold', 'returned'))
+                    ->where('invoice_id', $invoiceId)
+                    ->groupEnd();
+            }
+            $query->groupEnd();
+
+            if (!empty($claimedIds)) {
+                $query->whereNotIn('product_serial_id', $claimedIds);
+            }
+
+            if ($filter !== '') {
+                $query->groupStart()
+                    ->like('serial_number', $filter)
+                    ->orLike('company_warranty_end_date', $filter)
+                    ->orLike('customer_warranty_end_date', $filter)
+                    ->groupEnd();
+            }
+
+            return $query;
+        };
+
+        $availableCount = $serialQuery()->countAllResults();
+
+        $serials = $serialQuery()
+            ->select('product_serial_id, serial_number, company_warranty_end_date, customer_warranty_end_date, status')
+            ->orderBy('product_serial_id', 'ASC')
+            ->get()->getResult();
+
+        // Warranty date already stored on this stock line of the invoice.
+        $warranty = '';
+        if (!empty($invoiceId)) {
+            $warrantyRow = DB()->table('product_serial')
+                ->select('customer_warranty_end_date')
+                ->where('product_stock_relation_id', $psrId)
+                ->where('invoice_id', $invoiceId)
+                ->groupStart()
+                ->where('customer_warranty_end_date IS NOT NULL')
+                ->where('customer_warranty_end_date !=', '')
+                ->groupEnd()
+                ->orderBy('product_serial_id', 'ASC')
+                ->get()->getRow();
+
+            if (!empty($warrantyRow)) {
+                $warranty = (string)$warrantyRow->customer_warranty_end_date;
+            }
+        }
+        if ($warranty === '') {
+            $warranty = trim((string)$this->request->getPost('customer_warranty_end_date'));
+        }
+
+        return $this->response->setJSON(array(
+            'status'          => 1,
+            'product_name'    => $product->name ?? '',
+            'serial_status'   => $serialOn ? '1' : '0',
+            'warranty_status' => $warrantyOn ? '1' : '0',
+            'qty'             => $needQty,
+            'available'       => (int)$availableCount,
+            'serials'         => $serials,
+            'warranty'        => $warranty,
+        ));
     }
 
     public function salesEdiAction()
@@ -1628,6 +2256,41 @@ class Sales extends BaseController
             return redirect()->to(site_url('Admin/Sales'));
         }
 
+        // The invoice must belong to the logged in shop.
+        $editInvoice = DB()->table('invoice')
+            ->where('invoice_id', $invoiceId)
+            ->where('sch_id', $shopId)
+            ->get()->getRow();
+
+        if (empty($editInvoice)) {
+            $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">Invalid invoice!<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+            return redirect()->to(site_url('Admin/Sales'));
+        }
+
+        // Serial numbers picked on the product cards, keyed by stock line.
+        $invoiceSerials        = $this->request->getPost('sale_serials') ?? array();
+        $invoiceSerialWarranty = $this->request->getPost('sale_serial_warranty') ?? array();
+
+        $invoiceSerials        = is_array($invoiceSerials) ? $invoiceSerials : array();
+        $invoiceSerialWarranty = is_array($invoiceSerialWarranty) ? $invoiceSerialWarranty : array();
+
+        $cleanSerials = array();
+        foreach ($invoiceSerials as $psrKey => $lineIds) {
+            $lineIds = is_array($lineIds) ? $lineIds : array();
+            $lineIds = array_values(array_filter(array_map('intval', $lineIds)));
+            $cleanSerials[(string)$psrKey] = $lineIds;
+        }
+        $invoiceSerials = $cleanSerials;
+
+        // Sold date of the sale (invoice has no date column).
+        $serialEditDate = DB()->table('sales')
+            ->select('date')
+            ->where('invoice_id', $invoiceId)
+            ->where('sch_id', $shopId)
+            ->get()->getRow();
+
+        $serialEditDate = !empty($serialEditDate->date) ? $serialEditDate->date : date('Y-m-d H:i:s');
+
         $number = count($proId);
 
         if (
@@ -1654,6 +2317,96 @@ class Sales extends BaseController
             $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">Please enter valid amount!<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
             return redirect()->to(site_url('Admin/Sales'));
         }
+
+        // -------------------- Serial & Warranty Validation --------------------
+        // Serial numbers arrive with the form (already sold ones are pre selected).
+        // $soldOnInvoice = every serial currently attached to this invoice, per stock line.
+        $soldOnInvoice = array();
+        $linePsrIds    = array();
+        foreach ($product_stock_relation_id as $psrLine) {
+            if (!empty($psrLine)) {
+                $linePsrIds[] = (int)$psrLine;
+            }
+        }
+        $linePsrIds = array_values(array_unique($linePsrIds));
+
+        if (!empty($linePsrIds)) {
+            $assignedRows = DB()->table('product_serial')
+                ->select('product_serial_id, product_stock_relation_id')
+                ->whereIn('product_stock_relation_id', $linePsrIds)
+                ->where('invoice_id', $invoiceId)
+                ->whereIn('status', array('sold', 'returned'))
+                ->get()
+                ->getResultArray();
+
+            foreach ($assignedRows as $row) {
+                $soldOnInvoice[(string)$row['product_stock_relation_id']][] = (int)$row['product_serial_id'];
+            }
+        }
+
+        $keepWarranty = array();
+        $claimedList  = array();
+
+        for ($i = 0; $i < $number; $i++) {
+            $product = DB()->table('products')
+                ->select('name, serial_status, warranty_status')
+                ->where('prod_id', $proId[$i])
+                ->get()->getRow();
+
+            if (empty($product) || $product->serial_status != 1) {
+                continue;
+            }
+
+            $psrKey    = (string)$product_stock_relation_id[$i];
+            $needQty   = (int)round((float)$quantity[$i]);
+            $selected  = $invoiceSerials[$psrKey] ?? array();
+            $warrantyEnd = trim((string)($invoiceSerialWarranty[$psrKey] ?? ''));
+            $ownIds    = $soldOnInvoice[$psrKey] ?? array();
+
+            if (count($selected) !== $needQty) {
+                $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">' . $product->name . ': ' . $needQty . ' serial number(s) must be added (quantity is ' . $needQty . ').<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+                return redirect()->to(site_url('Admin/Sales'));
+            }
+
+            if (count(array_unique($selected)) !== count($selected)) {
+                $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">' . $product->name . ': duplicate serial numbers are not allowed.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+                return redirect()->to(site_url('Admin/Sales'));
+            }
+
+            if (!empty(array_intersect($selected, $claimedList))) {
+                $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">' . $product->name . ': the same serial number cannot be sold twice in one sale.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+                return redirect()->to(site_url('Admin/Sales'));
+            }
+            $claimedList = array_merge($claimedList, $selected);
+
+            // A serial must be in stock, or already sold on this very invoice.
+            $validCount = DB()->table('product_serial')
+                ->whereIn('product_serial_id', $selected)
+                ->where('product_stock_relation_id', $product_stock_relation_id[$i])
+                ->groupStart()
+                ->where('status', 'in_stock')
+                ->orGroupStart()
+                ->whereIn('status', array('sold', 'returned'))
+                ->where('invoice_id', $invoiceId)
+                ->groupEnd()
+                ->groupEnd()
+                ->countAllResults();
+
+            if ($validCount !== count($selected)) {
+                $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">' . $product->name . ': one or more serial numbers are not available.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+                return redirect()->to(site_url('Admin/Sales'));
+            }
+
+            if ($product->warranty_status == 1 && $warrantyEnd === '') {
+                $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">' . $product->name . ': Customer Warranty End Date is required.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+                return redirect()->to(site_url('Admin/Sales'));
+            }
+
+            if ($warrantyEnd === '' && !empty($ownIds)) {
+                $keepWarranty[$psrKey] = true;
+            }
+        }
+        // -------------------- Serial & Warranty Validation (end) --------------------
 
         $discountAmount = $amount - $finalAmount;
         $alldiscount    = $discountAmount + $singDiscount;
@@ -1683,6 +2436,81 @@ class Sales extends BaseController
         }
 
         DB()->table('invoice')->where('invoice_id', $invoiceId)->update($invData);
+
+        // -------------------- 1b. Sync Serial Numbers --------------------
+        // Only when the form carries serial lines, so older posts stay untouched.
+        if (!empty($invoiceSerials)) {
+            for ($i = 0; $i < $number; $i++) {
+                $psrKey = (string)$product_stock_relation_id[$i];
+
+                $product = DB()->table('products')
+                    ->select('serial_status, warranty_status')
+                    ->where('prod_id', $proId[$i])
+                    ->get()->getRow();
+
+                if (empty($product) || $product->serial_status != 1) {
+                    continue;
+                }
+
+                $selected = $invoiceSerials[$psrKey] ?? array();
+                $ownIds   = $soldOnInvoice[$psrKey] ?? array();
+                $released = array_values(array_diff($ownIds, $selected));
+                $warrantyEnd = trim((string)($invoiceSerialWarranty[$psrKey] ?? ''));
+
+                // Serial numbers dropped from the invoice go back to stock.
+                if (!empty($released)) {
+                    DB()->table('product_serial')
+                        ->whereIn('product_serial_id', $released)
+                        ->where('invoice_id', $invoiceId)
+                        ->update([
+                            'status'                     => 'in_stock',
+                            'customer_warranty_end_date' => null,
+                            'invoice_id'                 => null,
+                            'customer_id'                => null,
+                            'sold_date'                  => null,
+                            'updatedBy'                  => $userId,
+                            'updatedDtm'                 => date('Y-m-d H:i:s'),
+                        ]);
+                }
+
+                if (empty($selected)) {
+                    continue;
+                }
+
+                // Warranty date is kept when the picker left it empty.
+                if ($warrantyEnd === '' && !empty($keepWarranty[$psrKey])) {
+                    $warrantyRow = DB()->table('product_serial')
+                        ->select('customer_warranty_end_date')
+                        ->whereIn('product_serial_id', $selected)
+                        ->groupStart()
+                        ->where('customer_warranty_end_date IS NOT NULL')
+                        ->where('customer_warranty_end_date !=', '')
+                        ->groupEnd()
+                        ->get()->getRow();
+
+                    if (!empty($warrantyRow)) {
+                        $warrantyEnd = (string)$warrantyRow->customer_warranty_end_date;
+                    }
+                }
+
+                $soldData = [
+                    'status'      => 'sold',
+                    'invoice_id'  => $invoiceId,
+                    'customer_id' => !empty($customerId) ? $customerId : null,
+                    'sold_date'   => $serialEditDate,
+                    'updatedBy'   => $userId,
+                    'updatedDtm'  => date('Y-m-d H:i:s'),
+                ];
+                if ($product->warranty_status == 1 && $warrantyEnd !== '') {
+                    $soldData['customer_warranty_end_date'] = $warrantyEnd;
+                }
+
+                DB()->table('product_serial')
+                    ->whereIn('product_serial_id', $selected)
+                    ->update($soldData);
+            }
+        }
+        // -------------------- 1b. Sync Serial Numbers (end) --------------------
 
         // -------------------- 2. Discount Ledger --------------------
         if ($alldiscount > 0) {

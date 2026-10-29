@@ -63,6 +63,7 @@
                     <tr>
                         <th>No</th>
                         <th>Product</th>
+                        <th>Serial Numbers</th>
                         <th>Price</th>
                         <th>Qty</th>
                         <th>Total</th>
@@ -81,6 +82,22 @@
                                 $productName =  get_data_by_id('name','products','prod_id',$row->prod_id);
 
                                 echo $productName.'<br> <small>('.$category.' > '.$subCategory .')</small>';
+                                ?></td>
+                            <td><?php
+                                $returnedSerials = get_return_purchase_item_serials($row->rtn_purchase_id, $row->prod_id);
+                                if (empty($returnedSerials)) {
+                                    echo '-';
+                                } else {
+                                    foreach ($returnedSerials as $serial) {
+                                        echo esc($serial['serial_number']);
+                                        if (!empty($serial['customer_warranty_end_date'])) {
+                                            echo ' <small class="text-muted">(' . esc($serial['customer_warranty_end_date']) . ')</small>';
+                                        } elseif (!empty($serial['company_warranty_end_date'])) {
+                                            echo ' <small class="text-muted">(' . esc($serial['company_warranty_end_date']) . ')</small>';
+                                        }
+                                        echo '<br>';
+                                    }
+                                }
                                 ?></td>
                             <td><?php echo $row->price;?></td>
                             <td><?php echo $row->quantity;?></td>

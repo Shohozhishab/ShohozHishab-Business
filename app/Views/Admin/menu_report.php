@@ -37,3 +37,5 @@ if (($uri == 'Purchase_report_ajax')  && ($uri2 == 'search') ) {$backinv = 'disp
 <a href="#" onclick="showData('<?php echo site_url('/Admin/Acquisition_due_ajax') ?>','/Admin/Acquisition_due')" class="btn btn-default" >Accounts Receivable</a>
 
 <a href="#" onclick="showData('<?php echo site_url('/Admin/Owe_amount_ajax') ?>','/Admin/Owe_amount')" class="btn btn-default">Accounts Payable</a>
+
+<a href="#" onclick="showData('<?php echo site_url('/Admin/Warranty_short_list_ajax') ?>','/Admin/Warranty_short_list')" class="btn btn-default">Warranty Short List</a>

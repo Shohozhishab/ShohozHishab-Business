@@ -48,8 +48,17 @@
                     <div class="box-header">
                         <div class="row">
                             <div class="col-lg-12">
-                                <h3 class="box-title">Sale Report List</h3>
-                                <span class="pull-right"><b style="color: green;">Total Profit: <?php echo showWithCurrencySymbol($saleprofit)?></b></span>
+                                <div class="col-md-4">
+                                    <h3 class="box-title">Sale Report List </h3>
+                                </div>
+                                <div class="col-md-4 text-center">
+                                    <?php if (!empty($st_date) && !empty($en_date)){ ?>
+                                    <small><b>Shows:</b> <?= $st_date;?> to <?= $en_date;?></small>
+                                    <?php }else{echo '<small><b>Shows:</b> All Sales</small>';} ?>
+                                </div>
+                                <div class="col-md-4">
+                                    <span class="pull-right"><b style="color: green;">Total Profit: <?php echo showWithCurrencySymbol($saleprofit)?></b></span>
+                                </div>
                             </div>
                             <?php if (isset($filter) && $filter == 1){ ?>
                             <div class="col-lg-12" style="margin-top: 20px;">

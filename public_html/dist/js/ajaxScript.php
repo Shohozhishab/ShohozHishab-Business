@@ -1037,7 +1037,11 @@
       },
       success: function(data) {
         $("#loading-image").hide();
-        $('#balance').html('Balance: ৳ ' + data.balance + '/-');
+        var balance = parseFloat(data.balance) || 0;
+        var balanceLimit = parseFloat(data.balance_limit) || 0;
+        $('#balance').html('Balance: ৳ ' + balance + '/- | Limit: ৳ ' + balanceLimit + '/-');
+        $('#balance').data('cus-balance', balance);
+        $('#balance').data('cus-limit', balanceLimit);
       }
     });
   }
@@ -3694,36 +3698,147 @@
 
   });
 
-  function downloadPDF(dataId, prefix) {
-    // Show hidden div before generating PDF
-    let element = document.getElementById(dataId);
-    element.style.display = 'block';
-    let opt = {
-      margin: [10, 0, 0, 0], // top, left, bottom, right
-      filename: 'ledger-' + prefix + '.pdf',
-      image: {
-        type: 'jpeg',
-        quality: 1
-      },
-      html2canvas: {
-        scale: 2,
-        useCORS: true,
-        scrollY: 0
-      },
-      jsPDF: {
-        unit: 'mm',
-        format: 'a4',
-        orientation: 'portrait'
-      },
-      pagebreak: {
-        mode: ['avoid-all', 'css', 'legacy']
+  // Build the html2pdf options for an element (shared by download & share).
+  // Thermal/continuous templates carry a width in mm, eg. <div id="x" data-pdf-width="58">
+  function buildPDFOptions(element, prefix, filename) {
+      let opt = {
+          margin: [10, 0, 0, 0],
+          filename: filename ? filename : ('ledger-'+prefix+'.pdf'),
+          image: { type: 'jpeg', quality: 1 },
+          html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['css'] }
+      };
+      if (element.dataset.pdfWidth) {
+          let w = parseFloat(element.dataset.pdfWidth);
+          opt.margin = [0, 0, 0, 0];
+          opt.jsPDF = { unit: 'mm', format: [w, element.offsetHeight * 0.264583], orientation: 'portrait' };
+          opt.pagebreak = { mode: ['avoid-all', 'css', 'legacy'] };
       }
-    };
+      return opt;
+  }
 
-    html2pdf().set(opt).from(element).save().then(() => {
-      // Hide again after download
-      element.style.display = 'none';
-    });
+  function downloadPDF(dataId, prefix, filename) {
+      let element = document.getElementById(dataId);
+      let wasHidden = (getComputedStyle(element).display === 'none');
+      element.style.display = 'block';
+      let opt = buildPDFOptions(element, prefix, filename);
+      let restore = () => { if (wasHidden) element.style.display = 'none'; };
+      html2pdf().set(opt).from(element).save().then(restore).catch(restore);
+  }
+
+  function sharePDF(dataId, prefix, filename) {
+      let element = document.getElementById(dataId);
+      let wasHidden = (getComputedStyle(element).display === 'none');
+      element.style.display = 'block';
+      let opt = buildPDFOptions(element, prefix, filename);
+      let restore = () => { if (wasHidden) element.style.display = 'none'; };
+      html2pdf().set(opt).from(element).outputPdf('blob').then(function (blob) {
+          restore();
+          let fileName = opt.filename || (prefix + '.pdf');
+          let file = new File([blob], fileName, { type: 'application/pdf' });
+          if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
+              navigator.share({ title: fileName, text: 'Invoice ' + fileName, files: [file] })
+                  .catch(function (err) {
+                      if (!err || err.name !== 'AbortError') { pdfShareFallback(blob, fileName); }
+                  });
+          } else { pdfShareFallback(blob, fileName); }
+      }).catch(restore);
+  }
+
+  function pdfShareFallback(blob, fileName) {
+      let url = URL.createObjectURL(blob);
+      let a = document.createElement('a');
+      a.href = url; a.download = fileName;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      let text = encodeURIComponent('Invoice ' + fileName + ' — the PDF has been downloaded, please attach it to this chat.');
+      let choice = window.confirm(
+          'Your browser cannot share the PDF file directly to an app.\n\n' +
+          'The PDF has been downloaded.\n\n' +
+          'Press OK to open WhatsApp, or Cancel to open Facebook Messenger.\n' +
+          '(Then attach the downloaded PDF in the chat.)');
+      if (choice) { window.open('https://wa.me/?text=' + text, '_blank'); }
+      else { window.open('https://www.messenger.com/', '_blank'); }
+  }
+
+  function sharePDFTo(target, dataId, prefix, filename) {
+      let element = document.getElementById(dataId);
+      let wasHidden = (getComputedStyle(element).display === 'none');
+      element.style.display = 'block';
+      let opt = buildPDFOptions(element, prefix, filename);
+      let restore = () => { if (wasHidden) element.style.display = 'none'; };
+      html2pdf().set(opt).from(element).outputPdf('blob').then(function (blob) {
+          restore();
+          let fileName = opt.filename || (prefix + '.pdf');
+          let file = new File([blob], fileName, { type: 'application/pdf' });
+          if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
+              navigator.share({ title: fileName, text: 'Invoice ' + fileName, files: [file] })
+                  .catch(function (err) {
+                      if (!err || err.name !== 'AbortError') { openChatWithDownload(blob, fileName, target); }
+                  });
+          } else { openChatWithDownload(blob, fileName, target); }
+      }).catch(restore);
+  }
+
+  function openChatWithDownload(blob, fileName, target) {
+      let url = URL.createObjectURL(blob);
+      let a = document.createElement('a');
+      a.href = url; a.download = fileName;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      let text = encodeURIComponent('Invoice ' + fileName + ' — the PDF has been downloaded, please attach it to this chat.');
+      if (target === 'messenger') { window.open('https://www.messenger.com/', '_blank'); }
+      else { window.open('https://wa.me/?text=' + text, '_blank'); }
+  }
+
+  let _pdfShareBlob = null;
+  let _pdfShareFileName = null;
+
+  function sharePDFChoose(dataId, prefix, filename) {
+      let element = document.getElementById(dataId);
+      let wasHidden = (getComputedStyle(element).display === 'none');
+      element.style.display = 'block';
+      let opt = buildPDFOptions(element, prefix, filename);
+      let restore = () => { if (wasHidden) element.style.display = 'none'; };
+      html2pdf().set(opt).from(element).outputPdf('blob').then(function (blob) {
+          restore();
+          _pdfShareBlob = blob;
+          _pdfShareFileName = opt.filename || (prefix + '.pdf');
+          showPdfShareModal();
+      }).catch(restore);
+  }
+
+  function showPdfShareModal() {
+      let modal = document.getElementById('pdfShareModal');
+      if (!modal) {
+          modal = document.createElement('div');
+          modal.id = 'pdfShareModal';
+          modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.5);';
+          modal.innerHTML =
+              '<div style="background:#fff;border-radius:8px;padding:20px 24px;min-width:280px;max-width:90%;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.3);">' +
+              '<h4 style="margin:0 0 6px;">Send Invoice</h4>' +
+              '<p style="margin:0 0 16px;color:#555;font-size:13px;">Choose where to send the PDF invoice</p>' +
+              '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">' +
+              '<button type="button" onclick="pdfShareSend(\'whatsapp\')" style="background:#25D366;color:#fff;border:none;padding:10px 18px;border-radius:6px;cursor:pointer;font-size:14px;"><i class="fa fa-whatsapp"></i>&nbsp; WhatsApp</button>' +
+              '<button type="button" onclick="pdfShareSend(\'messenger\')" style="background:#0084FF;color:#fff;border:none;padding:10px 18px;border-radius:6px;cursor:pointer;font-size:14px;"><i class="fa fa-facebook"></i>&nbsp; Facebook</button>' +
+              '</div>' +
+              '<div style="margin-top:12px;"><button type="button" onclick="hidePdfShareModal()" style="background:none;border:none;color:#999;cursor:pointer;font-size:13px;">Cancel</button></div>' +
+              '</div>';
+          document.body.appendChild(modal);
+      }
+      modal.style.display = 'flex';
+  }
+
+  function hidePdfShareModal() {
+      let modal = document.getElementById('pdfShareModal');
+      if (modal) modal.style.display = 'none';
+  }
+
+  function pdfShareSend(target) {
+      hidePdfShareModal();
+      if (!_pdfShareBlob) return;
+      openChatWithDownload(_pdfShareBlob, _pdfShareFileName, target);
   }
 
   function downloadCSV(dataId, prefix) {
@@ -4114,6 +4229,7 @@
               $('#cus').val('').trigger('change');
           }
           $('#balance').html('');
+          $('#balance').removeData('cus-balance').removeData('cus-limit');
       }
   }
 
@@ -4219,5 +4335,181 @@
       $('#salePrice_' + printId).val(basePrice.toFixed(8));
   }
 
+  function notificationEscape(value) {
+      return $('<i>').text(value == null ? '' : String(value)).html();
+  }
 
+  // Edit targets reuse each module's note_update endpoint.
+  var notificationUpdateTargets = {
+      customer: { url: '<?php echo base_url('Admin/Customers/note_update'); ?>', idField: 'customer_id' },
+      supplier: { url: '<?php echo base_url('Admin/Suppliers/note_update'); ?>', idField: 'supplier_id' },
+      account:  { url: '<?php echo base_url('Admin/Loan_provider/note_update'); ?>', idField: 'loan_pro_id' }
+  };
+
+  function showNotificationModal(btn) {
+      var $btn = $(btn);
+      var name = $btn.attr('data-name') || '';
+      var phone = $btn.attr('data-phone') || '';
+      var date = $btn.attr('data-date') || '';
+      var note = $btn.attr('data-note') || '';
+      var due = String($btn.attr('data-due')) === '1';
+      var id = $btn.attr('data-id') || '';
+      var type = $btn.attr('data-type') || '';
+      var target = notificationUpdateTargets[type];
+
+      $('#notificationModal .modal-title').html(
+          '<i class="fa ' + (due ? 'fa-bell text-red' : 'fa-bell-o') + '"></i> Notification : ' + notificationEscape(name)
+      );
+
+      var html = '<form id="notificationForm" method="post" action="' + (target ? target.url : '') + '">'
+          + '<table class="table table-bordered" style="margin-bottom:10px;">'
+          + '<tr><th style="width:30%;">Name</th><td>' + notificationEscape(name) + '</td></tr>'
+          + '<tr><th>Phone</th><td>'
+          + (phone ? '<a href="tel:' + notificationEscape(phone) + '">' + notificationEscape(phone) + '</a>' : '<span class="text-muted">Not set</span>') + '</td></tr>'
+          + '<tr><th>Notification Date</th><td>'
+          + '<input type="date" class="form-control" name="notification_date" id="NotificationDate" value="' + notificationEscape(date) + '" />'
+          + '</td></tr>'
+          + '<tr><th>Note</th><td>'
+          + '<textarea class="form-control" name="note" id="Note" rows="4" placeholder="Note">' + notificationEscape(note) + '</textarea>'
+          + '</td></tr>'
+          + '</table>';
+
+      if (target) {
+          html += '<input type="hidden" name="' + target.idField + '" value="' + notificationEscape(id) + '" />';
+      }
+      html += '<div class="notification-message"></div>'
+          + '<button type="submit" class="btn btn-primary notificationSubmit-btn"' + (target ? '' : ' disabled') + '>'
+          + '<i class="fa fa-save"></i> Update</button>'
+          + '</form>';
+
+      if (due) {
+          html += '<div class="callout callout-danger" style="margin-bottom:0;margin-top:10px;">'
+              + '<h5 style="margin:0;"><i class="fa fa-exclamation-triangle"></i> This notification is due today.</h5></div>';
+      }
+
+      $('#notificationModal .modal-body').html(html);
+  }
+
+  // Save via the module note_update endpoint, then refresh the report list.
+  $(document).on('submit', '#notificationForm', function(e){
+      e.preventDefault();
+      var $form = $(this);
+      var $submitBtn = $form.find('.notificationSubmit-btn');
+      var $msg = $form.find('.notification-message');
+      $submitBtn.prop('disabled', true);
+      $msg.html('');
+      $.ajax({
+          method: 'POST',
+          url: $form.prop('action'),
+          data: new FormData(this),
+          contentType: false,
+          cache: false,
+          processData: false,
+          success: function(data){
+              if (String(data).indexOf('alert-success') !== -1) {
+                  $msg.html('<div class="alert alert-success" style="margin-bottom:0;">Update data successfully</div>');
+                  setTimeout(function(){
+                      $('#notificationModal').modal('hide');
+                      window.location.reload();
+                  }, 1200);
+              } else {
+                  $msg.html(data);
+                  $submitBtn.prop('disabled', false);
+              }
+          },
+          error: function(){
+              $msg.html('<div class="alert alert-danger" style="margin-bottom:0;">Something went wrong</div>');
+              $submitBtn.prop('disabled', false);
+          }
+      });
+  });
+
+  // ===== Balance Limit soft guard (customer credit limit) =====
+
+  // Sale submit guard (capture phase so it also works on AJAX-loaded pages).
+  document.addEventListener('submit', function(e){
+      var form = e.target;
+      if (!form || form.id !== 'saleForm') { return; }
+      var customerId = $('#cus').val();
+      if (!customerId) { return; }
+      var balanceLimit = parseFloat($('#balance').data('cus-limit'));
+      if (isNaN(balanceLimit) || balanceLimit <= 0) { return; }
+      var currentBalance = parseFloat($('#balance').data('cus-balance')) || 0;
+      var due = parseFloat($('#grandtotaldue').val()) || 0;
+      var newBalance = currentBalance + due;
+      if (newBalance > balanceLimit) {
+          var msg = 'This sale will make the customer balance \u09f3 ' + newBalance.toFixed(2)
+              + '/-, which exceeds the balance limit \u09f3 ' + balanceLimit.toFixed(2)
+              + ',-.\n\nDo you want to continue?';
+          if (!confirm(msg)) { e.preventDefault(); e.stopImmediatePropagation(); }
+      }
+  }, true);
+
+  // Customer Transaction page: load balance + limit onto #cusData when a customer is chosen.
+  $(document).on('change', '#cusData', function(){
+      var id = $(this).val();
+      var $sel = $(this);
+      $sel.removeData('cus-balance').removeData('cus-limit');
+      if (!id) { return; }
+      $.ajax({
+          type: "POST",
+          url: "<?php echo site_url('Admin/Sales/customerBalance') ?>",
+          data: { customer_id: id },
+          success: function(data){
+              $sel.data('cus-balance', parseFloat(data.balance) || 0);
+              $sel.data('cus-limit', parseFloat(data.balance_limit) || 0);
+          }
+      });
+  });
+
+  // Customer Transaction submit guard (capture phase; detects the customer form by its
+  // #cusData field so it works even when the tab-pane is AJAX-loaded, and runs before the
+  // delegated #geniusform AJAX submit handler so a Cancel can block it).
+  document.addEventListener('submit', function(e){
+      var form = e.target;
+      if (!form || !form.querySelector) { return; }
+      var cusData = form.querySelector('#cusData');
+      if (!cusData) { return; } // only the Customer transaction form
+      var customerId = cusData.value;
+      if (!customerId) { return; }
+      var typeSel = form.querySelector('select[name="trangaction_type"]');
+      if (!typeSel || typeSel.value !== '2') { return; } // Dr only
+      var $cd = $(cusData);
+      var balanceLimit = parseFloat($cd.data('cus-limit'));
+      if (isNaN(balanceLimit) || balanceLimit <= 0) { return; }
+      var currentBalance = parseFloat($cd.data('cus-balance')) || 0;
+      var amountInput = form.querySelector('input[name="amount"]');
+      var amount = amountInput ? (parseFloat(amountInput.value) || 0) : 0;
+      var newBalance = currentBalance + amount;
+      if (newBalance > balanceLimit) {
+          var msg = 'This will make the customer balance \u09f3 ' + newBalance.toFixed(2)
+              + '/-, which exceeds the balance limit \u09f3 ' + balanceLimit.toFixed(2)
+              + ',-.\n\nDo you want to continue?';
+          if (!confirm(msg)) { e.preventDefault(); e.stopImmediatePropagation(); }
+      }
+  }, true);
+
+  // ===== Balance Limit soft guard (end) =====
+
+  // ===== Invoice Settings multi-row add/remove (global functions; this settings
+  // view is AJAX-injected into #viewpage, so we use inline onclick + global funcs
+  // instead of inline <script> bindings that run before footer jQuery loads) =====
+  function invoiceMultiAdd(btn) {
+    var $container = $(btn).closest('.form-group').find('.input-group').first().parent();
+    var $firstRow = $container.find('.input-group').first();
+    var $newRow = $firstRow.clone();
+    $newRow.find('input').val('').prop('required', false);
+    $container.find('.input-group').last().after($newRow);
+  }
+
+  function invoiceMultiRemove(btn) {
+    var $container = $(btn).closest('div[id$="_rows"]');
+    // keep at least one row in the group
+    if ($container.find('.input-group').length > 1) {
+      $(btn).closest('.input-group').remove();
+    } else {
+      $container.find('.input-group').first().find('input').val('');
+    }
+  }
+  // ===== Invoice Settings multi-row add/remove (end) =====
 </script>

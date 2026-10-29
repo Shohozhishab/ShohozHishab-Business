@@ -131,7 +131,9 @@
                     <?php echo add_main_ajax_based_menu_with_permission('Products', '/Admin/Products', $role_id, 'fa fa-tasks', '/Admin/Products_ajax','Products'); ?>
                     <?php echo add_main_ajax_based_menu_with_permission('Product Category', '/Admin/Product_category', $role_id, 'fa fa-tasks', '/Admin/Product_category_ajax','Product_category'); ?>
                     <?php echo add_main_ajax_based_menu_with_permission('Brand', '/Admin/Brand', $role_id, 'fa fa-tasks', '/Admin/Brand_ajax','Brand'); ?>
-                    <?php echo add_main_ajax_based_menu_with_permission('Stock Transfer', '/Admin/Stock_transfer', $role_id, 'fa fa-tasks', '/Admin/Stock_transfer_ajax','StockTransfer'); ?>                </ul>
+                    <?php echo add_main_ajax_based_menu_with_permission('Stock Transfer', '/Admin/Stock_transfer', $role_id, 'fa fa-tasks', '/Admin/Stock_transfer_ajax','StockTransfer'); ?> 
+                    <?php echo add_main_ajax_based_menu_with_permission('Warranty Short List', '/Admin/Warranty_short_list', $role_id, 'fa fa-shield', '/Admin/Warranty_short_list_ajax','Warranty_short_list'); ?>
+                </ul>
             </li>
             <?php } ?>
 
@@ -177,7 +179,7 @@
             <li><?php echo add_main_ajax_based_menu_with_permission('Trial Balance', '/Admin/Trial_balance', $role_id, 'fa fa-list-alt', '/Admin/Trial_balance_ajax','Trial_balance'); ?> </li>
 
             <?php
-                $modArrayRe = ['Balance_report','Stock_report','Sales_report','Purchase_report','Acquisition_due','Owe_amount'];
+                $modArrayRe = ['Balance_report','Stock_report','Sales_report','Purchase_report','Acquisition_due','Owe_amount','Warranty_short_list'];
                 $menuAccessRe = all_menu_permission_check($modArrayRe,$role_id);
                 if ($menuAccessRe == true){
             ?>
@@ -201,6 +203,8 @@
                     <?php echo add_main_ajax_based_menu_with_permission('Purchase Report', '/Admin/Purchase_report', $role_id, 'fa fa-line-chart', '/Admin/Purchase_report_ajax','Purchase_report'); ?>
                     <?php echo add_main_ajax_based_menu_with_permission('Accounts Receivable', '/Admin/Acquisition_due', $role_id, 'fa fa-line-chart', '/Admin/Acquisition_due_ajax','Acquisition_due'); ?>
                     <?php echo add_main_ajax_based_menu_with_permission('Accounts Payable', '/Admin/Owe_amount', $role_id, 'fa fa-line-chart', '/Admin/Owe_amount_ajax','Owe_amount'); ?>
+                    
+                    
 
 
                 </ul>

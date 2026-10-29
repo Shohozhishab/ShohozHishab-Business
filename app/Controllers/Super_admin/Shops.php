@@ -195,6 +195,24 @@ class Shops extends BaseController
                     ),
                     array('sch_id' => $shopsId, 'label' => 'invoice', 'value' => 'default.php'
                     ),
+                    array('sch_id' => $shopsId, 'label' => 'invoice_title', 'value' => ''
+                    ),
+                    array('sch_id' => $shopsId, 'label' => 'invoice_sub_title', 'value' => ''
+                    ),
+                    array('sch_id' => $shopsId, 'label' => 'invoice_address', 'value' => ''
+                    ),
+                    array('sch_id' => $shopsId, 'label' => 'invoice_gmail', 'value' => ''
+                    ),
+                    array('sch_id' => $shopsId, 'label' => 'invoice_name_phone', 'value' => ''
+                    ),
+                    array('sch_id' => $shopsId, 'label' => 'invoice_footer_text', 'value' => ''
+                    ),
+                    array('sch_id' => $shopsId, 'label' => 'invoice_logo', 'value' => ''
+                    ),
+                    array('sch_id' => $shopsId, 'label' => 'invoice_background_image', 'value' => ''
+                    ),
+                    array('sch_id' => $shopsId, 'label' => 'invoice_bin_no', 'value' => '0031746'
+                    ),
 
                 );
                 $this->gen_settingsModel->insertBatch($gen_settingsData);

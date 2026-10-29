@@ -10,7 +10,7 @@ class Loan_providerModel extends Model {
     protected $primaryKey = 'loan_pro_id';
     protected $returnType = 'object';
     protected $useSoftDeletes = false;
-    protected $allowedFields = ['loan_pro_id','sch_id','status', 'name','balance','address','phone','createdDtm', 'createdBy', 'updateDtm', 'updatedBy', 'deleted', 'deletedRole'];
+    protected $allowedFields = ['loan_pro_id','sch_id','status', 'notification_date', 'note', 'name','balance','address','phone','createdDtm', 'createdBy', 'updateDtm', 'updatedBy', 'deleted', 'deletedRole'];
     protected $useTimestamps = false;
     protected $createdField  = 'created_at';
     protected $updatedField  = 'updated_at';

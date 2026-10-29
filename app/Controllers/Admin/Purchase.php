@@ -707,6 +707,8 @@ class Purchase extends BaseController
                     'salePrice' => $salePrice,
                     'cat_id' => $data['subCatId'],
                     'unit_set_id' => $categories_id,
+                    'serial_status'   => (int)($this->request->getPost('serial_status') ?: 0),
+                    'warranty_status' => (int)($this->request->getPost('warranty_status') ?: 0),
                 );
 
                 $this->cart->insert($dataAdd);
@@ -824,6 +826,64 @@ class Purchase extends BaseController
                 $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">Please enter valid amount<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
                 return redirect()->to(site_url('Admin/Purchase/new_product'));
             }
+
+            // ---- Serial number & warranty validation for new_product (start) ----
+            $serialDataAll   = $this->request->getPost('serialData') ?: [];
+            $warrantyDataAll = $this->request->getPost('warrantyData') ?: [];
+            $qtyArr          = $this->request->getPost('quantity[]') ?: [];
+            $serialStatusArr = $this->request->getPost('serialStatus[]') ?: [];
+            $warrantyStatusArr = $this->request->getPost('warrantyStatus[]') ?: [];
+            $nameArr         = $this->request->getPost('name[]') ?: [];
+            $serialErrors    = [];
+
+            for ($idx = 0; $idx < $number; $idx++) {
+                $sStatus = (int)($serialStatusArr[$idx] ?? 0);
+                $wStatus = (int)($warrantyStatusArr[$idx] ?? 0);
+
+                if ($sStatus !== 1 && $wStatus !== 1) {
+                    continue;
+                }
+
+                $prodName = $nameArr[$idx] ?? ('Product #' . ($idx + 1));
+                $prodQty  = isset($qtyArr[$idx]) ? (int) $qtyArr[$idx] : 0;
+
+                if ($sStatus === 1) {
+                    $serials = json_decode($serialDataAll[$idx] ?? '', true);
+                    if (!is_array($serials) || count($serials) === 0) {
+                        $serialErrors[] = "Serial numbers are required for '{$prodName}'.";
+                    } else {
+                        $hasEmpty = false;
+                        foreach ($serials as $s) {
+                            if ($s === null || trim((string) $s) === '') {
+                                $hasEmpty = true;
+                                break;
+                            }
+                        }
+                        if ($hasEmpty) {
+                            $serialErrors[] = "All serial numbers must be filled for '{$prodName}'.";
+                        }
+                        if (count($serials) !== $prodQty) {
+                            $serialErrors[] = 'Serial count (' . count($serials) . ") must equal the quantity ({$prodQty}) for '{$prodName}'.";
+                        }
+                        if (count($serials) !== count(array_unique($serials))) {
+                            $serialErrors[] = "Duplicate serial numbers are not allowed for '{$prodName}'.";
+                        }
+                    }
+                }
+
+                if ($wStatus === 1) {
+                    $wdate = $warrantyDataAll[$idx] ?? '';
+                    if (empty($wdate) || strtotime($wdate) === false) {
+                        $serialErrors[] = "Company warranty end date is required for '{$prodName}'.";
+                    }
+                }
+            }
+
+            if (!empty($serialErrors)) {
+                $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">' . implode('<br>', $serialErrors) . ' <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+                return redirect()->to(site_url('Admin/Purchase/new_product'));
+            }
+            // ---- Serial number & warranty validation for new_product (end) ----
 
             DB()->transStart();
 
@@ -1116,6 +1176,8 @@ class Purchase extends BaseController
                     'sale_units' => $queryUnit->sell_units,
                     'supplier_id' => $supplierId,
                     'prod_cat_id' => $this->request->getPost('prod_cat_id[]')[$i],
+                    'serial_status' => $serialStatusArr[$i] ?? '0',
+                    'warranty_status' => $warrantyStatusArr[$i] ?? '0',
                     'createdBy' => $userId,
                     'createdDtm' => date('Y-m-d h:i:s')
                 );
@@ -1164,6 +1226,36 @@ class Purchase extends BaseController
                 //insert log (start)
                 $this->transactionLog->insert_log_data('purchase_item',$purchase_item_id,'',$total_price,'','','',$purchaseId);
                 //insert log (end)
+
+                // ---- Insert serial numbers & company warranty (new_product) (start) ----
+                if (isset($serialDataAll[$i]) && !empty($serialDataAll[$i])) {
+                    $serialsForProduct = json_decode($serialDataAll[$i], true);
+                    $warrantyForProduct = (isset($warrantyDataAll[$i]) && !empty($warrantyDataAll[$i]))
+                        ? $warrantyDataAll[$i]
+                        : null;
+
+                    if (is_array($serialsForProduct) && !empty($serialsForProduct)) {
+                        $serialRows = [];
+                        foreach ($serialsForProduct as $sn) {
+                            $sn = trim((string) $sn);
+                            if ($sn === '') {
+                                continue;
+                            }
+                            $serialRows[] = [
+                                'product_stock_relation_id' => $product_stock_relation_id,
+                                'serial_number'             => $sn,
+                                'company_warranty_end_date' => $warrantyForProduct,
+                                'status'                    => 'in_stock',
+                                'createdDtm'                => date('Y-m-d h:i:s'),
+                                'createdBy'                 => $userId,
+                            ];
+                        }
+                        if (!empty($serialRows)) {
+                            DB()->table('product_serial')->insertBatch($serialRows);
+                        }
+                    }
+                }
+                // ---- Insert serial numbers & company warranty (new_product) (end) ----
             }
             //purchase product insert in product table and purchase item table (end)
 
@@ -1252,14 +1344,88 @@ class Purchase extends BaseController
 
     public function purchaseEdit(){
         $purchaseId = $this->request->getPost('id');
+        $shopId = $this->session->shopId;
 
         $purchaseTable = DB()->table('purchase');
-        $data['purchase'] = $purchaseTable->where('purchase_id', $purchaseId)->get()->getRow();
+        $data['purchase'] = $purchaseTable->where('purchase_id', $purchaseId)->where('sch_id', $shopId)->get()->getRow();
 
         $purchase_itemTable = DB()->table('purchase_item');
         $data['purchaseItem'] = $purchase_itemTable->where('purchase_id', $purchaseId)->get()->getResult();
 
+        // Existing in-stock serials per product line (keyed by prod_id) for the edit modal
+        $data['serialPayload'] = [];
+        $data['warrantyPayload'] = [];
+        $data['lockedPayload'] = [];
+        foreach ($data['purchaseItem'] as $item) {
+            $rows = $this->get_purchase_line_serials($item->product_stock_relation_id);
+            $data['serialPayload'][$item->prod_id] = json_encode(array_map(function ($r) {
+                return ['id' => (int) $r->product_serial_id, 'serial' => $r->serial_number, 'protected' => 1];
+            }, $rows));
+            $data['lockedPayload'][$item->prod_id] = $this->get_purchase_line_locked_serial_count($item->product_stock_relation_id);
+            $wdate = null;
+            foreach ($rows as $r) {
+                if (!empty($r->company_warranty_end_date)) { $wdate = $r->company_warranty_end_date; break; }
+            }
+            $data['warrantyPayload'][$item->prod_id] = $wdate ?: '';
+        }
+
         echo view('Admin/Purchase/edit', $data);
+    }
+
+    /**
+     * @description In-stock serial rows of a stock relation (the serial pool of a
+     *              purchase line). product_stock_relation.purchase_id is not reliable
+     *              (the new-product purchase flow never fills it), so the relation id
+     *              itself scopes the serials; sold/returned serials are excluded and
+     *              therefore never editable from the purchase screen.
+     * @param int $stockRelationId
+     * @return array
+     */
+    private function get_purchase_line_serials($stockRelationId)
+    {
+        if (empty($stockRelationId)) {
+            return [];
+        }
+        return DB()->table('product_serial')
+            ->where('product_stock_relation_id', $stockRelationId)
+            ->where('status', 'in_stock')
+            ->orderBy('product_serial_id', 'ASC')
+            ->get()->getResult();
+    }
+
+    /**
+     * @description Count of serial rows on a stock relation that are no longer
+     *              in stock (sold/returned/damaged). These are excluded from the
+     *              purchase edit payload and always preserved, so they reduce the
+     *              number of serials the user is expected to provide.
+     * @param int $stockRelationId
+     * @return int
+     */
+    private function get_purchase_line_locked_serial_count($stockRelationId)
+    {
+        if (empty($stockRelationId)) {
+            return 0;
+        }
+        return DB()->table('product_serial')
+            ->where('product_stock_relation_id', $stockRelationId)
+            ->where('status !=', 'in_stock')
+            ->countAllResults();
+    }
+
+    /**
+     * @description Submitted serial rows of a purchase edit line as an array of
+     *              ['id' => existing product_serial_id or null, 'serial' => string, 'protected' => 0|1].
+     * @param array $serialDataAll
+     * @param int $prodId
+     * @return array|null
+     */
+    private function parse_purchase_edit_serial_rows($serialDataAll, $prodId)
+    {
+        if (empty($serialDataAll[$prodId])) {
+            return null;
+        }
+        $decoded = json_decode($serialDataAll[$prodId], true);
+        return is_array($decoded) ? $decoded : null;
     }
 
     public function purchaseEdiAction(){
@@ -1281,8 +1447,135 @@ class Purchase extends BaseController
         $bankAmount = $this->request->getPost('bank');
         $totalDue = $this->request->getPost('due');
 
+        // ---- Serial number & warranty validation for purchase edit (start) ----
+        $serialDataAll   = $this->request->getPost('serialData') ?: [];
+        $warrantyDataAll = $this->request->getPost('warrantyData') ?: [];
+        $serialErrors    = [];
+        $purchaseItems   = DB()->table('purchase_item')->where('purchase_id', $purchaseId)->get()->getResult();
+        $itemByProd      = [];
+        foreach ($purchaseItems as $piRow) {
+            $itemByProd[$piRow->prod_id] = $piRow;
+        }
+        foreach ($prod_id as $lineIdx => $lineProdId) {
+            $serialStatus   = (int) get_data_by_id('serial_status', 'products', 'prod_id', $lineProdId);
+            $warrantyStatus = (int) get_data_by_id('warranty_status', 'products', 'prod_id', $lineProdId);
+            if ($serialStatus !== 1 && $warrantyStatus !== 1) {
+                continue;
+            }
+            $prodName = get_data_by_id('name', 'products', 'prod_id', $lineProdId);
+            $lineQty  = (int) $qty[$lineIdx];
+
+            $rows = $this->parse_purchase_edit_serial_rows($serialDataAll, $lineProdId) ?: [];
+            $serials   = [];
+            $newSerials = [];
+            $existingIds = [];
+            foreach ($rows as $r) {
+                $sn = trim((string) ($r['serial'] ?? ''));
+                if ($sn === '') {
+                    $serialErrors[] = "All serial numbers must be filled for '{$prodName}'.";
+                    break;
+                }
+                $serials[] = $sn;
+                if (empty($r['id'])) {
+                    $newSerials[] = $sn;
+                } else {
+                    $existingIds[(int) $r['id']] = $sn;
+                }
+            }
+            if ($serialStatus === 1) {
+                // Serials already sold/returned/damaged are locked and never sent in the
+                // payload, so the user only needs to cover the remaining quantity.
+                $lockedCount = $this->get_purchase_line_locked_serial_count($itemByProd[$lineProdId]->product_stock_relation_id ?? 0);
+                $expectedCount = $lineQty - $lockedCount;
+                if ($expectedCount < 0) {
+                    $expectedCount = 0;
+                }
+                if (empty($serials) && $expectedCount > 0) {
+                    $serialErrors[] = "Serial numbers are required for '{$prodName}'.";
+                } elseif (count($serials) !== $expectedCount) {
+                    $serialErrors[] = 'Serial count (' . count($serials) . ") must equal the quantity ({$expectedCount}) for '{$prodName}'.";
+                }
+                if (count($serials) !== count(array_unique($serials))) {
+                    $serialErrors[] = "Duplicate serial numbers are not allowed for '{$prodName}'.";
+                }
+            }
+            // Existing serial ids must belong to this purchase line and still be in stock.
+            // Their serial number may be updated; a renamed serial then goes through the
+            // same global uniqueness check as a brand new serial.
+            if (!empty($existingIds)) {
+                $found = $this->get_purchase_line_serials($itemByProd[$lineProdId]->product_stock_relation_id ?? 0);
+                $foundMap = [];
+                foreach ($found as $f) {
+                    $foundMap[(int) $f->product_serial_id] = $f->serial_number;
+                }
+                foreach ($existingIds as $eid => $esn) {
+                    if (!isset($foundMap[$eid])) {
+                        $serialErrors[] = "Serial '{$esn}' of '{$prodName}' is no longer available (it may have been sold or edited).";
+                    } elseif ($foundMap[$eid] !== $esn) {
+                        $newSerials[] = $esn;
+                    }
+                }
+            }
+            // New serial numbers must not already exist globally
+            foreach ($newSerials as $ns) {
+                if (DB()->table('product_serial')->where('serial_number', $ns)->countAllResults() > 0) {
+                    $serialErrors[] = "Serial '{$ns}' already exists for '{$prodName}'.";
+                }
+            }
+            if ($warrantyStatus === 1) {
+                $wdate = $warrantyDataAll[$lineProdId] ?? '';
+                if (empty($wdate) || strtotime($wdate) === false) {
+                    $serialErrors[] = "Company warranty end date is required for '{$prodName}'.";
+                }
+            }
+        }
+        if (!empty($serialErrors)) {
+            $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">' . implode('<br>', $serialErrors) . ' <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+            return redirect()->to(site_url('Admin/Purchase'));
+        }
+        // ---- Serial number & warranty validation for purchase edit (end) ----
 
         DB()->transStart();
+
+        // Purchases created via Admin/Products::add_action() carry no supplier and are
+        // funded from shop capital (capital Cr. / stock Dr. / purchase_balance Dr.)
+        // without any transaction_log rows. Merge their edits into that same model:
+        // adjust the shop balances and the purchase ledger by the amount difference
+        // and skip the supplier / payment ledger machinery entirely.
+        $purchaseRow = DB()->table('purchase')->where('purchase_id', $purchaseId)->get()->getRow();
+        $isSupplierlessPurchase = empty($purchaseRow->supplier_id);
+
+        if ($isSupplierlessPurchase) {
+            $oldAmount = (float) $purchaseRow->amount;
+            $delta = (float) $totalPrice - $oldAmount;
+
+            if (abs($delta) > 0.00000001) {
+                $shopsRow = DB()->table('shops')->where('sch_id', $shopId)->get()->getRow();
+                DB()->table('shops')->where('sch_id', $shopId)->update(array(
+                    'capital'          => $shopsRow->capital - $delta,
+                    'stockAmount'      => $shopsRow->stockAmount + $delta,
+                    'purchase_balance' => $shopsRow->purchase_balance + $delta,
+                    'updatedBy'        => $userId,
+                ));
+            }
+
+            // The purchase ledger row is linked by purchase_id at creation time;
+            // update it and shift the rest_balance of every later row by the delta.
+            $ledgerPurchaseRow = DB()->table('ledger_purchase')->where('purchase_id', $purchaseId)->orderBy('ledgPurch_id', 'DESC')->get()->getRow();
+            if (!empty($ledgerPurchaseRow)) {
+                DB()->table('ledger_purchase')->where('ledgPurch_id', $ledgerPurchaseRow->ledgPurch_id)->update(array(
+                    'amount'       => $totalPrice,
+                    'rest_balance' => $ledgerPurchaseRow->rest_balance - $ledgerPurchaseRow->amount + $totalPrice,
+                    'updatedBy'    => $userId,
+                ));
+                if (abs($delta) > 0.00000001) {
+                    $laterLedgerRows = DB()->table('ledger_purchase')->where('ledgPurch_id >', $ledgerPurchaseRow->ledgPurch_id)->get()->getResult();
+                    foreach ($laterLedgerRows as $lr) {
+                        DB()->table('ledger_purchase')->where('ledgPurch_id', $lr->ledgPurch_id)->update(array('rest_balance' => $lr->rest_balance + $delta));
+                    }
+                }
+            }
+        } else {
         //purchase total price calculate to suppliers balance and update suppliers balance or create suppliers ledger (start)
         $suppliersInfo = $this->transactionLog->get_table_name_by_row_purchase_id('suppliers',$purchaseId);
         $supplierCash = get_data_by_id('balance', 'suppliers', 'supplier_id', $suppliersInfo->id);
@@ -1385,8 +1678,9 @@ class Purchase extends BaseController
 
         $this->stock_ledger_rest_balance_update($purchaseId,$totalPrice);
         // stock balance update and ledger create (end)
+        }
 
-        if ($cashAmount > 0) {
+        if (!$isSupplierlessPurchase && $cashAmount > 0) {
             //purchase pay cash amount calculate (start)
             $shopsCash = get_data_by_id('cash', 'shops', 'sch_id', $shopId);
             if ($shopsCash >= $cashAmount) {
@@ -1544,7 +1838,7 @@ class Purchase extends BaseController
             //purchase pay cash amount calculate (end)
         }
 
-        if ($bankAmount > 0) {
+        if (!$isSupplierlessPurchase && $bankAmount > 0) {
             //purchase pay bank amount calculate to bank balance and update bank balance or create bank ledger in ledger_bank table (start)
             $bankCash = get_data_by_id('balance', 'bank', 'bank_id', $bankId);
             if ($bankCash >= $bankAmount) {
@@ -1712,18 +2006,99 @@ class Purchase extends BaseController
             );
             $purchase_itemTab = DB()->table('purchase_item');
             $purchase_itemTab->where('purchase_id',$purchaseId)->where('prod_id',$prod_id[$i])->update($purchaseData);
+
+            // ---- Sync serial numbers & company warranty (purchase edit) (start) ----
+            $lineSerialStatus   = (int) get_data_by_id('serial_status', 'products', 'prod_id', $prod_id[$i]);
+            $lineWarrantyStatus = (int) get_data_by_id('warranty_status', 'products', 'prod_id', $prod_id[$i]);
+            $lineRows = $this->parse_purchase_edit_serial_rows($serialDataAll, $prod_id[$i]);
+            if (($lineSerialStatus === 1 || $lineWarrantyStatus === 1) && $lineRows !== null && !empty($purchaseItem->product_stock_relation_id)) {
+                $relationId = $purchaseItem->product_stock_relation_id;
+                $warrantyForProduct = !empty($warrantyDataAll[$prod_id[$i]]) ? $warrantyDataAll[$prod_id[$i]] : null;
+
+                $keepSerials = [];
+                $newSerialRows = [];
+                foreach ($lineRows as $r) {
+                    $sn = trim((string) ($r['serial'] ?? ''));
+                    if ($sn === '') {
+                        continue;
+                    }
+                    if (empty($r['id'])) {
+                        $newSerialRows[] = [
+                            'product_stock_relation_id' => $relationId,
+                            'serial_number'             => $sn,
+                            'company_warranty_end_date' => $warrantyForProduct,
+                            'status'                    => 'in_stock',
+                            'createdDtm'                => date('Y-m-d h:i:s'),
+                            'createdBy'                 => $userId,
+                        ];
+                    } else {
+                        $keepSerials[(int) $r['id']] = $sn;
+                    }
+                }
+
+                // Delete serials removed from this line, only while they are still
+                // in stock on this relation (sold/returned serials are always preserved).
+                $currentRows = $this->get_purchase_line_serials($relationId);
+                $currentById = [];
+                foreach ($currentRows as $cr) {
+                    $currentById[(int) $cr->product_serial_id] = $cr->serial_number;
+                }
+                $toDelete = array_diff(array_map('intval', array_keys($currentById)), array_keys($keepSerials));
+                foreach ($toDelete as $delId) {
+                    DB()->table('product_serial')
+                        ->where('product_serial_id', $delId)
+                        ->where('product_stock_relation_id', $relationId)
+                        ->where('status', 'in_stock')
+                        ->where('invoice_id', null)
+                        ->delete();
+                }
+
+                // Update serial numbers of existing serials that were renamed
+                foreach ($keepSerials as $keepId => $keepSn) {
+                    if (isset($currentById[$keepId]) && $currentById[$keepId] !== $keepSn) {
+                        DB()->table('product_serial')
+                            ->where('product_serial_id', $keepId)
+                            ->where('product_stock_relation_id', $relationId)
+                            ->where('status', 'in_stock')
+                            ->update(['serial_number' => $keepSn, 'updatedBy' => $userId]);
+                    }
+                }
+
+                // Insert newly added serials
+                if (!empty($newSerialRows)) {
+                    DB()->table('product_serial')->insertBatch($newSerialRows);
+                }
+
+                // Warranty date is shared across the whole line; apply it to all
+                // in-stock serials of the relation (covers other lines reusing it)
+                if ($warrantyForProduct !== null) {
+                    DB()->table('product_serial')
+                        ->where('product_stock_relation_id', $relationId)
+                        ->where('status', 'in_stock')
+                        ->update(['company_warranty_end_date' => $warrantyForProduct, 'updatedBy' => $userId]);
+                }
+            }
+            // ---- Sync serial numbers & company warranty (purchase edit) (end) ----
         }
         //purchase product insert in product table and purchase item table (end)
 
 
         //purchase all pay amount detail Update in purchase table(start)
-        $parsData = array(
-            'amount' => $totalPrice,
-            'nagad_paid' => $cashAmount,
-            'bank_paid' => $bankAmount,
-            'bank_id' => $bankId,
-            'due' => $totalDue,
-        );
+        if ($isSupplierlessPurchase) {
+            // Capital-funded purchase (created without a supplier): only the amount
+            // changes; payments were never cash/bank based and due stays as created.
+            $parsData = array(
+                'amount' => $totalPrice,
+            );
+        } else {
+            $parsData = array(
+                'amount' => $totalPrice,
+                'nagad_paid' => $cashAmount,
+                'bank_paid' => $bankAmount,
+                'bank_id' => $bankId,
+                'due' => $totalDue,
+            );
+        }
         $purchaseTab = DB()->table('purchase');
         $purchaseTab->where('purchase_id', $purchaseId)->update($parsData);
         //purchase all pay amount detail Update in purchase table(end)
@@ -2100,6 +2475,65 @@ class Purchase extends BaseController
                 return redirect()->to(site_url('Admin/Purchase/purchase_product'));
             }
 
+            // ---- Serial number & warranty validation (start) ----
+            $serialDataAll   = $this->request->getPost('serialData') ?: [];
+            $warrantyDataAll = $this->request->getPost('warrantyData') ?: [];
+            $qtyArr          = $this->request->getPost('qty[]') ?: [];
+            $serialErrors    = [];
+
+            foreach ($productId as $idx => $prodId) {
+                $serialStatus   = (int) get_data_by_id('serial_status', 'products', 'prod_id', $prodId);
+                $warrantyStatus = (int) get_data_by_id('warranty_status', 'products', 'prod_id', $prodId);
+
+                // A product with neither flag active needs no serial/warranty data.
+                if ($serialStatus !== 1 && $warrantyStatus !== 1) {
+                    continue;
+                }
+
+                $prodName = get_data_by_id('name', 'products', 'prod_id', $prodId);
+                $prodQty  = isset($qtyArr[$idx]) ? (int) $qtyArr[$idx] : 0;
+
+                // Serial numbers: mandatory, all filled, count == qty, unique.
+                if ($serialStatus === 1) {
+                    $serials = json_decode($serialDataAll[$prodId] ?? '', true);
+                    if (!is_array($serials) || count($serials) === 0) {
+                        $serialErrors[] = "Serial numbers are required for '{$prodName}'.";
+                    } else {
+                        $hasEmpty = false;
+                        foreach ($serials as $s) {
+                            if ($s === null || trim((string) $s) === '') {
+                                $hasEmpty = true;
+                                break;
+                            }
+                        }
+                        if ($hasEmpty) {
+                            $serialErrors[] = "All serial numbers must be filled for '{$prodName}'.";
+                        }
+                        if (count($serials) !== $prodQty) {
+                            $serialErrors[] = 'Serial count (' . count($serials) . ") must equal the quantity ({$prodQty}) for '{$prodName}'.";
+                        }
+                        if (count($serials) !== count(array_unique($serials))) {
+                            $serialErrors[] = "Duplicate serial numbers are not allowed for '{$prodName}'.";
+                        }
+                    }
+                }
+
+                // Company warranty end date: mandatory whenever warranty_status is
+                // on, independent of whether serial tracking is enabled.
+                if ($warrantyStatus === 1) {
+                    $wdate = $warrantyDataAll[$prodId] ?? '';
+                    if (empty($wdate) || strtotime($wdate) === false) {
+                        $serialErrors[] = "Company warranty end date is required for '{$prodName}'.";
+                    }
+                }
+            }
+
+            if (!empty($serialErrors)) {
+                $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">' . implode('<br>', $serialErrors) . ' <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+                return redirect()->to(site_url('Admin/Purchase/purchase_product'));
+            }
+            // ---- Serial number & warranty validation (end) ----
+
             DB()->transStart();
 
             DB()->table('purchase')->insert([
@@ -2444,6 +2878,36 @@ class Purchase extends BaseController
                 //insert log (start)
                 $this->transactionLog->insert_log_data('purchase_item',$purchase_item_id,'',$total_price,'','','',$purchaseId);
                 //insert log (end)
+
+                // ---- Insert serial numbers & company warranty (start) ----
+                if (isset($serialDataAll[$prodId]) && !empty($serialDataAll[$prodId])) {
+                    $serialsForProduct = json_decode($serialDataAll[$prodId], true);
+                    $warrantyForProduct = (isset($warrantyDataAll[$prodId]) && !empty($warrantyDataAll[$prodId]))
+                        ? $warrantyDataAll[$prodId]
+                        : null;
+
+                    if (is_array($serialsForProduct) && !empty($serialsForProduct)) {
+                        $serialRows = [];
+                        foreach ($serialsForProduct as $sn) {
+                            $sn = trim((string) $sn);
+                            if ($sn === '') {
+                                continue;
+                            }
+                            $serialRows[] = [
+                                'product_stock_relation_id' => $product_stock_relation_id,
+                                'serial_number'             => $sn,
+                                'company_warranty_end_date' => $warrantyForProduct,
+                                'status'                    => 'in_stock',
+                                'createdDtm'                => date('Y-m-d h:i:s'),
+                                'createdBy'                 => $userId,
+                            ];
+                        }
+                        if (!empty($serialRows)) {
+                            DB()->table('product_serial')->insertBatch($serialRows);
+                        }
+                    }
+                }
+                // ---- Insert serial numbers & company warranty (end) ----
             }
             //purchase product insert in product table and purchase item table (end)
 

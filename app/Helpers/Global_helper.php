@@ -2083,6 +2083,81 @@ function get_return_status_by_invoice_id($invoiceId){
     return $status;
 
 }
+/**
+ * @description Serial numbers attached to one invoice line, used by the sale
+ *              return screen. A serialized line lists every serial that still
+ *              belongs to the invoice: 'sold' rows can be picked for reversal,
+ *              rows already 'returned' by an earlier return stay locked.
+ *              Legacy serialized sales without attached serials report an empty
+ *              list, so the line can still be returned without picking serials.
+ * @param int $invoiceId
+ * @param int $productStockRelationId
+ * @param int $prod_id
+ * @return array
+ */
+function get_return_sale_line_serials($invoiceId, $productStockRelationId, $prod_id)
+{
+    $data = [
+        'serial_status'   => false,
+        'warranty_status' => false,
+        'serials'         => [],
+        'available_count' => 0,
+    ];
+
+    $product = DB()->table('products')
+        ->select('serial_status, warranty_status')
+        ->where('prod_id', $prod_id)
+        ->get()->getRow();
+
+    if (empty($product) || (int)$product->serial_status !== 1) {
+        return $data;
+    }
+
+    $data['serial_status']   = true;
+    $data['warranty_status'] = ((int)$product->warranty_status === 1);
+
+    $data['serials'] = DB()->table('product_serial')
+        ->select('product_serial_id, serial_number, status, company_warranty_end_date, customer_warranty_end_date')
+        ->where('invoice_id', $invoiceId)
+        ->where('product_stock_relation_id', $productStockRelationId)
+        ->whereIn('status', ['sold', 'returned'])
+        ->orderBy('product_serial_id', 'ASC')
+        ->get()->getResultArray();
+
+    foreach ($data['serials'] as $row) {
+        if ($row['status'] === 'sold') {
+            $data['available_count']++;
+        }
+    }
+
+    return $data;
+}
+
+/**
+ * @description Serial numbers reversed by one return sale, for the return view
+ *              page. A reversed serial keeps its invoice link and remembers the
+ *              return that released it, so every return slip lists exactly its
+ *              own units.
+ * @param int $rtnSaleId
+ * @param int $prod_id
+ * @return array
+ */
+function get_return_sale_item_serials($rtnSaleId, $prod_id)
+{
+    if (empty($rtnSaleId)) {
+        return [];
+    }
+
+    return DB()->table('product_serial')
+        ->select('product_serial.serial_number, product_serial.customer_warranty_end_date')
+        ->join('product_stock_relation', 'product_stock_relation.product_stock_relation_id = product_serial.product_stock_relation_id')
+        ->where('product_serial.rtn_sale_id', $rtnSaleId)
+        ->where('product_serial.status', 'returned')
+        ->where('product_stock_relation.product_id', $prod_id)
+        ->orderBy('product_serial.product_serial_id', 'ASC')
+        ->get()->getResultArray();
+}
+
 function get_available_quantity_to_return_purchase($purchaseId,$prod_id,$purQuantity){
     $table = DB()->table('return_purchase');
     $returnData = $table->selectSum('quantity')->join('return_purchase_item','return_purchase_item.rtn_purchase_id = return_purchase.rtn_purchase_id' )->where('return_purchase.purchase_id',$purchaseId)->where('return_purchase_item.prod_id',$prod_id)->get()->getRow();
@@ -2123,6 +2198,83 @@ function get_return_status_by_purchase_id($purchaseId){
     return $status;
 
 }
+
+/**
+ * @description Serial numbers sitting on one purchase line, used by the purchase
+ *              return screen. A serialized line lists every unit that can still be
+ *              sent back: 'in_stock' rows can be picked, rows already
+ *              'purchase_returned' by an earlier return stay locked. Purchases made
+ *              before serial numbers were attached report an empty list, so the line
+ *              can still be returned without picking serials.
+ * @param int $productStockRelationId
+ * @param int $prod_id
+ * @return array
+ */
+function get_return_purchase_line_serials($productStockRelationId, $prod_id)
+{
+    $data = [
+        'serial_status'   => false,
+        'warranty_status' => false,
+        'serials'         => [],
+        'available_count' => 0,
+    ];
+
+    if (empty($productStockRelationId)) {
+        return $data;
+    }
+
+    $product = DB()->table('products')
+        ->select('serial_status, warranty_status')
+        ->where('prod_id', $prod_id)
+        ->get()->getRow();
+
+    if (empty($product) || (int)$product->serial_status !== 1) {
+        return $data;
+    }
+
+    $data['serial_status']   = true;
+    $data['warranty_status'] = ((int)$product->warranty_status === 1);
+
+    $data['serials'] = DB()->table('product_serial')
+        ->select('product_serial_id, serial_number, status, company_warranty_end_date, customer_warranty_end_date')
+        ->where('product_stock_relation_id', $productStockRelationId)
+        ->whereIn('status', ['in_stock', 'purchase_returned'])
+        ->orderBy('product_serial_id', 'ASC')
+        ->get()->getResultArray();
+
+    foreach ($data['serials'] as $row) {
+        if ($row['status'] === 'in_stock') {
+            $data['available_count']++;
+        }
+    }
+
+    return $data;
+}
+
+/**
+ * @description Serial numbers sent back to the supplier by one return purchase,
+ *              for the return view page. A returned unit remembers the slip that
+ *              released it, so every return slip lists exactly its own units.
+ * @param int $rtnPurchaseId
+ * @param int $prod_id
+ * @return array
+ */
+function get_return_purchase_item_serials($rtnPurchaseId, $prod_id)
+{
+    if (empty($rtnPurchaseId)) {
+        return [];
+    }
+
+    return DB()->table('product_serial')
+        ->select('product_serial.serial_number, product_serial.company_warranty_end_date, product_serial.customer_warranty_end_date')
+        ->join('product_stock_relation', 'product_stock_relation.product_stock_relation_id = product_serial.product_stock_relation_id')
+        ->where('product_serial.rtn_purchase_id', $rtnPurchaseId)
+        ->where('product_serial.status', 'purchase_returned')
+        ->where('product_stock_relation.product_id', $prod_id)
+        ->orderBy('product_serial.product_serial_id', 'ASC')
+        ->get()->getResultArray();
+}
+
 function available_invoice($sel = '')
 {
     helper('filesystem');
@@ -2148,4 +2300,172 @@ function barcodeGenaret($data)
 
     return '<img src="data:image/png;base64,' . base64_encode($generator->getBarcode((string)$data, $barcodeType)) . '" width="' . $barcodeSize . '">';
 
+}
+
+/**
+ * @description Strip redundant trailing zeros from decimal(14,8) column values
+ *              for display, e.g. "500.00000000" -> "500", "437.50000000" -> "437.5".
+ * @param mixed $value
+ * @return string
+ */
+function trim_decimal_zero($value)
+{
+    $str = (string) $value;
+    if (strpos($str, '.') === false) {
+        return $str;
+    }
+    return rtrim(rtrim($str, '0'), '.');
+}
+
+/**
+ * @description Default store stock relation row of a product (used by the
+ *              product update serial/warranty tab).
+ * @param int $prod_id
+ * @return object|null
+ */
+function product_default_store_relation($prod_id)
+{
+    $table = DB()->table('product_stock_relation');
+    $table->join('stores', 'stores.store_id = product_stock_relation.store_id');
+    $table->where('stores.is_default', '1');
+    $table->where('stores.sch_id', $_SESSION['shopId']);
+    $table->where('product_stock_relation.product_id', $prod_id);
+    $row = $table->get()->getRow();
+    return $row ?: null;
+}
+
+/**
+ * @description ALL product_stock_relation rows of a product within the current
+ *              shop (a product can be split across several batches/stores, each
+ *              with its own quantity and serials). Used to aggregate the Serial
+ *              tab quantity/serials across every stock row of the same product.
+ * @param int $prod_id
+ * @return array
+ */
+function product_all_store_relations($prod_id)
+{
+    $rows = DB()->table('product_stock_relation')
+        ->where('product_id', $prod_id)
+        ->where('sch_id', $_SESSION['shopId'])
+        ->orderBy('product_stock_relation_id', 'ASC')
+        ->get()->getResultArray();
+    return $rows;
+}
+
+/**
+ * @description product_stock_relation_id that new serial numbers should be
+ *              attached to: the first (lowest id) DEFAULT-store row of the
+ *              product, falling back to its first stock row of any store.
+ * @param array $relations result of product_all_store_relations()
+ * @return int|null
+ */
+function product_serial_target_relation_id($relations)
+{
+    if (empty($relations)) {
+        return null;
+    }
+    $defaultStoreIds = array_column(
+        DB()->table('stores')
+            ->select('store_id')
+            ->where('sch_id', $_SESSION['shopId'])
+            ->where('is_default', '1')
+            ->get()->getResultArray(),
+        'store_id'
+    );
+    foreach ($relations as $rel) {
+        if (in_array($rel['store_id'], $defaultStoreIds)) {
+            return (int) $rel['product_stock_relation_id'];
+        }
+    }
+    return (int) $relations[0]['product_stock_relation_id'];
+}
+
+/**
+ * Maximum number of serial rows the Serial tab can render / save for one
+ * product. The grid holds one row per stocked unit, so products stocked in
+ * bulk (thousands/millions of units) would otherwise build an unbounded table
+ * and exhaust PHP memory while the update page renders.
+ */
+if (!defined('SERIAL_ENTRY_ROW_LIMIT')) {
+    define('SERIAL_ENTRY_ROW_LIMIT', 1000);
+}
+
+/**
+ * @description Serial & warranty payload for the product update page's
+ *              Serial tab. Aggregates across every product_stock_relation row
+ *              of the product in the shop (total qty + all serials). Only
+ *              in-stock serials are editable; sold/returned/damaged rows are
+ *              locked and simply reduce the expected serial count.
+ * @param object $product products table row
+ * @return array
+ */
+function product_serial_tab_data($product)
+{
+    $serialOn   = ((int)($product->serial_status ?? 0) === 1);
+    $warrantyOn = ((int)($product->warranty_status ?? 0) === 1);
+    $data = [
+        'enabled'         => ($serialOn || $warrantyOn),
+        'serialOn'        => $serialOn,
+        'warrantyOn'      => $warrantyOn,
+        'relations'       => [],
+        'relation'        => null,
+        'relationIds'     => [],
+        'quantity'        => 0,
+        'serials'         => [],
+        'lockedCount'     => 0,
+        'expectedCount'   => 0,
+        'warrantyDate'    => '',
+        'targetRelationId' => null,
+        'rowLimit'        => SERIAL_ENTRY_ROW_LIMIT,
+        'tooLarge'        => false,
+    ];
+    // Aggregate over ALL stock rows of the product in the shop, even when the
+    // flags are currently OFF, so the Serial tab can be revealed live and the
+    // quantity/rows follow the product's total stock (any store, any qty).
+    $relations = product_all_store_relations($product->prod_id);
+    if (empty($relations)) {
+        return $data;
+    }
+    $data['relations'] = $relations;
+    $data['relation']  = (object) $relations[0];
+    $data['relationIds'] = array_map(function ($r) { return (int) $r['product_stock_relation_id']; }, $relations);
+    $data['targetRelationId'] = product_serial_target_relation_id($relations);
+
+    $totalQty = 0;
+    foreach ($relations as $rel) {
+        $totalQty += (int) round((float) $rel['quantity']);
+    }
+    $data['quantity'] = $totalQty;
+
+    // Fetch one row beyond the limit so an oversized saved set is detectable
+    // without loading millions of rows into memory
+    $data['serials'] = DB()->table('product_serial')
+        ->whereIn('product_stock_relation_id', $data['relationIds'])
+        ->where('status', 'in_stock')
+        ->orderBy('product_serial_id', 'ASC')
+        ->limit(SERIAL_ENTRY_ROW_LIMIT + 1)
+        ->get()->getResultArray();
+
+    $data['lockedCount'] = DB()->table('product_serial')
+        ->whereIn('product_stock_relation_id', $data['relationIds'])
+        ->where('status !=', 'in_stock')
+        ->countAllResults();
+
+    $data['expectedCount'] = max(0, $data['quantity'] - $data['lockedCount']);
+
+    foreach ($data['serials'] as $row) {
+        if (!empty($row['company_warranty_end_date'])) {
+            $data['warrantyDate'] = $row['company_warranty_end_date'];
+            break;
+        }
+    }
+
+    // Bulk-stocked products cannot use the per-unit serial grid: skip the row
+    // data entirely so the view renders a notice instead of an endless table
+    $data['tooLarge'] = ($data['expectedCount'] > SERIAL_ENTRY_ROW_LIMIT)
+        || (count($data['serials']) > SERIAL_ENTRY_ROW_LIMIT);
+    if ($data['tooLarge']) {
+        $data['serials'] = [];
+    }
+    return $data;
 }

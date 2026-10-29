@@ -1,3 +1,49 @@
+<?php
+// Preload sold/returned serial numbers and the customer warranty end date for
+// this invoice, grouped by stock line (product_stock_relation_id) so each item
+// row can show its serial number(s) and warranty date.
+$invoiceSerials = array();
+if (!empty($invoiceId)) {
+    $serialRows = DB()->table('product_serial')
+        ->select('product_stock_relation_id, serial_number, customer_warranty_end_date')
+        ->where('invoice_id', $invoiceId)
+        ->whereIn('status', array('sold', 'returned'))
+        ->orderBy('product_serial_id', 'ASC')
+        ->get()
+        ->getResultArray();
+    foreach ($serialRows as $sr) {
+        $key = (string) $sr['product_stock_relation_id'];
+        if (!isset($invoiceSerials[$key])) {
+            $invoiceSerials[$key] = array('serials' => array(), 'warranty' => '');
+        }
+        $invoiceSerials[$key]['serials'][] = $sr['serial_number'];
+        if ($invoiceSerials[$key]['warranty'] === '' && !empty($sr['customer_warranty_end_date'])) {
+            $invoiceSerials[$key]['warranty'] = $sr['customer_warranty_end_date'];
+        }
+    }
+}
+
+// Null-safe invoice settings lookup (uses the current session shop).
+$__inv = function ($label) {
+    $row = DB()->table('gen_settings')
+        ->where('label', $label)
+        ->where('sch_id', $_SESSION['shopId'])
+        ->get()->getRow();
+    return $row ? (string) $row->value : '';
+};
+$invTitle = $__inv('invoice_title');
+$invSubTitle = $__inv('invoice_sub_title');
+$invAddress = $__inv('invoice_address');
+$invBinNo = $__inv('invoice_bin_no');
+$invFooter = $__inv('invoice_footer_text');
+$invLogo = $__inv('invoice_logo');
+$invEmails = array_values(array_filter(array_map('trim', explode(',', $__inv('invoice_gmail'))), function ($v) {
+    return $v !== '';
+}));
+$invContacts = array_values(array_filter(array_map('trim', explode(',', $__inv('invoice_name_phone'))), function ($v) {
+    return $v !== '';
+}));
+?>
 <div class="content-wrapper" id="viewpage">
     <!-- Content Header (Page header) -->
     <section class="content-header">
@@ -278,21 +324,26 @@
             }
         </style>
 
-        <div class="receipt">
+        <div class="receipt" id="receiptPage" data-pdf-width="58">
 
             <!-- HEADER -->
             <div class="header">
-                <img src="<?= base_url('uploads/logo.png')?>" class="img-logo">
-                <div class="shop-name">MIR TRADING</div>
-                <div class="address">Importer &amp; Wholesaler</div>
-                <div class="test-note">Khulna Road, Bokchor Hustala Moor, Jashore</div>
-                <div class="contact">
-                    Email : mirtrading.jsr@gmail.com<br>
-                    Khurshid : 01919-812281<br>
-                    Shamim : 01937-238798<br>
-                    Rumi : 01775-011922<br>
-                    Sazzad : 01712-921951
-                </div>
+                <img src="<?= no_image_view('/uploads/schools/' . $invLogo, '/uploads/logo.png', $invLogo) ?>" class="img-logo">
+                <?php if ($invTitle !== '') { ?>
+                    <div class="shop-name"><?= esc($invTitle) ?></div>
+                <?php } ?>
+                <?php if ($invSubTitle !== '') { ?>
+                    <div class="address"><?= esc($invSubTitle) ?></div>
+                <?php } ?>
+                <?php if ($invAddress !== '') { ?>
+                    <div class="test-note"><?= esc($invAddress) ?></div>
+                <?php } ?>
+                <?php if (!empty($invEmails) || !empty($invContacts)) { ?>
+                    <div class="contact">
+                        <?php foreach ($invEmails as $__email) { ?>Email : <?= esc($__email) ?><br><?php } ?>
+                        <?php foreach ($invContacts as $__contact) { ?><?= esc($__contact) ?><br><?php } ?>
+                    </div>
+                <?php } ?>
             </div>
 
             <div class="dashed"></div>
@@ -346,11 +397,20 @@
                 $subCategory = get_data_by_id('product_category', 'product_category', 'prod_cat_id', $catId);
                 $productName = get_data_by_id('name', 'products', 'prod_id', $row->prod_id);
                 $unit = productIdByDefaultStoreUnit($row->prod_id);
+
+                $psrKey = (string) ($row->product_stock_relation_id ?? '');
+                $lineSerial = $invoiceSerials[$psrKey] ?? null;
                 ?>
                 <div class="item-row">
                     <div class="col-item">
                         <div class="item-name"><?= $productName; ?></div>
                         <div class="item-detail">(<?= $category . ' > ' . $subCategory; ?>)</div>
+                        <?php if ($lineSerial && !empty($lineSerial['serials'])) { ?>
+                            <div class="item-detail">Serial: <?= esc(implode(', ', $lineSerial['serials'])); ?></div>
+                        <?php } ?>
+                        <?php if ($lineSerial && $lineSerial['warranty'] !== '') { ?>
+                            <div class="item-detail">Warranty: <?= esc($lineSerial['warranty']); ?></div>
+                        <?php } ?>
                         <div class="item-detail"><?= showWithCurrencySymbol(unitOrBasePriceByUnitPrice($unit, $row->price)); ?></div>
                     </div>
                     <div class="col-qty"><?= unitOrQtyByUnitQty($unit, $row->quantity); ?>/<?= showUnitName($unit) ?></div>
@@ -446,14 +506,18 @@
 
             <!-- ========== FOOTER ========== -->
             <div class="footer">
-                <div class="footer-message">
-                    ফোলা, ফাটা, চাপ খাওয়া, পোড়া, ভাঙ্গা, ডেট ওভার, জিরো ভোল্টেজ মাল ফেরত যোগ্য নয়।
-                </div>
+                <?php if ($invFooter !== '') { ?>
+                    <div class="footer-message">
+                        <?= esc($invFooter) ?>
+                    </div>
+                <?php } ?>
 
-                <div class="footer-info">
-                    Email : mirtrading.jsr@gmail.com<br>
-                    Bin: 003174613-0901
-                </div>
+                <?php if (!empty($invEmails) || $invBinNo !== '') { ?>
+                    <div class="footer-info">
+                        <?php foreach ($invEmails as $__email) { ?>Email : <?= esc($__email) ?><br><?php } ?>
+                        <?php if ($invBinNo !== '') { ?>Bin: <?= esc($invBinNo) ?><?php } ?>
+                    </div>
+                <?php } ?>
 
                 <div class="signature-row">
                     <div class="signature">
@@ -469,11 +533,13 @@
 
         </div>
 
-        <div class="row no-print">
+        <div class="row no-print" data-html2canvas-ignore="true">
             <div class="col-xs-12" style="margin-top: 15px;">
                 <div class="print_line btn btn-primary pull-right" onclick="print(document);">
                     <i class="fa fa-print"></i> Print Now
                 </div>
+                <button type="button" class="btn btn-info pull-right" style="margin-right: 10px;" onclick="downloadPDF('receiptPage','Invoice','Inv_<?= $invoiceId ?>.pdf')"><i class="fa fa-file-pdf-o"></i> Download PDF </button>
+                <button type="button" class="btn btn-success pull-right" style="margin-right: 10px;" onclick="sharePDFChoose('receiptPage','Invoice','Inv_<?= $invoiceId ?>.pdf')"><i class="fa fa-share-square-o"></i> Share </button>
             </div>
         </div>
     </section>
