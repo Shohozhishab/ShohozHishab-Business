@@ -220,6 +220,83 @@ class Settings extends BaseController
     }
 
     /**
+     * @description This method update invoice settings
+     * @return void
+     * @throws \ReflectionException
+     */
+    public function invoice_settings_update()
+    {
+        $shopId = $this->session->shopId;
+        $userId = $this->session->userId;
+
+        $gen_settingsTable = DB()->table('gen_settings');
+
+        // single value fields
+        $singleFields = array(
+            'invoice_title',
+            'invoice_sub_title',
+            'invoice_address',
+            'invoice_footer_text',
+            'invoice_bin_no',
+        );
+        foreach ($singleFields as $label) {
+            $gen_settingsTable->where('sch_id', $shopId)->where('label', $label)->update([
+                'value' => $this->request->getPost($label),
+                'updatedBy' => $userId,
+                'updatedDtm' => date('Y-m-d h:i:s'),
+            ]);
+        }
+
+        // multiple row fields (comma separated in a single row)
+        $multiFields = array('invoice_gmail', 'invoice_name_phone');
+        foreach ($multiFields as $label) {
+            $rows = $this->request->getPost($label . '[]') ?? array();
+            $values = array();
+            foreach ((array)$rows as $row) {
+                $row = trim($row);
+                if ($row !== '') {
+                    $values[] = $row;
+                }
+            }
+            $gen_settingsTable->where('sch_id', $shopId)->where('label', $label)->update([
+                'value' => implode(',', $values),
+                'updatedBy' => $userId,
+                'updatedDtm' => date('Y-m-d h:i:s'),
+            ]);
+        }
+
+        // invoice image uploads (logo + background image, no crop/resize)
+        $imageFields = array('invoice_logo', 'invoice_background_image');
+        foreach ($imageFields as $imageLabel) {
+            if (empty($_FILES[$imageLabel]['name'])) {
+                continue;
+            }
+            $target_dir = FCPATH . '/uploads/schools/';
+            if (!file_exists($target_dir)) {
+                mkdir($target_dir, 0777);
+            }
+
+            //old image unlink
+            $old_img = $gen_settingsTable->where('sch_id', $shopId)->where('label', $imageLabel)->get()->getRow();
+            if (!empty($old_img) && !empty($old_img->value) && file_exists($target_dir . $old_img->value)) {
+                unlink($target_dir . $old_img->value);
+            }
+
+            //new image uplode
+            $pic = $this->request->getFile($imageLabel);
+            $namePic = $pic->getRandomName();
+            $pic->move($target_dir, $namePic);
+            $gen_settingsTable->where('sch_id', $shopId)->where('label', $imageLabel)->update([
+                'value' => $namePic,
+                'updatedBy' => $userId,
+                'updatedDtm' => date('Y-m-d h:i:s'),
+            ]);
+        }
+
+        print '<div class="alert alert-success alert-dismissible" role="alert"> update data successfully  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+    }
+
+    /**
      * @description This method update vat
      * @return void
      */

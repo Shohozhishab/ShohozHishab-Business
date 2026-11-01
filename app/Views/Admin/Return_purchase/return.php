@@ -39,23 +39,65 @@
                                 <tr role="row">
                                     <th>Select</th>
                                     <th>Product Name</th>
+                                    <th>Serial Numbers</th>
                                     <th>Quantity</th>
                                     <th>Purchase Price</th>
                                 </tr>
                                 </thead>
                                 <tbody>
-                                <?php foreach ($purchase_item as $row) {   $availableReturnQty = get_available_quantity_to_return_purchase($purchaseId,$row->prod_id,$row->quantity); ?>
+                                <?php foreach ($purchase_item as $row) {
+                                    $itemId = (int) $row->purchase_item_id;
+                                    $availableReturnQty = get_available_quantity_to_return_purchase($purchaseId, $row->prod_id, $row->quantity);
+                                    $lineSerials = get_return_purchase_line_serials($row->product_stock_relation_id, $row->prod_id);
+                                    $hasSerials = !empty($lineSerials['serials']);
+                                    // Serialized lines can only return units whose serial is still in stock.
+                                    $maxQty = $hasSerials ? min((float)$availableReturnQty, (float)$lineSerials['available_count']) : (float)$availableReturnQty;
+                                    $rowDisabled = ($maxQty <= 0);
+                                    $productName = get_data_by_id('name', 'products', 'prod_id', $row->prod_id);
+                                ?>
                                     <tr role="row" class="odd">
                                         <td>
-                                            <input type="checkbox" oninput="calculateTotalPrice()" name="returnchecked[]" class="datatablesReturn" id="checkedProd" value="<?php echo $row->prod_id; ?>" <?= empty($availableReturnQty)?'disabled':'';?> >
-                                            <input type="hidden" name="product_stock_relation_id[]" value="<?= $row->product_stock_relation_id;?>">
+                                            <input type="checkbox" oninput="calculateTotalPrice()" onchange="returnRowToggle(this)"
+                                                   name="returnchecked[<?= $itemId; ?>]" class="datatablesReturn"
+                                                   id="checkedProd<?= $itemId; ?>" value="<?= $row->prod_id; ?>" <?= $rowDisabled ? 'disabled' : '' ?>>
                                         </td>
-                                        <td><?php echo get_data_by_id('name', 'products', 'prod_id', $row->prod_id) ?></td>
-                                        <td><input type="number" class="quantityReturn form-control" oninput="calculateTotalPrice()" id="quantity"
-                                                   name="quantity[]" placeholder="Quantity" min="<?= empty($availableReturnQty)?0:1;?>" max="<?= $availableReturnQty;?>"
-                                                   value="<?= $availableReturnQty ?>"> </td>
-                                        <td><input type="text" class="purchase_priceReturn form-control" id="searchColumn"
-                                                   name="purchase_price[]" value="<?php echo $row->purchase_price ?>" readonly></td>
+                                        <td><span class="rp-product-name"><?= esc($productName) ?></span></td>
+                                        <td>
+                                            <?php if ($hasSerials): $preSelected = 0; ?>
+                                                <div style="max-height:160px; overflow-y:auto; border:1px solid #ddd; border-radius:4px; padding:6px;">
+                                                    <?php foreach ($lineSerials['serials'] as $serial):
+                                                        $serialId = (int)$serial['product_serial_id'];
+                                                        $isAvailable = ($serial['status'] === 'in_stock');
+                                                        $isChecked = $isAvailable && ($preSelected < $maxQty);
+                                                        if ($isChecked) { $preSelected++; }
+                                                        $warrantyDate = !empty($serial['customer_warranty_end_date']) ? $serial['customer_warranty_end_date'] : $serial['company_warranty_end_date'];
+                                                    ?>
+                                                        <label style="display:block; font-weight:normal; margin:0 0 4px;">
+                                                            <input type="checkbox" class="returnSerial" onchange="returnSerialChanged(this)"
+                                                                   name="return_serials[<?= $itemId; ?>][]" value="<?= $serialId; ?>"
+                                                                   <?= $isChecked ? 'checked="checked"' : '' ?> <?= $isAvailable ? '' : 'disabled' ?>>
+                                                            <span><?= esc($serial['serial_number']) ?></span>
+                                                            <?php if (!empty($warrantyDate)): ?>
+                                                                <small class="text-muted">(Warranty: <?= esc($warrantyDate) ?>)</small>
+                                                            <?php endif; ?>
+                                                            <?php if (!$isAvailable): ?>
+                                                                <span class="label label-default">Already Returned</span>
+                                                            <?php endif; ?>
+                                                        </label>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                                <p class="text-muted" style="margin:4px 0 0;">Selected:
+                                                    <b class="returnSerialCount"><?= $preSelected; ?></b> of <?= (int)$lineSerials['available_count']; ?>
+                                                </p>
+                                            <?php else: ?>
+                                                <span class="text-muted">-</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td><input type="number" class="quantityReturn form-control" oninput="calculateTotalPrice()" id="quantity<?= $itemId; ?>"
+                                                   name="quantity[<?= $itemId; ?>]" placeholder="Quantity" min="<?= ($maxQty <= 0) ? 0 : 1; ?>" max="<?= $maxQty; ?>"
+                                                   value="<?= $maxQty; ?>" <?= $hasSerials ? 'readonly data-serialized="1"' : '' ?>> </td>
+                                        <td><input type="text" class="purchase_priceReturn form-control" id="searchColumn<?= $itemId; ?>"
+                                                   name="purchase_price[<?= $itemId; ?>]" value="<?php echo (float)$row->purchase_price ?>" readonly></td>
                                     </tr>
                                 <?php } ?>
                                 </tbody>
@@ -63,6 +105,7 @@
                                 <tr>
                                     <th>Select</th>
                                     <th>Product Name</th>
+                                    <th>Serial Numbers</th>
                                     <th>Quantity</th>
                                     <th>Purchase Price</th>
                                 </tr>
@@ -140,6 +183,86 @@
 </div>
 
 <script>
+    // ---- Serial number return helpers (start) ----
+    // Serialized lines are returned unit by unit: one checked serial = one unit.
+    // The quantity box of such a line is readonly and always mirrors the picker.
+    function returnEnabledSerials(row) {
+        var boxes = row.querySelectorAll('.returnSerial');
+        var enabled = [];
+        for (var i = 0; i < boxes.length; i++) {
+            if (!boxes[i].disabled) {
+                enabled.push(boxes[i]);
+            }
+        }
+        return enabled;
+    }
+
+    function returnCheckedSerialCount(row) {
+        return row.querySelectorAll('.returnSerial:checked').length;
+    }
+
+    function returnSerialSync(row) {
+        var checked = returnCheckedSerialCount(row);
+        var qty = row.querySelector('.quantityReturn');
+        var counter = row.querySelector('.returnSerialCount');
+        if (qty && qty.getAttribute('data-serialized') === '1') {
+            qty.value = checked;
+        }
+        if (counter) {
+            counter.textContent = checked;
+        }
+    }
+
+    function returnSerialChanged(el) {
+        var row = el.closest('tr');
+        var qty = row.querySelector('.quantityReturn');
+        var max = parseInt(qty ? qty.getAttribute('max') : 0, 10) || 0;
+        var checked = returnCheckedSerialCount(row);
+
+        // Never allow more serials than the units that can still be returned.
+        if (max > 0 && checked > max) {
+            el.checked = false;
+            checked = checked - 1;
+        }
+
+        var select = row.querySelector('.datatablesReturn');
+        if (select && !select.disabled && checked > 0 && !select.checked) {
+            select.checked = true;
+        }
+
+        returnSerialSync(row);
+        calculateTotalPrice();
+    }
+
+    function returnRowToggle(cb) {
+        var row = cb.closest('tr');
+        var serials = returnEnabledSerials(row);
+        if (serials.length === 0) {
+            return;
+        }
+
+        var qty = row.querySelector('.quantityReturn');
+        var max = parseInt(qty ? qty.getAttribute('max') : 0, 10) || 0;
+
+        if (cb.checked) {
+            if (returnCheckedSerialCount(row) === 0) {
+                var limit = max > 0 ? max : serials.length;
+                for (var i = 0; i < serials.length && i < limit; i++) {
+                    serials[i].checked = true;
+                }
+            }
+        } else {
+            // Deselecting the line must not leave its serials in the form.
+            for (var j = 0; j < serials.length; j++) {
+                serials[j].checked = false;
+            }
+        }
+
+        returnSerialSync(row);
+        calculateTotalPrice();
+    }
+    // ---- Serial number return helpers (end) ----
+
     function validateReturnForm() {
 
         let checkedProduct = document.querySelectorAll('.datatablesReturn:checked').length;
@@ -164,6 +287,8 @@
 
             let maxQty = row.querySelector('.quantityReturn').max;
 
+            let productName = row.querySelector('.rp-product-name') ? row.querySelector('.rp-product-name').textContent.trim() : 'this product';
+
             if (qty == '' || qty <= 0) {
 
                 message += 'Quantity must be greater than 0 .<br>';
@@ -173,6 +298,19 @@
             if (parseInt(qty) > parseInt(maxQty)) {
 
                 message += 'Quantity cannot exceed stock .<br>';
+
+            }
+
+            // Serial validation: every returned unit needs its serial number
+            if (row.querySelector('.quantityReturn').getAttribute('data-serialized') === '1') {
+
+                let serialCount = row.querySelectorAll('.returnSerial:checked').length;
+
+                if (serialCount != parseInt(qty, 10) || serialCount == 0) {
+
+                    message += 'Select ' + qty + ' serial number(s) for ' + productName + ' (selected: ' + serialCount + ').<br>';
+
+                }
 
             }
 
@@ -198,8 +336,8 @@
         var totalPrice = 0;
 
         var checks = $("input.datatablesReturn");
-        var qnt = $("input[name='quantity[]']");
-        var pur_price = $("input[name='purchase_price[]']");
+        var qnt = $("input.quantityReturn");
+        var pur_price = $("input.purchase_priceReturn");
 
         // Calculate selected product total
         for (var i = 0; i < checks.length; i++) {

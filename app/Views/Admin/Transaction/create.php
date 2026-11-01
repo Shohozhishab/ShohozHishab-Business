@@ -57,7 +57,6 @@
                                             <h3 class="box-title">Customer Transaction</h3>
                                         </div>
                                         <div class="box-body">
-
                                             <div class="row">
                                                 <div class="col-md-4">
                                                     <form id="geniusform" action="<?php echo $action; ?>" method="post">
@@ -130,7 +129,6 @@
 
                                     <div class="tab-pane " id="supplier">
                                         <div class="box-header">
-
                                             <h3 class="box-title">Supplier Transaction</h3>
                                         </div>
                                         <div class="box-body">
@@ -210,7 +208,6 @@
 
                                     <div class="tab-pane " id="loanProvider">
                                         <div class="box-header">
-
                                             <h3 class="box-title">Account Head Transaction</h3>
                                         </div>
                                         <div class="box-body">
@@ -288,7 +285,6 @@
                                     <div class="tab-pane fade  in" id="bank">
                                         <div id="er_msg"></div>
                                         <div class="box-header">
-
                                             <h3 class="box-title">Bank Transaction</h3>
                                         </div>
                                         <div class="row">
@@ -444,7 +440,6 @@
 
                                     <div class="tab-pane " id="employeeSalary">
                                         <div class="box-header">
-
                                             <h3 class="box-title">Employee Salary</h3>
                                         </div>
                                         <div class="box-body">

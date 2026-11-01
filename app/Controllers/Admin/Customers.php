@@ -379,12 +379,14 @@ class Customers extends BaseController
         $data['customer_name'] = $this->request->getPost('customer_name');
         $data['mobile'] = $this->request->getPost('mobile');
         $data['status'] = $this->request->getPost('status');
+        $data['balance_limit'] = (float) $this->request->getPost('balance_limit');
         $data['updatedBy'] = $userId;
 
         $this->validation->setRules([
             'mobile' => ['label' => 'Mobile', 'rules' => 'required|alpha_numeric|min_length[5]|max_length[12]'],
             'customer_name' => ['label' => 'Name', 'rules' => 'required|only_numeric_not_allow|max_length[60]'],
             'cus_type_id' => ['label' => 'cus_type_id', 'rules' => 'required'],
+            'balance_limit' => ['label' => 'Balance Limit', 'rules' => 'required|numeric|greater_than_equal_to[0]'],
         ]);
 
         if ($this->validation->run($data) == FALSE) {
@@ -402,6 +404,39 @@ class Customers extends BaseController
                 print '<div class="alert alert-danger alert-dismissible" role="alert">This phone number is already in use<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
             }
 
+        }
+    }
+
+    /**
+     * Update notification date and note
+     */
+    public function note_update()
+    {
+        $userId = $this->session->userId;
+
+        $data['customer_id']         = $this->request->getPost('customer_id');
+        $data['notification_date']   = $this->request->getPost('notification_date');
+        $data['note']                = $this->request->getPost('note');
+        $data['updatedBy']           = $userId;
+
+        // empty date is stored as NULL, not as an invalid zero date
+        if (empty($data['notification_date'])) {
+            $data['notification_date'] = null;
+        }
+
+        $this->validation->setRules([
+            'notification_date' => ['label' => 'Notification Date', 'rules' => 'permit_empty|valid_date'],
+            'note'              => ['label' => 'Note', 'rules' => 'max_length[2000]'],
+        ]);
+
+        if ($this->validation->run($data) == FALSE) {
+            print '<div class="alert alert-danger alert-dismissible" role="alert">' . $this->validation->listErrors() . ' <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+        } else {
+            if ($this->customersModel->update($data['customer_id'], $data)) {
+                print '<div class="alert alert-success alert-dismissible" role="alert"> Update data successfully  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+            } else {
+                print '<div class="alert alert-danger alert-dismissible" role="alert"> something went wrong  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+            }
         }
     }
 

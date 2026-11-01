@@ -1,4 +1,29 @@
 
+<?php
+// Preload sold/returned serial numbers and the customer warranty end date for
+// this invoice, grouped by stock line (product_stock_relation_id) so each item
+// row can show its serial number(s) and warranty date.
+$invoiceSerials = array();
+if (!empty($invoiceId)) {
+    $serialRows = DB()->table('product_serial')
+        ->select('product_stock_relation_id, serial_number, customer_warranty_end_date')
+        ->where('invoice_id', $invoiceId)
+        ->whereIn('status', array('sold', 'returned'))
+        ->orderBy('product_serial_id', 'ASC')
+        ->get()
+        ->getResultArray();
+    foreach ($serialRows as $sr) {
+        $key = (string) $sr['product_stock_relation_id'];
+        if (!isset($invoiceSerials[$key])) {
+            $invoiceSerials[$key] = array('serials' => array(), 'warranty' => '');
+        }
+        $invoiceSerials[$key]['serials'][] = $sr['serial_number'];
+        if ($invoiceSerials[$key]['warranty'] === '' && !empty($sr['customer_warranty_end_date'])) {
+            $invoiceSerials[$key]['warranty'] = $sr['customer_warranty_end_date'];
+        }
+    }
+}
+?>
 <div class="content-wrapper" id="viewpage">
     <!-- Content Header (Page header) -->
     <section class="content-header">
@@ -60,7 +85,12 @@
             }
         }
     </style>
-    <section class="invoice">
+    <?php
+    // Invoice logo (falls back to the shop logo, then to no_image_logo.jpg)
+    $invLogoRow = DB()->table('gen_settings')->where('label', 'invoice_logo')->where('sch_id', $_SESSION['shopId'])->get()->getRow();
+    $invLogo = $invLogoRow ? (string) $invLogoRow->value : '';
+    ?>
+    <section class="invoice" id="invoicePrint">
         <!-- title row -->
         <div class="row">
 
@@ -68,7 +98,7 @@
                 <h2 class="page-header">
                     <small class="pull-right">Date: <?php echo invoiceDateFormat(get_data_by_id('createdDtm','invoice','invoice_id',$invoiceId));?></small>
                     <!-- <i class="fa fa-globe"></i> <?php //print $shopsName; ?>. -->
-                    <img src="<?php echo base_url(); ?>/uploads/schools/<?php echo logo_image(); ?>" class="" width="200" alt="<?php print $shopsName; ?>">
+                    <img src="<?php echo no_image_view('/uploads/schools/' . $invLogo, '/uploads/schools/' . logo_image(), $invLogo); ?>" class="" width="200" alt="<?php print $shopsName; ?>">
 
                 </h2>
             </div>
@@ -118,6 +148,7 @@
                     <tr>
                         <th>No</th>
                         <th>Product</th>
+                        <th>Warranty Date</th>
                         <th>Price</th>
                         <th>Qty</th>
                         <th>Total</th>
@@ -141,7 +172,15 @@
                                 $unit =  productIdByDefaultStoreUnit($row->prod_id);
 
                                 echo $productName.'<br> <small>('.$category.' > '.$subCategory .')</small>';
+
+                                // Serial number(s) recorded on this invoice line.
+                                $psrKey = (string) ($row->product_stock_relation_id ?? '');
+                                $lineSerial = $invoiceSerials[$psrKey] ?? null;
+                                if ($lineSerial && !empty($lineSerial['serials'])) {
+                                    echo '<br><small><b>Serial:</b> ' . esc(implode(', ', $lineSerial['serials'])) . '</small>';
+                                }
                                 ?></td>
+                            <td><?php echo ($lineSerial && $lineSerial['warranty'] !== '') ? esc($lineSerial['warranty']) : '---';?></td>
                             <td><?php echo showWithCurrencySymbol(unitOrBasePriceByUnitPrice($unit,$row->price));?></td>
                             <td><?php echo unitOrQtyByUnitQty($unit,$row->quantity);?>/<?php echo showUnitName($unit) ?></td>
                             <td><?php echo showWithCurrencySymbol($row->total_price);?></td>
@@ -254,9 +293,11 @@
         <!-- /.row -->
         <?php if (isset($print) && $print == 1){ ?>
             <!-- this row will not appear when printing -->
-            <div class="row no-print">
+            <div class="row no-print" data-html2canvas-ignore="true">
                 <div class="col-xs-12">
                     <div class="print_line btn btn-primary pull-right" onclick="print(document);"><i class="fa fa-print"></i> Print Now</div>
+                    <button type="button" class="btn btn-info pull-right" style="margin-right: 10px;" onclick="downloadPDF('invoicePrint','Invoice','Inv_<?= $invoiceId ?>.pdf')"><i class="fa fa-file-pdf-o"></i> Download PDF </button>
+                    <button type="button" class="btn btn-success pull-right" style="margin-right: 10px;" onclick="sharePDFChoose('invoicePrint','Invoice','Inv_<?= $invoiceId ?>.pdf')"><i class="fa fa-share-square-o"></i> Share </button>
 
                 </div>
             </div>

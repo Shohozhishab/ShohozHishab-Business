@@ -102,6 +102,11 @@ class Sales_ajax extends BaseController
             }
 
             $data['action'] = base_url('Admin/Sales/create_action');
+
+            // Serial numbers / customer warranty selected on the cart list.
+            $saleSerials = $this->session->get('saleSerials');
+            $data['saleSerials'] = is_array($saleSerials) ? $saleSerials : array();
+
             $data['menu'] = view('Admin/menu_sales', $data);
             // All Permissions
             //$perm = array('create','read','update','delete','mod_access');

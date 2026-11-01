@@ -24,37 +24,67 @@
                         <div class="row">
                             <div id="message"></div>
                             <?php if (session()->getFlashdata('message') !== NULL) : echo session()->getFlashdata('message'); endif; ?>
-                            <div class="col-lg-6" >
-                                <form id="geniusformUpdate" action="<?php echo $action; ?>" method="post">
-                                    <div class="form-group">
-                                        <label for="varchar">Name </label>
-                                        <input type="text" class="form-control" name="name" id="name" placeholder="Name" value="<?php echo $supplier->name?>"  />
-                                        <input type="hidden" class="form-control" name="supplier_id" id="supplier_id" value="<?php echo $supplier->supplier_id?>"  />
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="int">Phone </label>
-                                        <input type="number" class="form-control" name="phone" id="phone" placeholder="Phone" value="<?php echo $supplier->phone?>" />
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="address">Address </label>
-                                        <textarea class="form-control" rows="3" name="address" id="address" placeholder="Address"><?php echo $supplier->address?></textarea>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="varchar">Status </label>
-                                        <select class="form-control" name="status" >
-                                            <?php echo globalStatus($supplier->status)?>
-                                        </select>
-                                    </div>
-
-
-                                    <button type="submit" class="btn btn-primary geniusSubmit-btn">Update</button>
-                                    <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Suppliers_ajax/'); ?>','<?php echo '/Admin/Suppliers/'; ?>')" class="btn btn-default">Cancel</a>
-                                </form>
+                            <!-- Nav tabs -->
+                            <div class="col-lg-12">
+                                <ul class="nav nav-tabs" role="tablist">
+                                    <li role="presentation" class="active "><a href="#home" aria-controls="home" role="tab" data-toggle="tab">General</a></li>
+                                    <li role="presentation" ><a href="#note" aria-controls="note" role="tab" data-toggle="tab">Note</a></li>
+                                </ul>
                             </div>
 
+                            <!-- Tab panes -->
+                            <div class="tab-content " style="margin-top: 60px;">
+                                <div role="tabpanel" class="tab-pane active" id="home">
+                                    <div class="col-lg-6">
+                                        <form id="geniusformUpdate" action="<?php echo $action; ?>" method="post">
+                                            <div class="form-group">
+                                                <label for="varchar">Name </label>
+                                                <input type="text" class="form-control" name="name" id="name" placeholder="Name" value="<?php echo $supplier->name?>"  />
+                                                <input type="hidden" class="form-control" name="supplier_id" id="supplier_id" value="<?php echo $supplier->supplier_id?>"  />
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="int">Phone </label>
+                                                <input type="number" class="form-control" name="phone" id="phone" placeholder="Phone" value="<?php echo $supplier->phone?>" />
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="address">Address </label>
+                                                <textarea class="form-control" rows="3" name="address" id="address" placeholder="Address"><?php echo $supplier->address?></textarea>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="varchar">Status </label>
+                                                <select class="form-control" name="status" >
+                                                    <?php echo globalStatus($supplier->status)?>
+                                                </select>
+                                            </div>
 
-                            <div class="col-lg-6" style="border-left: 1px solid #cecdcd;">
 
+                                            <button type="submit" class="btn btn-primary geniusSubmit-btn">Update</button>
+                                            <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Suppliers_ajax/'); ?>','<?php echo '/Admin/Suppliers/'; ?>')" class="btn btn-default">Cancel</a>
+                                        </form>
+                                    </div>
+                                    <div class="col-lg-6"></div>
+                                </div>
+
+                                <div role="tabpanel" class="tab-pane " id="note">
+                                    <div class="col-lg-6">
+                                        <form id="geniusformUpdate" action="<?php echo base_url('Admin/Suppliers/note_update'); ?>" method="post">
+                                            <div class="form-group">
+                                                <label>Notification Date </label>
+                                                <input type="date" class="form-control" name="notification_date" id="NotificationDate"
+                                                       value="<?php echo !empty($supplier->notification_date) ? $supplier->notification_date : ''; ?>" />
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Note </label>
+                                                <textarea class="form-control" name="note" id="Note" rows="6"
+                                                          placeholder="Note"><?php echo !empty($supplier->note) ? $supplier->note : ''; ?></textarea>
+                                            </div>
+                                            <input type="hidden" name="supplier_id" value="<?php echo $supplier->supplier_id; ?>" />
+                                            <button type="submit" class="btn btn-primary geniusSubmit-btn">Update</button>
+                                            <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Suppliers_ajax/'); ?>','<?php echo '/Admin/Suppliers/'; ?>')" class="btn btn-default">Cancel</a>
+                                        </form>
+                                    </div>
+                                    <div class="col-lg-6"></div>
+                                </div>
                             </div>
                         </div>
 

@@ -144,6 +144,25 @@ class Return_sale extends BaseController
     }
 
     /**
+     * @description Flash an error message and send the user back to the return screen
+     * @param int $invoiceId
+     * @param string $message
+     * @return RedirectResponse
+     */
+    private function back_to_return_with_error($invoiceId, string $message): RedirectResponse
+    {
+        $this->session->setFlashdata('message', '
+        <div class="alert alert-danger alert-dismissible" role="alert">
+            ' . $message . '
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>');
+
+        return redirect()->to(site_url('Admin/Return_sale/return/' . $invoiceId));
+    }
+
+    /**
      * @description This method store return sale
      * @return RedirectResponse
      */
@@ -156,10 +175,38 @@ class Return_sale extends BaseController
         $customerName = $this->request->getPost('customer_name');
         $invoiceId    = $this->request->getPost('invoice_id');
 
-        $productIds              = $this->request->getPost('returnchecked[]');
-        $productStockRelationIds = $this->request->getPost('product_stock_relation_id[]');
-        $quantities              = $this->request->getPost('quantity[]');
-        $purchasePrices          = $this->request->getPost('purchase_price[]');
+        // Lines arrive keyed by stock row (returnchecked[psr] = prod_id), so the
+        // quantity, the price and the serial numbers of a line always stay paired.
+        $checkedLines   = $this->request->getPost('returnchecked');
+        $quantities     = $this->request->getPost('quantity');
+        $purchasePrices = $this->request->getPost('purchase_price');
+        $postedSerials  = $this->request->getPost('return_serials');
+
+        $checkedLines   = is_array($checkedLines) ? $checkedLines : array();
+        $quantities     = is_array($quantities) ? $quantities : array();
+        $purchasePrices = is_array($purchasePrices) ? $purchasePrices : array();
+        $postedSerials  = is_array($postedSerials) ? $postedSerials : array();
+
+        $lines = array();
+        foreach ($checkedLines as $psrId => $prodId) {
+            $qty = isset($quantities[$psrId]) ? (float)$quantities[$psrId] : 0;
+            if ($qty <= 0) {
+                continue;
+            }
+
+            $serialIds = array();
+            if (!empty($postedSerials[$psrId]) && is_array($postedSerials[$psrId])) {
+                $serialIds = array_values(array_unique(array_map('intval', $postedSerials[$psrId])));
+            }
+
+            $lines[] = [
+                'psr'     => (int)$psrId,
+                'prod_id' => (int)$prodId,
+                'qty'     => $qty,
+                'price'   => isset($purchasePrices[$psrId]) ? (float)$purchasePrices[$psrId] : 0,
+                'serials' => $serialIds,
+            ];
+        }
 
         $amount     = $this->request->getPost('totalPrice');
         $cashAmount = $this->request->getPost('cash');
@@ -175,37 +222,52 @@ class Return_sale extends BaseController
         }
 
         if (empty($amount)) {
-            $this->session->setFlashdata('message', '
-            <div class="alert alert-danger alert-dismissible" role="alert">
-                Please select any product
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>');
-            return redirect()->to(site_url('Admin/Return_sale/return/' . $invoiceId));
+            return $this->back_to_return_with_error($invoiceId, 'Please select any product');
         }
 
         // New customer must clear full amount (no due)
         if (!empty($customerName) && $dueAmount != 0) {
-            $this->session->setFlashdata('message', '
-            <div class="alert alert-danger alert-dismissible" role="alert">
-                Please clear due
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>');
-            return redirect()->to(site_url('Admin/Return_sale/return/' . $invoiceId));
+            return $this->back_to_return_with_error($invoiceId, 'Please clear due');
         }
 
         if ($dueAmount < 0) {
-            $this->session->setFlashdata('message', '
-            <div class="alert alert-danger alert-dismissible" role="alert">
-                Please enter a valid due amount
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>');
-            return redirect()->to(site_url('Admin/Return_sale/return/' . $invoiceId));
+            return $this->back_to_return_with_error($invoiceId, 'Please enter a valid due amount');
+        }
+
+        // Serial validation: every returned unit of a serialized product must
+        // carry one of the serial numbers that is still sold on this invoice line.
+        foreach ($lines as $line) {
+            $product = DB()->table('products')
+                ->select('name, serial_status')
+                ->where('prod_id', $line['prod_id'])
+                ->get()->getRow();
+
+            if (empty($product) || (int)$product->serial_status !== 1) {
+                continue;
+            }
+
+            $lineSerials = get_return_sale_line_serials($invoiceId, $line['psr'], $line['prod_id']);
+            if (empty($lineSerials['serials'])) {
+                // Sold before serial numbers were attached to the invoice line
+                continue;
+            }
+
+            $needQty = (int)round($line['qty']);
+
+            if (count($line['serials']) !== $needQty) {
+                return $this->back_to_return_with_error($invoiceId, esc($product->name) . ': ' . $needQty . ' serial number(s) must be selected (quantity is ' . $needQty . ').');
+            }
+
+            $soldIds = array();
+            foreach ($lineSerials['serials'] as $serialRow) {
+                if ($serialRow['status'] === 'sold') {
+                    $soldIds[] = (int)$serialRow['product_serial_id'];
+                }
+            }
+
+            if (!empty(array_diff($line['serials'], $soldIds))) {
+                return $this->back_to_return_with_error($invoiceId, esc($product->name) . ': one or more serial numbers are not available for return.');
+            }
         }
 
         DB()->transStart();
@@ -252,18 +314,17 @@ class Return_sale extends BaseController
 
         // 3. Process each returned item
         $totalPurchasePrice = 0;
-        $itemCount = count($productIds);
 
-        for ($i = 0; $i < $itemCount; $i++) {
-            $qty   = $quantities[$i];
-            $price = $purchasePrices[$i];
+        foreach ($lines as $line) {
+            $qty   = $line['qty'];
+            $price = $line['price'];
             $total = $qty * $price;
 
             // Insert return item
             DB()->table('return_sale_item')->insert([
                 'sch_id'      => $shopId,
                 'rtn_sale_id' => $returnId,
-                'prod_id'     => $productIds[$i],
+                'prod_id'     => $line['prod_id'],
                 'price'       => $price,
                 'quantity'    => $qty,
                 'total_price' => $total,
@@ -273,8 +334,8 @@ class Return_sale extends BaseController
 
             // Update product stock quantity
             $stock = DB()->table('product_stock_relation')
-                ->where('product_stock_relation_id', $productStockRelationIds[$i])
-                ->where('product_id', $productIds[$i])
+                ->where('product_stock_relation_id', $line['psr'])
+                ->where('product_id', $line['prod_id'])
                 ->get()
                 ->getRow();
 
@@ -282,12 +343,29 @@ class Return_sale extends BaseController
                 $newQty = $stock->quantity + $qty;
 
                 DB()->table('product_stock_relation')
-                    ->where('product_stock_relation_id', $productStockRelationIds[$i])
-                    ->where('product_id', $productIds[$i])
+                    ->where('product_stock_relation_id', $line['psr'])
+                    ->where('product_id', $line['prod_id'])
                     ->update(['quantity' => $newQty]);
 
                 // Calculate total purchase cost
                 $totalPurchasePrice += ($stock->purchase_price * $qty);
+            }
+
+            // Reverse the returned serial numbers: they stay linked to the invoice
+            // (so the invoice keeps showing them) but leave the sold state, and they
+            // remember this return slip.
+            if (!empty($line['serials'])) {
+                DB()->table('product_serial')
+                    ->whereIn('product_serial_id', $line['serials'])
+                    ->where('invoice_id', $invoiceId)
+                    ->where('product_stock_relation_id', $line['psr'])
+                    ->where('status', 'sold')
+                    ->update([
+                        'status'      => 'returned',
+                        'rtn_sale_id' => $returnId,
+                        'updatedBy'   => $userId,
+                        'updatedDtm'  => date('Y-m-d H:i:s'),
+                    ]);
             }
         }
 
@@ -310,6 +388,25 @@ class Return_sale extends BaseController
                 'amount'           => $totalVat,
                 'rest_balance'     => $newVatBal,
                 'createdBy'        => $shopId,
+            ]);
+        }
+
+        if (!empty($totalDiscount)) {
+            $discountBalance = get_data_by_id('discount', 'shops', 'sch_id', $shopId);
+            $newDiscountBal  = $discountBalance + $totalDiscount;
+
+            DB()->table('shops')
+                ->where('sch_id', $shopId)
+                ->update(['discount' => $newDiscountBal]);
+
+            DB()->table('ledger_discount')->insert([
+                'invoice_id'       => $invoiceId,
+                'sch_id'           => $shopId,
+                'particulars'      => 'Return Sale Discount return',
+                'trangaction_type' => 'Cr.',
+                'amount'           => $totalDiscount,
+                'rest_balance'     => $newDiscountBal,
+                'createdBy'        => $userId,
             ]);
         }
 

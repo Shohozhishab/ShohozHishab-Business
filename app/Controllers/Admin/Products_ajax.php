@@ -78,6 +78,8 @@ class Products_ajax extends BaseController
             $unitCategory = get_data_by_id('unit_categories_id','units','units_id',$data['showUnit']);
             $data['units'] = DB()->table('units')->where('unit_categories_id',$unitCategory)->orderBy('conversion_factor','DESC')->get()->getResult();
 
+            // Serial & warranty tab data (visible only when a flag is ON)
+            $data['serialTab'] = product_serial_tab_data($data['product']);
 
             $data['menu'] = view('Admin/menu_stock');
             // All Permissions

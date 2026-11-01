@@ -24,39 +24,69 @@
                         <div class="row">
                             <div id="message"></div>
                             <?php if (session()->getFlashdata('message') !== NULL) : echo session()->getFlashdata('message'); endif; ?>
-                            <div class="col-lg-6" >
-                                <form id="geniusformUpdate" action="<?php echo $action; ?>" method="post">
-                                    <h4>New Account Head</h4>
-                                    <div class="form-group">
-                                        <label for="varchar">Name</label>
-                                        <input type="text" class="form-control" name="name" id="name" placeholder="Name" value="<?php echo $loan_provider->name ?>" />
-                                        <input type="hidden" class="form-control" name="loan_pro_id" id="loan_pro_id" value="<?php echo $loan_provider->loan_pro_id ?>" />
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="int">Phone</label>
-                                        <input type="number" class="form-control" name="phone" id="phone" placeholder="Phone"  value="<?php echo $loan_provider->phone ?>" />
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="address">Adress </label>
-                                        <textarea class="form-control" rows="3" name="address" id="address" placeholder="address"><?php echo $loan_provider->address ?></textarea>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="varchar">Status </label>
-                                        <select class="form-control" name="status" >
-                                            <?php echo globalStatus($loan_provider->status)?>
-                                        </select>
-                                    </div>
-
-
-                                    <button type="submit" class="btn btn-primary geniusSubmit-btn">Update</button>
-                                    <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Loan_provider_ajax/'); ?>','<?php echo '/Admin/Loan_provider/'; ?>')" class="btn btn-default">Cancel</a>
-                                </form>
+                            <!-- Nav tabs -->
+                            <div class="col-lg-12">
+                                <ul class="nav nav-tabs" role="tablist">
+                                    <li role="presentation" class="active "><a href="#home" aria-controls="home" role="tab" data-toggle="tab">General</a></li>
+                                    <li role="presentation" ><a href="#note" aria-controls="note" role="tab" data-toggle="tab">Note</a></li>
+                                </ul>
                             </div>
 
+                            <!-- Tab panes -->
+                            <div class="tab-content " style="margin-top: 60px;">
+                                <div role="tabpanel" class="tab-pane active" id="home">
+                                    <div class="col-lg-6">
+                                        <form id="geniusformUpdate" action="<?php echo $action; ?>" method="post">
+                                            <h4>New Account Head</h4>
+                                            <div class="form-group">
+                                                <label for="varchar">Name</label>
+                                                <input type="text" class="form-control" name="name" id="name" placeholder="Name" value="<?php echo $loan_provider->name ?>" />
+                                                <input type="hidden" class="form-control" name="loan_pro_id" id="loan_pro_id" value="<?php echo $loan_provider->loan_pro_id ?>" />
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="int">Phone</label>
+                                                <input type="number" class="form-control" name="phone" id="phone" placeholder="Phone"  value="<?php echo $loan_provider->phone ?>" />
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="address">Adress </label>
+                                                <textarea class="form-control" rows="3" name="address" id="address" placeholder="address"><?php echo $loan_provider->address ?></textarea>
+                                            </div>
 
-                            <div class="col-lg-6" style="border-left: 1px solid #cecdcd;">
+                                            <div class="form-group">
+                                                <label for="varchar">Status </label>
+                                                <select class="form-control" name="status" >
+                                                    <?php echo globalStatus($loan_provider->status)?>
+                                                </select>
+                                            </div>
 
+
+                                            <button type="submit" class="btn btn-primary geniusSubmit-btn">Update</button>
+                                            <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Loan_provider_ajax/'); ?>','<?php echo '/Admin/Loan_provider/'; ?>')" class="btn btn-default">Cancel</a>
+                                        </form>
+                                    </div>
+                                    <div class="col-lg-6"></div>
+                                </div>
+
+                                <div role="tabpanel" class="tab-pane " id="note">
+                                    <div class="col-lg-6">
+                                        <form id="geniusformUpdate" action="<?php echo base_url('Admin/Loan_provider/note_update'); ?>" method="post">
+                                            <div class="form-group">
+                                                <label>Notification Date </label>
+                                                <input type="date" class="form-control" name="notification_date" id="NotificationDate"
+                                                       value="<?php echo !empty($loan_provider->notification_date) ? $loan_provider->notification_date : ''; ?>" />
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Note </label>
+                                                <textarea class="form-control" name="note" id="Note" rows="6"
+                                                          placeholder="Note"><?php echo !empty($loan_provider->note) ? $loan_provider->note : ''; ?></textarea>
+                                            </div>
+                                            <input type="hidden" name="loan_pro_id" value="<?php echo $loan_provider->loan_pro_id; ?>" />
+                                            <button type="submit" class="btn btn-primary geniusSubmit-btn">Update</button>
+                                            <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Loan_provider_ajax/'); ?>','<?php echo '/Admin/Loan_provider/'; ?>')" class="btn btn-default">Cancel</a>
+                                        </form>
+                                    </div>
+                                    <div class="col-lg-6"></div>
+                                </div>
                             </div>
                         </div>
 
