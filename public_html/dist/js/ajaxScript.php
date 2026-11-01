@@ -4473,7 +4473,7 @@
       var customerId = cusData.value;
       if (!customerId) { return; }
       var typeSel = form.querySelector('select[name="trangaction_type"]');
-      if (!typeSel || typeSel.value !== '2') { return; } // Dr only
+      if (!typeSel || typeSel.value !== '1') { return; } // Cr only (credit increases customer balance)
       var $cd = $(cusData);
       var balanceLimit = parseFloat($cd.data('cus-limit'));
       if (isNaN(balanceLimit) || balanceLimit <= 0) { return; }

@@ -22,6 +22,25 @@ if (!function_exists('wsl_days_class')) {
         return 'wsl-ok';
     }
 }
+
+/** Days label helper: "Today" / "Tomorrow" instead of "0 days" / "1 days". */
+if (!function_exists('wsl_days_label')) {
+    function wsl_days_label($days)
+    {
+        $days = (int) $days;
+        if ($days === 0) { return 'Today'; }
+        if ($days === 1) { return 'Tomorrow'; }
+        return $days . ' days';
+    }
+}
+
+/** Status label helper: "in_stock" renders as "In Stock". */
+if (!function_exists('wsl_status_label')) {
+    function wsl_status_label($status)
+    {
+        return ucwords(str_replace('_', ' ', (string) $status));
+    }
+}
 ?>
 <style>
     .wsl-legend span { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
@@ -141,8 +160,8 @@ if (!function_exists('wsl_days_class')) {
                                             <td><?= esc($row->product_name) ?></td>
                                             <td><?= esc($row->serial_number) ?></td>
                                             <td><?= esc($row->company_warranty_end_date) ?></td>
-                                            <td><span class="wsl-days-badge"><?= (int) $row->days_remaining ?></span> day<?= $row->days_remaining == 1 ? '' : 's' ?></td>
-                                            <td><span class="label label-<?= $row->status === 'sold' ? 'primary' : 'default' ?>"><?= esc(ucfirst($row->status)) ?></span></td>
+                                            <td><span class="wsl-days-badge"><?= esc(wsl_days_label($row->days_remaining)) ?></span></td>
+                                            <td><span class="label label-<?= $row->status === 'sold' ? 'primary' : 'default' ?>"><?= esc(wsl_status_label($row->status)) ?></span></td>
                                             <td><?= $row->customer_name ? esc($row->customer_name) : '<span class="text-muted">&mdash;</span>' ?></td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -177,7 +196,7 @@ if (!function_exists('wsl_days_class')) {
                                             <td><strong><?= esc($group['product_name']) ?></strong></td>
                                             <td><span class="badge"><?= (int) $group['count'] ?></span></td>
                                             <td><?= esc($earliest) ?></td>
-                                            <td><span class="wsl-days-badge"><?= (int) $minDays ?></span> day<?= $minDays == 1 ? '' : 's' ?></td>
+                                            <td><span class="wsl-days-badge"><?= esc(wsl_days_label($minDays)) ?></span></td>
                                             <td><?= count($customerNames) ? esc(implode(', ', $customerNames)) : '<span class="text-muted">&mdash;</span>' ?></td>
                                         </tr>
                                         <tr class="wsl-group-detail" id="wslgrp-<?= (int) $gkey ?>" style="display:none;">
@@ -197,8 +216,8 @@ if (!function_exists('wsl_days_class')) {
                                                         <tr class="<?= $rowCls ?>">
                                                             <td><?= esc($row->serial_number) ?></td>
                                                             <td><?= esc($row->company_warranty_end_date) ?></td>
-                                                            <td><span class="wsl-days-badge"><?= (int) $row->days_remaining ?></span> day<?= $row->days_remaining == 1 ? '' : 's' ?></td>
-                                                            <td><span class="label label-<?= $row->status === 'sold' ? 'primary' : 'default' ?>"><?= esc(ucfirst($row->status)) ?></span></td>
+                                                            <td><span class="wsl-days-badge"><?= esc(wsl_days_label($row->days_remaining)) ?></span></td>
+                                                            <td><span class="label label-<?= $row->status === 'sold' ? 'primary' : 'default' ?>"><?= esc(wsl_status_label($row->status)) ?></span></td>
                                                             <td><?= $row->customer_name ? esc($row->customer_name) : '<span class="text-muted">&mdash;</span>' ?></td>
                                                         </tr>
                                                     <?php endforeach; ?>
@@ -266,7 +285,7 @@ if (!function_exists('wsl_days_class')) {
                             <td><?= esc($row->serial_number) ?></td>
                             <td><?= esc($row->company_warranty_end_date) ?></td>
                             <td><?= (int) $row->days_remaining ?></td>
-                            <td><?= esc(ucfirst($row->status)) ?></td>
+                            <td><?= esc(wsl_status_label($row->status)) ?></td>
                             <td><?= $row->customer_name ? esc($row->customer_name) : '' ?></td>
                         </tr>
                     <?php endforeach; ?>

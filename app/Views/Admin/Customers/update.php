@@ -1,10 +1,10 @@
 <div class="content-wrapper" id="viewpage">
     <!-- Content Header (Page header) -->
     <section class="content-header">
-        <h1> Shops <small>Shops Update</small> </h1>
+        <h1> Customer <small>Customer Update</small> </h1>
         <ol class="breadcrumb">
             <li><a href="#"><i class="fa fa-dashboard"></i> Home</a></li>
-            <li class="active">Shops</li>
+            <li class="active">Customer</li>
         </ol>
     </section>
 
@@ -21,7 +21,7 @@
 
                 <div class="box">
                     <div class="box-header">
-                        <h3 class="box-title">Shop Update</h3>
+                        <h3 class="box-title">Customer Update</h3>
                     </div>
                     <!-- /.box-header -->
                     <div class="box-body">

@@ -317,8 +317,8 @@
                                             <thead>
                                                 <tr>
                                                     <th style="width:40px;">#</th>
-                                                    <th id="warrantyColHeader">Company Warranty End Date</th>
                                                     <th id="serialColHeader">Serial Number</th>
+                                                    <th id="warrantyColHeader">Company Warranty End Date</th>
                                                     <th style="width:50px;"></th>
                                                 </tr>
                                             </thead>
@@ -371,8 +371,8 @@
         function rowHtml(value, dateVal) {
             return '<tr class="serial-row">' +
                 '<td class="row-index text-center"></td>' +
-                '<td class="col-warranty"><input type="date" class="form-control input-sm serial-warranty" value="' + escapeHtml(dateVal || '') + '"></td>' +
                 '<td class="col-serial"><input type="text" class="form-control input-sm serial-input" placeholder="Enter serial number" value="' + escapeHtml(value) + '"></td>' +
+                '<td class="col-warranty"><input type="date" class="form-control input-sm serial-warranty" value="' + escapeHtml(dateVal || '') + '"></td>' +
                 '<td class="text-center"><button type="button" class="btn btn-danger btn-xs remove-serial-row"><i class="fa fa-times"></i></button></td>' +
                 '</tr>';
         }

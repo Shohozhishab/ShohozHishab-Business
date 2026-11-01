@@ -461,6 +461,7 @@ class Bank_withdraw extends BaseController
 
     private function bank_withdraw_transaction_entries($wthd_id, $ledger_id, $table_name, $transaction_type) {
         DB()->table('transaction_entries')->insert([
+            'sch_id'          => $this->session->shopId,
             'wthd_id'         => $wthd_id,
             'ledger_id'        => $ledger_id,
             'table_name'       => $table_name,
@@ -478,6 +479,7 @@ class Bank_withdraw extends BaseController
 
             $data['flow'] = DB()->table('transaction_entries')
                 ->where('wthd_id',$wthd_id)
+                ->where('sch_id', $this->session->shopId)
                 ->get()
                 ->getResult();
 

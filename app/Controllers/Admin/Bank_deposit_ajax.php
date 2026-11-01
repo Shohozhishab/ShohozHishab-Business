@@ -94,6 +94,7 @@ class Bank_deposit_ajax extends BaseController
 
             $data['flow'] = DB()->table('transaction_entries')
                 ->where('dep_id',$dep_id)
+                ->where('sch_id', $shopId)
                 ->get()
                 ->getResult();
 

@@ -88,7 +88,15 @@
                                         <td>
                                             <input type="number" name="barcodeqty[<?php print $products->prod_id; ?>]" style="width: 40px;" value="0">
                                         </td>
-                                        <td><?php echo $products->name ?></td>
+                                        <td>
+                                            <?php echo $products->name ?>
+                                            <?php if (isset($products->serial_status) && $products->serial_status == 1): ?>
+                                                <br><span class="label bg-blue">Serial Status: ON</span>
+                                            <?php endif; ?>
+                                            <?php if (isset($products->warranty_status) && $products->warranty_status == 1): ?>
+                                                <br><span class="label bg-orange">Warranty Status: ON</span>
+                                            <?php endif; ?>
+                                        </td>
                                         <td><?php echo unitOrQtyByUnitQty($products->unit,productIdByQuantity($products->prod_id)) ?>
                                             / <?php echo showUnitName($products->unit) ?></td>
                                         <td><?php echo showWithCurrencySymbol(unitOrBasePriceByUnitPrice($products->unit,$products->purchase_price)) ?></td>

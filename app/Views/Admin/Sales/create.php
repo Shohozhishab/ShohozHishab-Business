@@ -172,17 +172,25 @@ $saleSerials = (isset($saleSerials) && is_array($saleSerials)) ? $saleSerials : 
                                                             data-saved="<?= count($savedIds) >= $needQty && ($warrantyOn ? $savedWarranty !== '' : true) ? '1' : '0'; ?>">
                                                         <i class="fa fa-barcode"></i> Add Serial
                                                     </button>
+                                                <?php } elseif ($warrantyOn) { ?>
+                                                    <button type="button" class="btn btn-warning btn-xs add-serial-btn"
+                                                            onclick="saleOpenSerialModal(this)"
+                                                            data-psr="<?= $dataPsr; ?>"
+                                                            data-qty="<?= (int)$needQty; ?>"
+                                                            data-serial-status="0"
+                                                            data-warranty-status="1"
+                                                            data-product-name="<?= $dataName; ?>"
+                                                            data-saved-warranty="<?= htmlspecialchars($savedWarranty, ENT_QUOTES, 'UTF-8'); ?>"
+                                                            data-saved="<?= $savedWarranty !== '' ? '1' : '0'; ?>">
+                                                        <i class="fa fa-shield"></i> Add Warranty
+                                                    </button>
                                                 <?php } else { ?>
                                                     <span class="text-muted">-</span>
                                                 <?php } ?>
                                             </td>
                                             <td id="saleWarrantyCell_<?= $dataPsr; ?>">
                                                 <?php if ($warrantyOn) { ?>
-                                                    <?php if ($serialOn) { ?>
-                                                        <b><?= $savedWarranty !== '' ? htmlspecialchars($savedWarranty, ENT_QUOTES, 'UTF-8') : '<span class="text-danger">not added</span>'; ?></b>
-                                                    <?php } else { ?>
-                                                        <span class="text-muted">needs serial tracking</span>
-                                                    <?php } ?>
+                                                    <b><?= $savedWarranty !== '' ? htmlspecialchars($savedWarranty, ENT_QUOTES, 'UTF-8') : '<span class="text-danger">not added</span>'; ?></b>
                                                 <?php } else { ?>
                                                     <span class="text-muted">-</span>
                                                 <?php } ?>
@@ -410,7 +418,7 @@ $saleSerials = (isset($saleSerials) && is_array($saleSerials)) ? $saleSerials : 
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h4 class="modal-title">Serial Numbers &amp; Warranty <small id="saleSerialProduct"></small></h4>
+                <h4 class="modal-title"><span id="saleSerialModalHeading">Serial Numbers &amp; Warranty</span> <small id="saleSerialProduct"></small></h4>
             </div>
             <div class="modal-body">
                 <div id="saleSerialSerialWrap">
@@ -534,13 +542,14 @@ $saleSerials = (isset($saleSerials) && is_array($saleSerials)) ? $saleSerials : 
 
         jQuery('#saleSerialModal').data('ctx', ctx);
         jQuery('#saleSerialProduct').text('- ' + ctx.name);
+        jQuery('#saleSerialModalHeading').text(ctx.serialOn ? 'Serial Numbers & Warranty' : 'Warranty');
         jQuery('#saleSerialQty').text(ctx.qty);
         jQuery('#saleSerialFilter').val('');
-        jQuery('#saleSerialWarranty').val('');
+        jQuery('#saleSerialWarranty').val(String($btn.data('saved-warranty') || ''));
         jQuery('#saleSerialRows').empty();
         jQuery('#saleSerialCheckAll').prop('checked', false);
         jQuery('#saleSerialSerialWrap').toggle(ctx.serialOn);
-        jQuery('#saleSerialWarrantyWrap').toggle(ctx.warrantyOn && ctx.serialOn);
+        jQuery('#saleSerialWarrantyWrap').toggle(ctx.warrantyOn);
 
         if (ctx.serialOn) {
             saleSerialLoad();
@@ -637,7 +646,7 @@ $saleSerials = (isset($saleSerials) && is_array($saleSerials)) ? $saleSerials : 
             }
         }
 
-        if (ctx.serialOn && ctx.warrantyOn && warranty === '') {
+        if (ctx.warrantyOn && warranty === '') {
             alert('Customer Warranty End Date is required for this product.');
             return;
         }
@@ -679,7 +688,14 @@ $saleSerials = (isset($saleSerials) && is_array($saleSerials)) ? $saleSerials : 
 
         var complete = (!ctx.serialOn || numbers.length === Number(res.qty)) && (!ctx.warrantyOn || res.warranty !== '');
         jQuery('.add-serial-btn').filter(function () {
-            return String(jQuery(this).data('psr')) === String(ctx.psr);
+            if (String(jQuery(this).data('psr')) !== String(ctx.psr)) {
+                return false;
+            }
+            // Warranty-only lines can resubmit the picked date for the modal.
+            if (!jQuery(this).data('serial-status')) {
+                jQuery(this).data('saved-warranty', res.warranty || '');
+            }
+            return true;
         }).attr('data-saved', complete ? '1' : '0');
     }
 
@@ -702,19 +718,23 @@ $saleSerials = (isset($saleSerials) && is_array($saleSerials)) ? $saleSerials : 
             }
 
             var missing = null;
+            var missingIsWarrantyOnly = false;
             jQuery('.add-serial-btn').each(function () {
                 if (missing !== null) {
                     return;
                 }
                 if (String(jQuery(this).attr('data-saved')) !== '1') {
-                    missing = jQuery(this).data('product-name') || 'the serialized product';
+                    missing = jQuery(this).data('product-name') || 'the product';
+                    missingIsWarrantyOnly = !jQuery(this).data('serial-status');
                 }
             });
 
             if (missing !== null) {
                 e.preventDefault();
                 e.stopImmediatePropagation();
-                alert('Please add the serial number(s) for: ' + missing);
+                alert(missingIsWarrantyOnly
+                    ? 'Please add the Customer Warranty End Date for: ' + missing
+                    : 'Please add the serial number(s) for: ' + missing);
                 return false;
             }
         }, true);

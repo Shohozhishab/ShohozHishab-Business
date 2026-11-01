@@ -54,7 +54,21 @@
                                     <h3 class="box-title">Purchase Product List</h3>
                                 </div>
                                 <div class="box-body ">
-                                    <div class="row" id="purchaseProductCards">
+                                    <div class="table-responsive">
+                                    <table class="table table-bordered table-striped" id="purchaseProductCards">
+                                        <thead>
+                                        <tr>
+                                            <th>No</th>
+                                            <th>Name</th>
+                                            <th>Unit</th>
+                                            <th>Quantity</th>
+                                            <th>Purchase Price</th>
+                                            <th>Sale Price</th>
+                                            <th>Subtotal</th>
+                                            <th>Action</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
                                         <?php $i = 0;
                                         foreach (Cart()->contents() as $row) {
                                             $unitId = productIdByDefaultStoreUnit($row['id']);
@@ -64,63 +78,52 @@
                                             $conversion_factor = get_data_by_id('conversion_factor', 'units', 'units_id', $unitId);
                                             $uSalePrice = unitOrBasePriceByUnitPrice($unitId, $row['sale_price']);
                                         ?>
-                                            <div class="col-md-6 col-lg-4">
-                                                <div class="panel panel-info product-card" style="margin-bottom:15px;" data-prod-id="<?= $row['id']; ?>" data-conv="<?= $conversion_factor; ?>">
-                                                    <div class="panel-heading">
-                                        <span class="pull-right text-muted">
-                                            <span class="badge serial-badge" id="serialBadge_<?= $row['id']; ?>" style="display:none;background:#3c8dbc;"></span>
-                                        </span>
-                                                        <h3 class="panel-title"><i class="fa fa-cube"></i> <?= $i + 1 ?>. <?= $row['name']; ?></h3>
+                                            <tr class="product-card" data-prod-id="<?= $row['id']; ?>" data-conv="<?= $conversion_factor; ?>">
+                                                <td><?= ++$i; ?></td>
+                                                <td><?= $row['name']; ?>
+                                                    <span class="badge serial-badge" id="serialBadge_<?= $row['id']; ?>" style="display:none;background:#3c8dbc;"></span>
+                                                    <!-- Preserved purchase inputs (order kept identical to original submit payload) -->
+                                                    <input type="hidden" name="productId[]" value="<?= $row['id']; ?>">
+                                                    <input type="hidden" name="qty[]" value="<?= $row['qty']; ?>">
+                                                    <input type="hidden" name="unit[]" value="<?= $unitId; ?>">
+                                                    <input type="hidden" class="upprice" id="qtyUp_<?= $row['id']; ?>" name="price[]" value="<?= $row['price']; ?>">
+                                                    <input type="hidden" name="conversion_factore[]" value="<?= $conversion_factor; ?>">
+                                                    <input type="hidden" id="salePrice_<?= $row['id']; ?>" name="salePrice[]" value="<?= $row['sale_price']; ?>">
+                                                    <input type="hidden" class="subtotal" name="subtotal[]" value="<?= $row['subtotal'] ?>">
+                                                    <input type="hidden" name="suballtotal[]" value="<?= $row['subtotal']; ?>">
+                                                    <!-- Serial / Warranty payload holders -->
+                                                    <input type="hidden" name="serialData[<?= $row['id']; ?>]" id="serialData_<?= $row['id']; ?>" value="">
+                                                    <input type="hidden" name="warrantyData[<?= $row['id']; ?>]" id="warrantyData_<?= $row['id']; ?>" value="">
+                                                </td>
+                                                <td><?= showUnitName($unitId); ?></td>
+                                                <td width="160px">
+                                                    <div class="input-group input-group-sm">
+                                                        <input type="number" class="form-control qty-unit-input" min="0" step="any" oninput="purchaseQtyChanged(this)" value="<?= unitOrQtyByUnitQty($unitId, $row['qty']) ?>" data-prod-id="<?= $row['id']; ?>" data-conv="<?= $conversion_factor; ?>">
+                                                        <span class="input-group-addon"><?= showUnitName($unitId) ?></span>
                                                     </div>
-                                                    <div class="panel-body">
-                                        <!-- Preserved purchase inputs (order kept identical to original submit payload) -->
-                                        <input type="hidden" name="productId[]" value="<?= $row['id']; ?>">
-                                        <input type="hidden" name="qty[]" value="<?= $row['qty']; ?>">
-                                        <input type="hidden" name="unit[]" value="<?= $unitId; ?>">
-                                        <input type="hidden" class="upprice" id="qtyUp_<?= $row['id']; ?>" name="price[]" value="<?= $row['price']; ?>">
-                                        <input type="hidden" name="conversion_factore[]" value="<?= $conversion_factor; ?>">
-                                        <input type="hidden" id="salePrice_<?= $row['id']; ?>" name="salePrice[]" value="<?= $row['sale_price']; ?>">
-                                        <input type="hidden" class="subtotal" name="subtotal[]" value="<?= $row['subtotal'] ?>">
-                                        <input type="hidden" name="suballtotal[]" value="<?= $row['subtotal']; ?>">
-                                        <!-- Serial / Warranty payload holders -->
-                                        <input type="hidden" name="serialData[<?= $row['id']; ?>]" id="serialData_<?= $row['id']; ?>" value="">
-                                        <input type="hidden" name="warrantyData[<?= $row['id']; ?>]" id="warrantyData_<?= $row['id']; ?>" value="">
-
-                                                        <dl class="dl-horizontal" style="margin-bottom:8px;">
-                                                            <dt>Quantity</dt>
-                                                            <dd>
-                                                                <div class="input-group input-group-sm">
-                                                                    <input type="number" class="form-control qty-unit-input" min="0" step="any" oninput="purchaseQtyChanged(this)" value="<?= unitOrQtyByUnitQty($unitId, $row['qty']) ?>" data-prod-id="<?= $row['id']; ?>" data-conv="<?= $conversion_factor; ?>">
-                                                                    <span class="input-group-addon"><?= showUnitName($unitId) ?></span>
-                                                                </div>
-                                                            </dd>
-                                                            <dt>Purchase Price</dt>
-                                                            <dd><input type="text" class="form-control input-sm" name="unitPrice[]" oninput="priceMakeBasePurchase(this.value,'<?= $conversion_factor;?>','<?= $row['id'];?>' )" value="<?= $uPrice ?>"></dd>
-                                                            <dt>Sale Price</dt>
-                                                            <dd><input type="text" class="form-control input-sm" name="salePrice[]" oninput="priceMakeBaseSalePrice(this.value,'<?= $conversion_factor;?>','<?= $row['id'];?>' )" value="<?= $uSalePrice ?>"></dd>
-                                                            <dt>Subtotal</dt>
-                                                            <dd><span id="subtext_<?= $row['id']; ?>"><?= number_format($row['subtotal'], 2); ?></span></dd>
-                                                        </dl>
-
-                                                        <div class="text-right">
-                                                            <?php if ($serialStatus == 1 || $warrantyStatus == 1): ?>
-                                                                <button type="button" class="btn btn-info btn-sm add-serial-btn"
-                                                                        data-prod-id="<?= $row['id']; ?>"
-                                                                        data-prod-name="<?= htmlspecialchars($row['name'], ENT_QUOTES); ?>"
-                                                                        data-qty="<?= (int) $row['qty']; ?>"
-                                                                        data-serial-status="<?= $serialStatus; ?>"
-                                                                        data-warranty-status="<?= $warrantyStatus; ?>">
-                                                                    <i class="fa fa-barcode"></i> Add Serial
-                                                                </button>
-                                                            <?php endif; ?>
-                                                            <a href="<?php echo site_url('/Admin/Purchase/removeCart/' . $row['rowid']); ?>"
-                                                               onclick="javascript: return confirm('Are You Sure ?')"
-                                                               class="btn btn-danger btn-sm">Cancel</a>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        <?php $i++; } ?>
+                                                </td>
+                                                <td width="140px"><input type="text" class="form-control input-sm" name="unitPrice[]" oninput="priceMakeBasePurchase(this.value,'<?= $conversion_factor;?>','<?= $row['id'];?>' )" value="<?= $uPrice ?>"></td>
+                                                <td width="140px"><input type="text" class="form-control input-sm" name="salePrice[]" oninput="priceMakeBaseSalePrice(this.value,'<?= $conversion_factor;?>','<?= $row['id'];?>' )" value="<?= $uSalePrice ?>"></td>
+                                                <td><span id="subtext_<?= $row['id']; ?>"><?= number_format($row['subtotal'], 2); ?></span></td>
+                                                <td width="180px">
+                                                    <?php if ($serialStatus == 1 || $warrantyStatus == 1): ?>
+                                                        <button type="button" class="btn btn-info btn-xs add-serial-btn"
+                                                                data-prod-id="<?= $row['id']; ?>"
+                                                                data-prod-name="<?= htmlspecialchars($row['name'], ENT_QUOTES); ?>"
+                                                                data-qty="<?= (int) $row['qty']; ?>"
+                                                                data-serial-status="<?= $serialStatus; ?>"
+                                                                data-warranty-status="<?= $warrantyStatus; ?>">
+                                                            <i class="fa fa-barcode"></i> Add Serial
+                                                        </button>
+                                                    <?php endif; ?>
+                                                    <a href="<?php echo site_url('/Admin/Purchase/removeCart/' . $row['rowid']); ?>"
+                                                       onclick="javascript: return confirm('Are You Sure ?')"
+                                                       class="btn btn-danger btn-xs">Cancel</a>
+                                                </td>
+                                            </tr>
+                                        <?php } ?>
+                                        </tbody>
+                                    </table>
                                     </div>
                                 </div>
                             </div>
@@ -246,8 +249,8 @@
                                             <thead>
                                                 <tr>
                                                     <th style="width:40px;">#</th>
-                                                    <th id="warrantyColHeader">Company Warranty End Date</th>
                                                     <th id="serialColHeader">Serial Number</th>
+                                                    <th id="warrantyColHeader">Company Warranty End Date</th>
                                                     <th style="width:50px;"></th>
                                                 </tr>
                                             </thead>
@@ -358,8 +361,8 @@
         function rowHtml(value, dateVal) {
             return '<tr class="serial-row">' +
                 '<td class="row-index text-center"></td>' +
-                '<td class="col-warranty"><input type="date" class="form-control input-sm serial-warranty" value="' + escapeHtml(dateVal || '') + '"></td>' +
                 '<td class="col-serial"><input type="text" class="form-control input-sm serial-input" placeholder="Enter serial number" value="' + escapeHtml(value) + '"></td>' +
+                '<td class="col-warranty"><input type="date" class="form-control input-sm serial-warranty" value="' + escapeHtml(dateVal || '') + '"></td>' +
                 '<td class="text-center"><button type="button" class="btn btn-danger btn-xs remove-serial-row"><i class="fa fa-times"></i></button></td>' +
                 '</tr>';
         }

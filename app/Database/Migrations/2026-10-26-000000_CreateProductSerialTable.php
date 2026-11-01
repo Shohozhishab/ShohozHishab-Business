@@ -9,12 +9,22 @@ class CreateProductSerialTable extends Migration
 {
     public function up()
     {
+        // Databases restored from a SQL dump already carry this table
+        if ($this->db->tableExists('product_serial')) {
+            return;
+        }
+
         $this->forge->addField([
             'product_serial_id' => [
                 'type'           => 'INT',
                 'constraint'     => 11,
                 'unsigned'       => true,
                 'auto_increment' => true,
+            ],
+            'sch_id' => [
+                'type'       => 'INT',
+                'constraint' => 11,
+                'default'    => 0,
             ],
             'product_stock_relation_id' => [
                 'type'       => 'INT',
@@ -104,6 +114,7 @@ class CreateProductSerialTable extends Migration
         ]);
 
         $this->forge->addKey('product_serial_id', true);
+        $this->forge->addKey('sch_id');
         $this->forge->addKey('product_stock_relation_id');
         $this->forge->addKey('invoice_id');
         $this->forge->addKey('status');

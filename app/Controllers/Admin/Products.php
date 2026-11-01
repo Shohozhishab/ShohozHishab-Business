@@ -192,7 +192,11 @@ class Products extends BaseController
             $warrantyDate = '';
         }
 
-        if ($warrantyStatus === 1 && $serialStatus !== 1 && $warrantyDate === '') {
+        // Warranty-only: a date is required, but it may arrive per-row (serialData)
+        // instead of via the shared field, so only block when neither is present.
+        $warrantyRowProbe = json_decode((string) $this->request->getPost('serialData'), true);
+        $hasWarrantyRows  = is_array($warrantyRowProbe) && count($warrantyRowProbe) > 0;
+        if ($warrantyStatus === 1 && $serialStatus !== 1 && $warrantyDate === '' && !$hasWarrantyRows) {
             return $json->setJSON(['status' => 'error', 'message' => 'Company warranty end date is required.']);
         }
 
@@ -439,6 +443,7 @@ class Products extends BaseController
                         $item = $toInsert[$insertIndex];
 
                         DB()->table('product_serial')->insert([
+                            'sch_id'                    => $shopId,
                             'product_stock_relation_id' => $relId,
                             'serial_number'             => $item['serial'],
                             'company_warranty_end_date' => $item['warranty'],
@@ -461,6 +466,7 @@ class Products extends BaseController
                         $item = $toInsert[$i];
 
                         DB()->table('product_serial')->insert([
+                            'sch_id'                    => $shopId,
                             'product_stock_relation_id' => $fallbackRelId,
                             'serial_number'             => $item['serial'],
                             'company_warranty_end_date' => $item['warranty'],
@@ -474,16 +480,65 @@ class Products extends BaseController
         }
 
 
-        // Warranty-only mode: only update date on existing in-stock serials
+        // Warranty-only mode: the visible per-unit grid keeps its own dates, so
+        // apply the submitted row dates; rows that sent none fall back to the
+        // shared date. With no row payload (legacy callers) the shared date is
+        // applied to every in-stock serial as before.
         if ($serialStatus !== 1 && $warrantyStatus === 1) {
-            DB()->table('product_serial')
-                ->whereIn('product_stock_relation_id', $relationIds)
-                ->where('status', 'in_stock')
-                ->update([
-                    'company_warranty_end_date' => $warrantyValue,
-                    'updatedBy'                 => $userId,
-                    'updatedDtm'                => date('Y-m-d H:i:s'),
-                ]);
+            $wRows = json_decode((string) $this->request->getPost('serialData'), true);
+            $wRows = is_array($wRows) ? $wRows : [];
+            if (count($wRows) > SERIAL_ENTRY_ROW_LIMIT) {
+                return $json->setJSON(['status' => 'error', 'message' => 'Only up to ' . SERIAL_ENTRY_ROW_LIMIT . ' serial rows can be saved at a time.']);
+            }
+
+            $inStockWarranty = [];
+            foreach (DB()->table('product_serial')
+                        ->whereIn('product_stock_relation_id', $relationIds)
+                        ->where('status', 'in_stock')
+                        ->get()
+                        ->getResultArray() as $row) {
+                $inStockWarranty[(int) $row['product_serial_id']] = (string) ($row['company_warranty_end_date'] ?? '');
+            }
+
+            $updatedIds = [];
+            foreach ($wRows as $r) {
+                $sid = (int) ($r['id'] ?? 0);
+                if ($sid <= 0 || !isset($inStockWarranty[$sid])) {
+                    continue; // unknown / sold row — never touched
+                }
+                $rw = trim((string) ($r['warranty'] ?? ''));
+                if ($rw !== '' && strtotime($rw) === false) {
+                    $rw = '';
+                }
+                if ($rw === '') {
+                    $rw = $warrantyDate; // shared field acts as fallback
+                }
+                if ($rw === '') {
+                    return $json->setJSON(['status' => 'error', 'message' => 'Company warranty end date is required for every unit row.']);
+                }
+                $updatedIds[] = $sid;
+                if ($inStockWarranty[$sid] !== $rw) {
+                    DB()->table('product_serial')
+                        ->where('product_serial_id', $sid)
+                        ->update([
+                            'company_warranty_end_date' => $rw,
+                            'updatedBy'                 => $userId,
+                            'updatedDtm'                => date('Y-m-d H:i:s'),
+                        ]);
+                }
+            }
+
+            // In-stock rows that were not part of the payload get the shared date
+            $pending = array_diff(array_keys($inStockWarranty), $updatedIds);
+            if (!empty($pending) && $warrantyValue !== null) {
+                DB()->table('product_serial')
+                    ->whereIn('product_serial_id', $pending)
+                    ->update([
+                        'company_warranty_end_date' => $warrantyValue,
+                        'updatedBy'                 => $userId,
+                        'updatedDtm'                => date('Y-m-d H:i:s'),
+                    ]);
+            }
         }
 
         $committed = DB()->transComplete();
@@ -815,6 +870,7 @@ class Products extends BaseController
                     $sn = trim((string)$sn);
                     if ($sn === '') { continue; }
                     $serialRows[] = [
+                        'sch_id'                    => $shopId,
                         'product_stock_relation_id' => $product_stock_relation_id,
                         'serial_number'             => $sn,
                         'company_warranty_end_date' => $warrantyDate,
@@ -1022,6 +1078,8 @@ class Products extends BaseController
                 $dataProduct['sale_units'] = $queryUnit->sell_units;
                 $dataProduct['purchase_date'] = date('Y-m-d H:i:s');
                 $dataProduct['sch_id'] = $shopId;
+                $dataProduct['serial_status'] = ((int)($this->request->getPost('serial_status') ?: 0) === 1) ? '1' : '0';
+                $dataProduct['warranty_status'] = ((int)($this->request->getPost('warranty_status') ?: 0) === 1) ? '1' : '0';
                 $dataProduct['createdBy'] = $this->session->userId;
                 $dataProduct['createdDtm'] = date('Y-m-d H:i:s');
                 $productTable = DB()->table('products');

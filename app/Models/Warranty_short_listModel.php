@@ -25,7 +25,7 @@ class Warranty_short_listModel extends Model
     protected $primaryKey       = 'product_serial_id';
     protected $returnType       = 'object';
     protected $useSoftDeletes   = false;
-    protected $allowedFields    = ['product_serial_id', 'product_stock_relation_id', 'serial_number', 'company_warranty_end_date', 'customer_warranty_end_date', 'status', 'invoice_id', 'customer_id', 'sold_date', 'createdDtm', 'createdBy', 'updatedBy', 'updatedDtm', 'deleted', 'deletedRole'];
+    protected $allowedFields    = ['product_serial_id', 'sch_id', 'product_stock_relation_id', 'serial_number', 'company_warranty_end_date', 'customer_warranty_end_date', 'status', 'invoice_id', 'customer_id', 'sold_date', 'createdDtm', 'createdBy', 'updatedBy', 'updatedDtm', 'deleted', 'deletedRole'];
     protected $useTimestamps    = false;
     protected $validationRules    = [];
     protected $validationMessages = [];

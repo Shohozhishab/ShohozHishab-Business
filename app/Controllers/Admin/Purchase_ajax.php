@@ -211,6 +211,7 @@ class Purchase_ajax extends BaseController
 
             $data['flow'] = DB()->table('transaction_entries')
                 ->where('purchase_id',$purchase_id)
+                ->where('sch_id', $shopId)
                 ->get()
                 ->getResult();
 

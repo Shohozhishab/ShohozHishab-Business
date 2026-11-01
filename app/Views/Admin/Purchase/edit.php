@@ -41,11 +41,21 @@ $isCapitalPurchase = empty($purchase->supplier_id);
                                 $conversion_factor = get_data_by_id('conversion_factor', 'units', 'units_id', $unit);
                                 $jsonArray = get_data_by_id('purchase_units', 'products', 'prod_id', $item->prod_id);
                                 $salePrice = get_data_by_id('selling_price', 'product_stock_relation', 'product_stock_relation_id', $item->product_stock_relation_id);
+                                $prodName = get_data_by_id('name','products','prod_id',$item->prod_id);
+                                // Units that have already left this line (sold, damaged, ...).
+                                // Once non-zero the purchase price is history and the quantity
+                                // may only be raised, never dropped below the sold units.
+                                // Hints stay in tooltips/inline warnings so the table layout
+                                // is not widened by extra badges or icons.
+                                $lineSoldQty = (float) ($soldPayload[$item->prod_id] ?? 0);
+                                $lineSoldLocked = $lineSoldQty > 0.000001;
+                                $lineSoldText = trim_decimal_zero($lineSoldQty);
+                                $lineSoldTitle = $lineSoldLocked ? ' title="' . $lineSoldText . ' unit(s) already sold - purchase price is locked and the quantity can only be increased"' : '';
                                 ?>
                                 <tr>
                                     <td width="80px"><?= $i++ ?></td>
                                     <td>
-                                        <?= get_data_by_id('name','products','prod_id',$item->prod_id); ?>
+                                        <?= $prodName; ?>
                                         <input type="hidden" name="prod_id[]" value="<?= $item->prod_id ?>">
                                         <?php
                                         $serialStatus   = (int) get_data_by_id('serial_status', 'products', 'prod_id', $item->prod_id);
@@ -53,39 +63,47 @@ $isCapitalPurchase = empty($purchase->supplier_id);
                                         $lineSerials    = $serialPayload[$item->prod_id] ?? '[]';
                                         $lineWarranty   = $warrantyPayload[$item->prod_id] ?? '';
                                         $lineLocked     = (int) ($lockedPayload[$item->prod_id] ?? 0);
+                                        // Sold/returned/damaged serials of this line - rendered
+                                        // read-only inside the modal, never submitted.
+                                        $lineLockedSerials = $lockedSerialPayload[$item->prod_id] ?? '[]';
                                         ?>
                                         <!-- Serial / Warranty payload holders -->
                                         <input type="hidden" name="serialData[<?= $item->prod_id ?>]" id="serialData_<?= $item->prod_id ?>" value="<?= htmlspecialchars($lineSerials, ENT_QUOTES) ?>">
                                         <input type="hidden" name="warrantyData[<?= $item->prod_id ?>]" id="warrantyData_<?= $item->prod_id ?>" value="<?= htmlspecialchars($lineWarranty, ENT_QUOTES) ?>">
+                                        <input type="hidden" id="lockedSerialData_<?= $item->prod_id ?>" value="<?= htmlspecialchars($lineLockedSerials, ENT_QUOTES) ?>">
                                         <?php if ($serialStatus == 1 || $warrantyStatus == 1): ?>
-                                            <span class="badge pe-serial-badge" id="serialBadge_<?= $item->prod_id ?>" style="display:none;background:#3c8dbc;"></span>
-                                            <button type="button" class="btn btn-info btn-xs pe-add-serial-btn" style="margin-left:6px;"
-                                                    data-prod-id="<?= $item->prod_id ?>"
-                                                    data-prod-name="<?= htmlspecialchars(get_data_by_id('name','products','prod_id',$item->prod_id), ENT_QUOTES) ?>"
-                                                    data-qty="<?= max((int) $item->quantity - $lineLocked, 0) ?>"
-                                                    data-locked-count="<?= $lineLocked ?>"
-                                                    data-serial-status="<?= $serialStatus ?>"
-                                                    data-warranty-status="<?= $warrantyStatus ?>">
-                                                <i class="fa fa-barcode"></i> Serial / Warranty
-                                            </button>
+                                            <!-- Button sits below the product name, like the purchase create screens -->
+                                            <div style="margin-top: 6px;">
+                                                <span class="badge pe-serial-badge" id="serialBadge_<?= $item->prod_id ?>" style="display:none;background:#3c8dbc;"></span>
+                                                <button type="button" class="btn btn-info btn-xs pe-add-serial-btn"
+                                                        data-prod-id="<?= $item->prod_id ?>"
+                                                        data-prod-name="<?= htmlspecialchars($prodName, ENT_QUOTES) ?>"
+                                                        data-qty="<?= max((int) $item->quantity - $lineLocked, 0) ?>"
+                                                        data-locked-count="<?= $lineLocked ?>"
+                                                        data-serial-status="<?= $serialStatus ?>"
+                                                        data-warranty-status="<?= $warrantyStatus ?>">
+                                                    <i class="fa fa-barcode"></i> Serial / Warranty
+                                                </button>
+                                            </div>
                                         <?php endif; ?>
                                     </td>
-                                    <td><input type="hidden" name="qty[]" id="qtyUp_<?= $item->prod_id ?>" value="<?= $item->quantity; ?>">
+                                    <td><input type="hidden" name="qty[]" id="qtyUp_<?= $item->prod_id ?>" value="<?= $item->quantity; ?>" data-sold="<?= $lineSoldQty ?>" data-prod-name="<?= htmlspecialchars($prodName, ENT_QUOTES) ?>">
                                         <div style="display: flex;">
                                             <?php $unitsArray = convertRevertToArray($item->quantity,json_decode($jsonArray));
                                                 foreach ($unitsArray as $input){
                                             ?>
                                                 <div style="margin-right: 10px;">
                                                      <label for="int" class="text-capitalize"><?= $input['name'];?></label>
-                                                    <input type="text" oninput="qtyMakeBaseUnit('<?= $item->prod_id ?>')" data-factor="<?= $input['conversion_factor']?>"  style="width: 50px;" value="<?= $input['qty']; ?>">
+                                                    <input type="text" oninput="qtyMakeBaseUnit('<?= $item->prod_id ?>')" data-factor="<?= $input['conversion_factor']?>"  style="width: 50px;" value="<?= $input['qty']; ?>"<?= $lineSoldLocked ? ' title="Minimum ' . trim_decimal_zero(round($lineSoldQty / max((float) $input['conversion_factor'], 0.00000001), 4)) . ' ' . htmlspecialchars($input['name'], ENT_QUOTES) . ' (already sold)"' : '' ?>>
                                                 </div>
                                             <?php } ?>
                                         </div>
+                                        <span class="text-danger" id="qtySoldNote_<?= $item->prod_id ?>" style="display:none;"></span>
                                     </td>
-                                    <td>
+                                    <td<?= $lineSoldLocked ? ' style="background-color:#fcf8e3;"' : '' ?>>
                                         <input type="hidden" name="price[]" id="priceUp_<?= $item->prod_id; ?>" value="<?= $item->purchase_price?>">
                                         <label for="int"><?= showUnitName($unit);?></label>
-                                        <input type="text" name="priceUnit[]" style="width: 100px;" oninput="priceMakeBaseUnit(this.value,'<?= $conversion_factor;?>','<?= $item->prod_id;?>' )" value="<?= trim_decimal_zero(unitOrBasePriceByUnitPrice($unit,$item->purchase_price))?>">
+                                        <input type="text" name="priceUnit[]" style="width: 100px;<?= $lineSoldLocked ? ' background:#eeeeee; cursor:not-allowed;' : '' ?>"<?= $lineSoldLocked ? ' readonly' : '' ?><?= $lineSoldTitle ?> oninput="priceMakeBaseUnit(this.value,'<?= $conversion_factor;?>','<?= $item->prod_id;?>' )" value="<?= trim_decimal_zero(unitOrBasePriceByUnitPrice($unit,$item->purchase_price))?>">
                                     </td>
 
                                     <td>
@@ -159,7 +177,14 @@ $isCapitalPurchase = empty($purchase->supplier_id);
 <!-- /.content -->
 
 <!-- Serial / Warranty Modal (purchase edit) -->
-<div class="modal fade" id="peSerialModal" tabindex="-1" role="dialog" aria-labelledby="peSerialModalLabel">
+<style>
+    /* The edit screen is itself shown inside #modal-default (z-index 1050), so this
+       picker modal is a nested modal and must stack above the parent modal. */
+    #peSerialModal { z-index: 1060; }
+    #peSerialModal .modal-dialog { margin: 60px auto; }
+    #peSerialModal .modal-content { border: none; border-radius: 5px; box-shadow: 0 8px 30px rgba(0, 0, 0, .35); }
+</style>
+<div class="modal fade pe-serial-modal" id="peSerialModal" tabindex="-1" role="dialog" aria-labelledby="peSerialModalLabel">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -219,11 +244,52 @@ $isCapitalPurchase = empty($purchase->supplier_id);
         return Array.isArray(list) ? list : [];
     };
 
+    // Units that already left this line (sold/returned/damaged). They are displayed
+    // inside the modal as read-only fields so the count matches the product quantity,
+    // but they are never part of the submitted payload.
+    window.peParseLockedSerials = function (pid) {
+        var raw = jQuery('#lockedSerialData_' + pid).val();
+        var list = [];
+        if (raw) { try { list = JSON.parse(raw); } catch (e) { list = []; } }
+        return Array.isArray(list) ? list : [];
+    };
+
     // Serials already sold/returned are never loaded into the payload; the button
     // carries their count so qty targets and validation exclude the locked units.
     window.peLockedCount = function (pid) {
         var $btn = jQuery('.pe-add-serial-btn[data-prod-id="' + pid + '"]');
         return $btn.length ? (parseInt($btn.attr('data-locked-count'), 10) || 0) : 0;
+    };
+
+    // Badge on the Serial / Warranty button: "entered / required" for the editable
+    // units, so an increased quantity immediately shows how many serials are still
+    // missing instead of only failing on submit.
+    window.peUpdateSerialBadge = function (pid) {
+        var $btn = jQuery('.pe-add-serial-btn[data-prod-id="' + pid + '"]');
+        var $badge = jQuery('#serialBadge_' + pid);
+        if (!$btn.length || !$badge.length) { return; }
+        var required = parseInt($btn.attr('data-qty'), 10) || 0;
+        var entered = window.peParseSerials(pid).length;
+        var warranty = jQuery('#warrantyData_' + pid).val() || '';
+        if (parseInt($btn.attr('data-serial-status'), 10) === 1) {
+            if (required === 0) {
+                // Whole line already sold: nothing to enter
+                $badge.text('0 / 0').css('background', '#9e9e9e')
+                    .attr('title', 'All units of this line are already sold - no serial needed').show();
+            } else {
+                var complete = entered >= required;
+                $badge.text(entered + ' / ' + required)
+                    .css('background', complete ? '#3c8dbc' : '#dd4b39')
+                    .attr('title', complete ? 'All editable units have a serial number'
+                        : (required - entered) + ' serial number(s) still needed')
+                    .show();
+            }
+        } else if (warranty) {
+            $badge.text('W').css('background', '#3c8dbc')
+                .attr('title', 'Company warranty end date: ' + warranty).show();
+        } else {
+            $badge.hide();
+        }
     };
 
     // Keep serial button target / hidden payload in sync when the base qty changes.
@@ -245,11 +311,10 @@ $isCapitalPurchase = empty($purchase->supplier_id);
                 var room = target - protectedRows.length;
                 var kept = protectedRows.concat(plainRows.slice(0, room));
                 jQuery('#serialData_' + pid).val(kept.length ? JSON.stringify(kept) : '');
-                list = kept;
             }
-            var $badge = jQuery('#serialBadge_' + pid);
-            if (list.length > 0) { $badge.text(list.length).show(); } else { $badge.hide(); }
         }
+        // Reflect the new requirement (or the trimmed payload) on the badge
+        window.peUpdateSerialBadge(pid);
     };
 
     // Strip redundant trailing zeros from an 8-decimal string for display,
@@ -374,6 +439,9 @@ $isCapitalPurchase = empty($purchase->supplier_id);
             });
             $("#qtyUp_" + printId).val(total.toFixed(8));
 
+            // Already-sold units can never be taken back out of this line
+            peQtySoldWarning(printId, total);
+
             // Keep the serial target aligned with the new base quantity
             if (typeof window.peSyncSerialQty === 'function') {
                 window.peSyncSerialQty(printId, total.toFixed(8));
@@ -382,13 +450,64 @@ $isCapitalPurchase = empty($purchase->supplier_id);
             calculateGrandTotal();
         };
 
+        // Inline hint shown while the edited quantity is below the sold quantity
+        window.peQtySoldWarning = function (printId, total) {
+            var $hidden = $("#qtyUp_" + printId);
+            var sold = parseFloat($hidden.attr('data-sold')) || 0;
+            if (sold <= 0) { return; }
+            var $note = $("#qtySoldNote_" + printId);
+            if (!$note.length) { return; }
+            if (total < sold - 0.000001) {
+                $note.text('Minimum ' + window.peTrimQtyStr(sold) + ' (already sold)').show();
+            } else {
+                $note.text('').hide();
+            }
+        };
+
+        window.peTrimQtyStr = function (num) {
+            return window.peTrimZeros((parseFloat(num) || 0).toFixed(8));
+        };
+
 
         // Initial calculation
         calculateGrandTotal();
 
+        // Show every line's serial requirement up front (entered / required)
+        $('.pe-add-serial-btn').each(function () {
+            window.peUpdateSerialBadge($(this).data('prod-id'));
+        });
+
         // ---- Serial / Warranty modal logic (purchase edit) ----
         (function () {
-            var $modal = jQuery('#peSerialModal');
+            // The edit screen is injected into #modal-default, so #peSerialModal is a
+            // nested modal. Bind the lifecycle handlers once on document (delegated by
+            // class, safe across AJAX re-injection) to keep backdrop stacking and the
+            // parent's scroll lock correct while the picker is open/closed.
+            if (!window.peSerialModalWired) {
+                window.peSerialModalWired = true;
+                jQuery(document)
+                    .on('shown.bs.modal', '.pe-serial-modal', function () {
+                        // Dim the parent edit modal too, by lifting this modal's backdrop above it.
+                        jQuery('.modal-backdrop').last().css('z-index', 1055);
+                    })
+                    .on('hidden.bs.modal', '.pe-serial-modal', function () {
+                        jQuery('.modal-backdrop').last().css('z-index', '');
+                        // Bootstrap clears the scroll lock on close; the outer edit modal still needs it.
+                        if (jQuery('#modal-default').hasClass('in')) {
+                            jQuery('body').addClass('modal-open');
+                        }
+                    });
+            }
+
+            function peSerialModal() {
+                // Prefer the visible instance; a re-injected edit screen can leave a
+                // duplicate copy of the modal in the DOM.
+                var $visible = jQuery('.pe-serial-modal.in');
+                if ($visible.length) { return $visible.last(); }
+                return jQuery('.pe-serial-modal').last();
+            }
+
+            var $modal = peSerialModal();
             var $rows = jQuery('#peSerialRowsContainer');
             var current = { prodId: null, qty: 0, serialStatus: 0, warrantyStatus: 0 };
 
@@ -396,7 +515,20 @@ $isCapitalPurchase = empty($purchase->supplier_id);
                 return jQuery('<i>').text(str == null ? '' : String(str)).html();
             }
 
-            function rowHtml(row, dateVal) {
+            function rowHtml(row, dateVal, locked) {
+                if (locked) {
+                    // Sold / returned / damaged unit: shown for completeness but frozen.
+                    var lSerial = row && row.serial ? String(row.serial) : '';
+                    var lDate = row && row.warrant ? String(row.warrant) : (dateVal || '');
+                    var lLabel = row && row.label ? String(row.label) : 'Sold';
+                    return '<tr class="serial-row locked-serial-row" data-locked="1">' +
+                        '<td class="row-index text-center"></td>' +
+                        '<td class="col-warranty"><input type="date" class="form-control input-sm serial-warranty locked-field" value="' + escapeHtml(lDate) + '" readonly style="background:#eeeeee;"></td>' +
+                        '<td class="col-serial"><input type="text" class="form-control input-sm serial-input locked-field" value="' + escapeHtml(lSerial) + '" readonly style="background:#eeeeee;">' +
+                        ' <small class="text-muted"><i class="fa fa-lock"></i> ' + escapeHtml(lLabel) + '</small></td>' +
+                        '<td class="text-center"><i class="fa fa-lock text-muted" title="' + escapeHtml(lLabel) + ' - cannot be changed or removed"></i></td>' +
+                        '</tr>';
+                }
                 var id = row && row.id ? parseInt(row.id, 10) : '';
                 var serial = row && row.serial ? String(row.serial) : '';
                 var isProtected = id !== '';
@@ -410,42 +542,62 @@ $isCapitalPurchase = empty($purchase->supplier_id);
                     '</tr>';
             }
 
+            function editableRows() {
+                return $rows.find('.serial-row').not('.locked-serial-row');
+            }
+
             function renumberRows() {
                 $rows.find('.serial-row').each(function (idx) {
                     jQuery(this).find('.row-index').text(idx + 1);
                 });
-                jQuery('#peSerialEnteredQty').text($rows.find('.serial-input').length);
+                // Sold units are listed but never counted as entered serials
+                jQuery('#peSerialEnteredQty').text(editableRows().find('.serial-input').length);
             }
 
-            function addRow(row, dateVal) {
-                $rows.append(rowHtml(row, dateVal));
+            function addRow(row, dateVal, locked) {
+                $rows.append(rowHtml(row, dateVal, locked));
                 renumberRows();
             }
 
             // Open modal for a specific purchase item row
             jQuery(document).on('click', '.pe-add-serial-btn', function () {
+                // Nested-modal fix: reuse a single instance (a re-injected edit screen
+                // can leave duplicate copies) and move it out of the parent dialog
+                // (whose CSS transform would otherwise trap and clip it) before showing.
+                $modal = peSerialModal();
+                $modal.not('body > .modal').detach().appendTo('body');
+                $rows = $modal.find('#peSerialRowsContainer');
+
                 var $btn = jQuery(this);
                 current.prodId = $btn.data('prod-id');
+                // data-qty already excludes the sold/locked units (kept in sync by
+                // peSyncSerialQty whenever the row quantity changes), so an increased
+                // quantity immediately produces the extra serial fields below.
                 current.qty = parseInt($btn.attr('data-qty'), 10) || 0;
                 current.serialStatus = parseInt($btn.attr('data-serial-status'), 10) || 0;
                 current.warrantyStatus = parseInt($btn.attr('data-warranty-status'), 10) || 0;
 
                 jQuery('#peSerialModalProduct').text('- ' + $btn.attr('data-prod-name'));
                 var locked = window.peLockedCount(current.prodId);
-                var editableQty = current.qty - locked;
+                var editableQty = current.qty;
                 if (editableQty < 0) { editableQty = 0; }
                 jQuery('#peSerialRequiredQty').text(editableQty);
                 if (locked > 0) {
-                    jQuery('#peSerialQtyAlert .pe-locked-note').text(' (' + locked + ' sold/locked serial(s) excluded)').show();
+                    jQuery('#peSerialQtyAlert .pe-locked-note').text(' (' + locked + ' sold/locked unit(s) shown read-only)').show();
                 } else {
                     jQuery('#peSerialQtyAlert .pe-locked-note').text('').hide();
                 }
                 
                 var defaultDate = jQuery('#warrantyData_' + current.prodId).val() || '';
                 var existing = current.serialStatus === 1 ? window.peParseSerials(current.prodId) : [];
+                var soldList = window.peParseLockedSerials(current.prodId);
                 
-                // Render one row per editable unit whenever serial OR warranty tracking is active
+                // Sold units first (frozen), then one editable row per remaining unit -
+                // new empty fields appear automatically whenever quantity was increased
                 $rows.empty();
+                for (var s = 0; s < soldList.length; s++) {
+                    addRow(soldList[s], defaultDate, true);
+                }
                 var needRows = (current.serialStatus === 1 || current.warrantyStatus === 1) ? editableQty : 0;
                 for (var r = 0; r < needRows; r++) {
                     addRow(existing[r] !== undefined ? existing[r] : {}, defaultDate);
@@ -453,10 +605,10 @@ $isCapitalPurchase = empty($purchase->supplier_id);
 
                 var showSerial = current.serialStatus === 1;
                 var showWarranty = current.warrantyStatus === 1;
-                jQuery('#peSerialQtyAlert').toggle(showSerial);
-                jQuery('#peSerialColHeader').toggle(showSerial);
+                jQuery('#peSerialQtyAlert').toggle(showSerial || soldList.length > 0);
+                jQuery('#peSerialColHeader').toggle(showSerial || soldList.length > 0);
                 jQuery('#peWarrantyColHeader').toggle(showWarranty);
-                $rows.find('.col-serial').toggle(showSerial);
+                $rows.find('.col-serial').toggle(showSerial || soldList.length > 0);
                 $rows.find('.col-warranty').toggle(showWarranty);
 
                 renumberRows();
@@ -464,13 +616,13 @@ $isCapitalPurchase = empty($purchase->supplier_id);
             });
 
             jQuery(document).on('click', '#peAddSerialRowBtn', function () {
-                var d = $rows.find('.serial-warranty').first().val() || '';
+                var d = editableRows().find('.serial-warranty').first().val() || '';
                 addRow({}, d);
             });
 
             jQuery(document).on('click', '#peRemoveLastRowBtn', function () {
-                // Never remove a protected (already in-stock) serial row
-                var $removable = $rows.find('.serial-row').filter(function () {
+                // Never remove a protected (already in-stock) or sold serial row
+                var $removable = editableRows().filter(function () {
                     return !jQuery(this).attr('data-serial-id');
                 });
                 $removable.last().remove();
@@ -483,13 +635,15 @@ $isCapitalPurchase = empty($purchase->supplier_id);
             });
 
             jQuery(document).on('input', '.serial-input', function () {
-                jQuery('#peSerialEnteredQty').text($rows.find('.serial-input').length);
+                jQuery('#peSerialEnteredQty').text(editableRows().find('.serial-input').length);
             });
 
-            // Keep the Company Warranty End Date identical across all serial rows
+            // Keep the Company Warranty End Date identical across all editable serial
+            // rows; sold rows keep their own stored date and are never overwritten
             jQuery(document).on('input change', '.serial-warranty', function () {
+                if (jQuery(this).hasClass('locked-field')) { return; }
                 var v = jQuery(this).val();
-                $rows.find('.serial-warranty').not(this).val(v);
+                editableRows().find('.serial-warranty').not(this).val(v);
             });
 
             // Save serials back to the hidden payload fields of the row
@@ -497,7 +651,8 @@ $isCapitalPurchase = empty($purchase->supplier_id);
                 var rows = [];
                 var valid = true;
 
-                $rows.find('.serial-row').each(function () {
+                // Sold rows are display only - they never enter the submitted payload
+                editableRows().each(function () {
                     var $row = jQuery(this);
                     var id = $row.attr('data-serial-id') ? parseInt($row.attr('data-serial-id'), 10) : null;
                     var v = id !== null
@@ -512,8 +667,8 @@ $isCapitalPurchase = empty($purchase->supplier_id);
                         alert('All serial numbers must be filled. Empty serial rows are not allowed.');
                         return;
                     }
-                    if (rows.length !== current.qty - window.peLockedCount(current.prodId)) {
-                        alert('Serial count (' + rows.length + ') must equal the editable quantity (' + (current.qty - window.peLockedCount(current.prodId)) + ').');
+                    if (rows.length !== current.qty) {
+                        alert('Serial count (' + rows.length + ') must equal the editable quantity (' + current.qty + ').');
                         return;
                     }
                     var serials = rows.map(function (r) { return r.serial; });
@@ -522,9 +677,20 @@ $isCapitalPurchase = empty($purchase->supplier_id);
                         alert('Duplicate serial numbers are not allowed.');
                         return;
                     }
+                    // A sold serial number still exists globally, so reusing it would be
+                    // rejected on save - report it here instead
+                    var soldSerials = window.peParseLockedSerials(current.prodId).map(function (r) {
+                        return String(r.serial == null ? '' : r.serial).trim();
+                    });
+                    var clash = serials.filter(function (v) { return soldSerials.indexOf(v) !== -1; });
+                    if (clash.length) {
+                        alert("Serial '" + clash[0] + "' is already sold and cannot be reused.");
+                        return;
+                    }
                 }
 
-                var warranty = $rows.find('.serial-warranty').first().val() || '';
+                var warranty = editableRows().find('.serial-warranty').first().val()
+                    || jQuery('#warrantyData_' + current.prodId).val() || '';
                 if (current.warrantyStatus === 1 && !warranty) {
                     alert('Company Warranty End Date is required.');
                     return;
@@ -532,13 +698,7 @@ $isCapitalPurchase = empty($purchase->supplier_id);
 
                 jQuery('#serialData_' + current.prodId).val(rows.length ? JSON.stringify(rows) : '');
                 jQuery('#warrantyData_' + current.prodId).val(warranty);
-
-                var $badge = jQuery('#serialBadge_' + current.prodId);
-                if (rows.length > 0) {
-                    $badge.text(rows.length + (warranty ? ' / W' : '')).show();
-                } else {
-                    $badge.hide();
-                }
+                window.peUpdateSerialBadge(current.prodId);
 
                 $modal.modal('hide');
             });
@@ -549,6 +709,26 @@ $isCapitalPurchase = empty($purchase->supplier_id);
                 if (!window.jQuery) { return; }
                 var $ = jQuery;
                 var block = null;
+
+                // Sold units are permanent: quantity may only be increased, never
+                // dropped below what has already left the stock.
+                $('input[name="qty[]"]').each(function () {
+                    var $hidden = $(this);
+                    var sold = parseFloat($hidden.attr('data-sold')) || 0;
+                    if (sold <= 0) { return; }
+                    var qty = parseFloat($hidden.val()) || 0;
+                    if (qty < sold - 0.000001) {
+                        block = 'Quantity of "' + $hidden.attr('data-prod-name') + '" cannot be less than the sold quantity (' + window.peTrimQtyStr(sold) + ').';
+                        return false;
+                    }
+                });
+                if (block) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    alert(block);
+                    return;
+                }
+
                 $('.pe-add-serial-btn').each(function () {
                     var $btn = $(this);
                     var pid = $btn.data('prod-id');
@@ -560,12 +740,17 @@ $isCapitalPurchase = empty($purchase->supplier_id);
 
                     if (serialOn) {
                         var list = window.peParseSerials(pid);
-                        if (list.length === 0) {
+                        // A reduced quantity can leave no editable unit at all (everything
+                        // sold): then no serial is required, matching the server rule
+                        // "serials required only when quantity - sold > 0".
+                        if (qty > 0 && list.length === 0) {
                             block = 'Please add serial numbers for "' + $btn.attr('data-prod-name') + '".';
                             return false;
                         }
                         if (list.length !== qty) {
-                            block = 'Serial count for "' + $btn.attr('data-prod-name') + '" (' + list.length + ') must equal quantity (' + qty + ').';
+                            block = qty === 0
+                                ? 'No serial number is needed for "' + $btn.attr('data-prod-name') + '" (all units are already sold) - clear them in the Serial / Warranty window.'
+                                : 'Serial count for "' + $btn.attr('data-prod-name') + '" (' + list.length + ') must equal quantity (' + qty + ').';
                             return false;
                         }
                         if (list.some(function (r) { return String(r.serial == null ? '' : r.serial).trim() === ''; })) {
