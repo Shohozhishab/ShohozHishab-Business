@@ -1242,6 +1242,7 @@ class Purchase extends BaseController
                                 continue;
                             }
                             $serialRows[] = [
+                                'sch_id'                    => $shopId,
                                 'product_stock_relation_id' => $product_stock_relation_id,
                                 'serial_number'             => $sn,
                                 'company_warranty_end_date' => $warrantyForProduct,
@@ -1256,6 +1257,17 @@ class Purchase extends BaseController
                     }
                 }
                 // ---- Insert serial numbers & company warranty (new_product) (end) ----
+
+                // Warranty-only products (no serial rows): the date lives on
+                // product_serial placeholder rows, not purchase_item
+                $wForLine = (isset($warrantyDataAll[$i]) && !empty($warrantyDataAll[$i])) ? $warrantyDataAll[$i] : null;
+                $this->sync_warranty_placeholder_serials(
+                    $product_stock_relation_id,
+                    (int)($serialStatusArr[$i] ?? 0),
+                    (int)($warrantyStatusArr[$i] ?? 0),
+                    $wForLine,
+                    $userId
+                );
             }
             //purchase product insert in product table and purchase item table (end)
 
@@ -1299,6 +1311,7 @@ class Purchase extends BaseController
 
     private function purchase_transaction_entries($purchase_id, $ledger_id, $table_name, $transaction_type) {
         DB()->table('transaction_entries')->insert([
+            'sch_id'           => $this->session->shopId,
             'purchase_id'      => $purchase_id,
             'ledger_id'        => $ledger_id,
             'table_name'       => $table_name,
@@ -1356,15 +1369,50 @@ class Purchase extends BaseController
         $data['serialPayload'] = [];
         $data['warrantyPayload'] = [];
         $data['lockedPayload'] = [];
+        // Locked (sold/returned/damaged) serials per line: shown read-only inside the
+        // Serial / Warranty modal so the sold units are visible but untouchable.
+        $data['lockedSerialPayload'] = [];
+        // Units already sold/removed from each line (keyed by prod_id): drives the
+        // price lock and the minimum quantity the edit screen may submit.
+        $data['soldPayload'] = [];
         foreach ($data['purchaseItem'] as $item) {
             $rows = $this->get_purchase_line_serials($item->product_stock_relation_id);
+            // Warranty placeholder rows (serial_number NULL) are not real serials:
+            // keep them out of the modal payload; they only carry the date.
             $data['serialPayload'][$item->prod_id] = json_encode(array_map(function ($r) {
                 return ['id' => (int) $r->product_serial_id, 'serial' => $r->serial_number, 'protected' => 1];
-            }, $rows));
-            $data['lockedPayload'][$item->prod_id] = $this->get_purchase_line_locked_serial_count($item->product_stock_relation_id);
+            }, array_values(array_filter($rows, function ($r) {
+                return $r->serial_number !== null && $r->serial_number !== '';
+            }))));
+            $lockedRows = $this->get_purchase_line_locked_serials($item->product_stock_relation_id);
+            $data['lockedPayload'][$item->prod_id] = count($lockedRows);
+            $data['lockedSerialPayload'][$item->prod_id] = json_encode(array_map(function ($r) {
+                return [
+                    'serial'  => (string) $r->serial_number,
+                    'label'   => $this->purchase_serial_status_label($r->status),
+                    'warrant' => !empty($r->company_warranty_end_date) ? $r->company_warranty_end_date : '',
+                ];
+            }, $lockedRows));
+            $stockQty   = $this->get_purchase_line_stock_quantity($item->product_stock_relation_id);
+            $soldPayload = $stockQty === null ? 0 : (float) $item->quantity - $stockQty;
+            $data['soldPayload'][$item->prod_id] = $soldPayload < 0.000001 ? 0 : $soldPayload;
             $wdate = null;
             foreach ($rows as $r) {
                 if (!empty($r->company_warranty_end_date)) { $wdate = $r->company_warranty_end_date; break; }
+            }
+            // A fully sold/returned line has no in-stock row left, so the line's date is
+            // only readable from its locked rows. Without this the warranty field renders
+            // empty and the edit screen demands a date the user cannot enter (the modal
+            // shows those rows read-only).
+            if ($wdate === null) {
+                foreach ($lockedRows as $r) {
+                    if (!empty($r->company_warranty_end_date)) { $wdate = $r->company_warranty_end_date; break; }
+                }
+            }
+            // Fallback: legacy warranty-only rows that predate product_serial
+            // placeholder syncing still keep their date on purchase_item
+            if ($wdate === null && !empty($item->company_warranty_end_date)) {
+                $wdate = $item->company_warranty_end_date;
             }
             $data['warrantyPayload'][$item->prod_id] = $wdate ?: '';
         }
@@ -1413,19 +1461,178 @@ class Purchase extends BaseController
     }
 
     /**
+     * @description Keep product_serial as the single home of the company warranty
+     *              end date. Warranty-only products (serial_status=0, warranty_status=1)
+     *              own one placeholder row per in-stock unit (serial_number NULL),
+     *              so the date is readable/writable on product_serial exactly like
+     *              serialized lines and shows up in the Warranty Short List report.
+     *              Row count is synced to the relation quantity (whole numbers only;
+     *              fractional stock is left untouched); rows carrying a real serial
+     *              number are never created or deleted here, and the posted date is
+     *              applied to every in-stock row of the relation.
+     * @param int              $stockRelationId
+     * @param int              $serialStatus   products.serial_status of the line
+     * @param int              $warrantyStatus products.warranty_status of the line
+     * @param string|null      $warrantyDate   posted company warranty end date (null = keep existing)
+     * @param int              $userId
+     */
+    private function sync_warranty_placeholder_serials($stockRelationId, $serialStatus, $warrantyStatus, $warrantyDate, $userId)
+    {
+        // Serialized lines already own real serial rows that carry the date.
+        if (empty($stockRelationId) || $serialStatus === 1 || $warrantyStatus !== 1) {
+            return;
+        }
+
+        $stock = DB()->table('product_stock_relation')
+            ->select('quantity')
+            ->where('product_stock_relation_id', $stockRelationId)
+            ->get()->getRow();
+        if ($stock === null) {
+            return;
+        }
+        $quantity = (float) $stock->quantity;
+        // Fractional stock has no meaningful per-unit row count.
+        if ($quantity < 0 || abs($quantity - round($quantity)) > 0.000001) {
+            return;
+        }
+        $target = (int) round($quantity);
+
+        // Placeholder rows = in-stock rows without a serial number.
+        $placeholderIds = DB()->table('product_serial')
+            ->select('product_serial_id')
+            ->where('product_stock_relation_id', $stockRelationId)
+            ->where('status', 'in_stock')
+            ->where('serial_number', null)
+            ->get()->getResultArray();
+        $placeholderIds = array_column($placeholderIds, 'product_serial_id');
+        $existing = count($placeholderIds);
+
+        // Rows already sold/consumed (invoice linked) are never removed.
+        if ($existing > $target) {
+            $removable = DB()->table('product_serial')
+                ->where('product_stock_relation_id', $stockRelationId)
+                ->where('status', 'in_stock')
+                ->where('serial_number', null)
+                ->where('invoice_id', null)
+                ->orderBy('product_serial_id', 'DESC')
+                ->limit($existing - $target)
+                ->get()->getResultArray();
+            foreach (array_column($removable, 'product_serial_id') as $delId) {
+                DB()->table('product_serial')->where('product_serial_id', $delId)->delete();
+            }
+            $existing -= count($removable);
+        } elseif ($existing < $target) {
+            $rows = [];
+            for ($k = 0; $k < $target - $existing; $k++) {
+                $rows[] = [
+                    'sch_id'                    => $this->session->shopId,
+                    'product_stock_relation_id' => $stockRelationId,
+                    'serial_number'             => null,
+                    'company_warranty_end_date' => $warrantyDate,
+                    'status'                    => 'in_stock',
+                    'createdDtm'                => date('Y-m-d h:i:s'),
+                    'createdBy'                 => $userId,
+                ];
+            }
+            DB()->table('product_serial')->insertBatch($rows);
+            $existing = $target;
+        }
+
+        // One warranty date per line: apply it to every in-stock row of the relation.
+        if ($warrantyDate !== null && $existing > 0) {
+            DB()->table('product_serial')
+                ->where('product_stock_relation_id', $stockRelationId)
+                ->where('status', 'in_stock')
+                ->update(['company_warranty_end_date' => $warrantyDate, 'updatedBy' => $userId]);
+        }
+    }
+
+    /**
+     * @description Serial rows of a stock relation that already left the stock
+     *              (sold/returned/damaged/purchase_returned). Purchase edit displays
+     *              them read-only: they are history and are never submitted or touched.
+     * @param int $stockRelationId
+     * @return array
+     */
+    private function get_purchase_line_locked_serials($stockRelationId)
+    {
+        if (empty($stockRelationId)) {
+            return [];
+        }
+        return DB()->table('product_serial')
+            ->select('serial_number, status, company_warranty_end_date')
+            ->where('product_stock_relation_id', $stockRelationId)
+            ->where('status !=', 'in_stock')
+            ->orderBy('product_serial_id', 'ASC')
+            ->get()->getResult() ?: [];
+    }
+
+    /**
+     * @description Human readable label of a product_serial status value.
+     */
+    private function purchase_serial_status_label($status)
+    {
+        $labels = [
+            'sold'              => 'Sold',
+            'returned'          => 'Returned',
+            'damaged'           => 'Damaged',
+            'purchase_returned' => 'Purchase Returned',
+        ];
+        return $labels[(string) $status] ?? ucfirst((string) $status);
+    }
+
+    /**
      * @description Submitted serial rows of a purchase edit line as an array of
      *              ['id' => existing product_serial_id or null, 'serial' => string, 'protected' => 0|1].
+     *              A line whose field was not submitted at all yields null (leave the
+     *              serial pool untouched), while a submitted but empty field yields []
+     *              - the user emptied the list (for example by lowering the quantity),
+     *              so the line's in-stock serials have to be removed.
      * @param array $serialDataAll
      * @param int $prodId
      * @return array|null
      */
     private function parse_purchase_edit_serial_rows($serialDataAll, $prodId)
     {
-        if (empty($serialDataAll[$prodId])) {
+        if (!array_key_exists($prodId, $serialDataAll)) {
             return null;
+        }
+        if (empty($serialDataAll[$prodId])) {
+            return [];
         }
         $decoded = json_decode($serialDataAll[$prodId], true);
         return is_array($decoded) ? $decoded : null;
+    }
+
+    /**
+     * @description Current stock quantity of a purchase line's stock relation.
+     *              Units already consumed (sold, damaged, write-offs) are gone
+     *              from this number, so it is the floor a purchase-edit quantity
+     *              may be reduced to.
+     * @param int $stockRelationId
+     * @return float|null null when the relation row no longer exists
+     */
+    private function get_purchase_line_stock_quantity($stockRelationId)
+    {
+        if (empty($stockRelationId)) {
+            return null;
+        }
+        $row = DB()->table('product_stock_relation')
+            ->select('quantity')
+            ->where('product_stock_relation_id', $stockRelationId)
+            ->get()->getRow();
+        return $row === null ? null : (float) $row->quantity;
+    }
+
+    /**
+     * @description Quantity for error messages: redundant trailing zeros removed
+     *              ("2.50000000" -> "2.5", "3.00000000" -> "3").
+     * @param float $value
+     * @return string
+     */
+    private function fmt_purchase_qty($value)
+    {
+        return trim_decimal_zero(rtrim(sprintf('%.8f', (float) $value), '0'));
     }
 
     public function purchaseEdiAction(){
@@ -1447,15 +1654,54 @@ class Purchase extends BaseController
         $bankAmount = $this->request->getPost('bank');
         $totalDue = $this->request->getPost('due');
 
-        // ---- Serial number & warranty validation for purchase edit (start) ----
-        $serialDataAll   = $this->request->getPost('serialData') ?: [];
-        $warrantyDataAll = $this->request->getPost('warrantyData') ?: [];
-        $serialErrors    = [];
+        // ---- Sold-stock guard for purchase edit (start) ----
+        // Once units of a purchase line have been sold, the line becomes accounting
+        // history: its purchase price may no longer be changed (the cost of goods
+        // already invoiced would move) and its quantity may only be increased,
+        // never reduced below the number of units that have left the stock.
         $purchaseItems   = DB()->table('purchase_item')->where('purchase_id', $purchaseId)->get()->getResult();
         $itemByProd      = [];
         foreach ($purchaseItems as $piRow) {
             $itemByProd[$piRow->prod_id] = $piRow;
         }
+        $lineErrors = [];
+        if (is_array($prod_id)) {
+            foreach ($prod_id as $lineIdx => $lineProdId) {
+                if (!isset($itemByProd[$lineProdId])) {
+                    continue;
+                }
+                $piRow     = $itemByProd[$lineProdId];
+                $stockQty  = $this->get_purchase_line_stock_quantity($piRow->product_stock_relation_id);
+                if ($stockQty === null) {
+                    continue;
+                }
+                $prodName  = get_data_by_id('name', 'products', 'prod_id', $lineProdId);
+                $consumed  = (float) $piRow->quantity - $stockQty;
+                if ($consumed < 0.000001) {
+                    $consumed = 0;
+                }
+                $lineQty   = (float) $qty[$lineIdx];
+
+                if ($consumed > 0) {
+                    if (abs((float) $price[$lineIdx] - (float) $piRow->purchase_price) > 0.000001) {
+                        $lineErrors[] = "Purchase price of '{$prodName}' is locked because {$this->fmt_purchase_qty($consumed)} unit(s) already sold.";
+                    }
+                    if ($lineQty + 0.000001 < $consumed) {
+                        $lineErrors[] = "Quantity of '{$prodName}' cannot be less than the sold quantity ({$this->fmt_purchase_qty($consumed)}); it can only be increased.";
+                    }
+                }
+            }
+        }
+        if (!empty($lineErrors)) {
+            $this->session->setFlashdata('message', '<div class="alert alert-danger alert-dismissible" role="alert">' . implode('<br>', $lineErrors) . ' <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+            return redirect()->to(site_url('Admin/Purchase'));
+        }
+        // ---- Sold-stock guard for purchase edit (end) ----
+
+        // ---- Serial number & warranty validation for purchase edit (start) ----
+        $serialDataAll   = $this->request->getPost('serialData') ?: [];
+        $warrantyDataAll = $this->request->getPost('warrantyData') ?: [];
+        $serialErrors    = [];
         foreach ($prod_id as $lineIdx => $lineProdId) {
             $serialStatus   = (int) get_data_by_id('serial_status', 'products', 'prod_id', $lineProdId);
             $warrantyStatus = (int) get_data_by_id('warranty_status', 'products', 'prod_id', $lineProdId);
@@ -1469,17 +1715,19 @@ class Purchase extends BaseController
             $serials   = [];
             $newSerials = [];
             $existingIds = [];
-            foreach ($rows as $r) {
-                $sn = trim((string) ($r['serial'] ?? ''));
-                if ($sn === '') {
-                    $serialErrors[] = "All serial numbers must be filled for '{$prodName}'.";
-                    break;
-                }
-                $serials[] = $sn;
-                if (empty($r['id'])) {
-                    $newSerials[] = $sn;
-                } else {
-                    $existingIds[(int) $r['id']] = $sn;
+            if ($serialStatus === 1) {
+                foreach ($rows as $r) {
+                    $sn = trim((string) ($r['serial'] ?? ''));
+                    if ($sn === '') {
+                        $serialErrors[] = "All serial numbers must be filled for '{$prodName}'.";
+                        break;
+                    }
+                    $serials[] = $sn;
+                    if (empty($r['id'])) {
+                        $newSerials[] = $sn;
+                    } else {
+                        $existingIds[(int) $r['id']] = $sn;
+                    }
                 }
             }
             if ($serialStatus === 1) {
@@ -2011,6 +2259,13 @@ class Purchase extends BaseController
             $lineSerialStatus   = (int) get_data_by_id('serial_status', 'products', 'prod_id', $prod_id[$i]);
             $lineWarrantyStatus = (int) get_data_by_id('warranty_status', 'products', 'prod_id', $prod_id[$i]);
             $lineRows = $this->parse_purchase_edit_serial_rows($serialDataAll, $prod_id[$i]);
+            // A submitted-but-empty list must still run the sync so the serials that
+            // dropped out with the reduced quantity get deleted. Warranty-only lines
+            // never own serial rows, so an empty list there stays a no-op.
+            $emptySerialList = ($lineRows !== null && count($lineRows) === 0);
+            if ($emptySerialList && $lineSerialStatus !== 1) {
+                $lineRows = null;
+            }
             if (($lineSerialStatus === 1 || $lineWarrantyStatus === 1) && $lineRows !== null && !empty($purchaseItem->product_stock_relation_id)) {
                 $relationId = $purchaseItem->product_stock_relation_id;
                 $warrantyForProduct = !empty($warrantyDataAll[$prod_id[$i]]) ? $warrantyDataAll[$prod_id[$i]] : null;
@@ -2024,6 +2279,7 @@ class Purchase extends BaseController
                     }
                     if (empty($r['id'])) {
                         $newSerialRows[] = [
+                            'sch_id'                    => $shopId,
                             'product_stock_relation_id' => $relationId,
                             'serial_number'             => $sn,
                             'company_warranty_end_date' => $warrantyForProduct,
@@ -2041,6 +2297,11 @@ class Purchase extends BaseController
                 $currentRows = $this->get_purchase_line_serials($relationId);
                 $currentById = [];
                 foreach ($currentRows as $cr) {
+                    // Warranty placeholder rows (serial_number NULL) belong to the
+                    // warranty sync below, never to the serial list.
+                    if ($cr->serial_number === null || $cr->serial_number === '') {
+                        continue;
+                    }
                     $currentById[(int) $cr->product_serial_id] = $cr->serial_number;
                 }
                 $toDelete = array_diff(array_map('intval', array_keys($currentById)), array_keys($keepSerials));
@@ -2079,6 +2340,10 @@ class Purchase extends BaseController
                 }
             }
             // ---- Sync serial numbers & company warranty (purchase edit) (end) ----
+
+            // Warranty-only lines keep their date on product_serial placeholder rows
+            // (serialized lines were already covered by the serial sync above).
+            $this->sync_warranty_placeholder_serials($purchaseItem->product_stock_relation_id, $lineSerialStatus, $lineWarrantyStatus, $warrantyForProduct, $userId);
         }
         //purchase product insert in product table and purchase item table (end)
 
@@ -2237,6 +2502,7 @@ class Purchase extends BaseController
 
             $data['flow'] = DB()->table('transaction_entries')
                 ->where('purchase_id',$purchase_id)
+                ->where('sch_id', $shopId)
                 ->get()
                 ->getResult();
 
@@ -2894,6 +3160,7 @@ class Purchase extends BaseController
                                 continue;
                             }
                             $serialRows[] = [
+                                'sch_id'                    => $shopId,
                                 'product_stock_relation_id' => $product_stock_relation_id,
                                 'serial_number'             => $sn,
                                 'company_warranty_end_date' => $warrantyForProduct,
@@ -2908,6 +3175,13 @@ class Purchase extends BaseController
                     }
                 }
                 // ---- Insert serial numbers & company warranty (end) ----
+
+                // Warranty-only products (no serial rows): the date lives on
+                // product_serial placeholder rows, not purchase_item
+                $prodSerialStatus   = (int) get_data_by_id('serial_status', 'products', 'prod_id', $prodId);
+                $prodWarrantyStatus = (int) get_data_by_id('warranty_status', 'products', 'prod_id', $prodId);
+                $wForLine = (isset($warrantyDataAll[$prodId]) && !empty($warrantyDataAll[$prodId])) ? $warrantyDataAll[$prodId] : null;
+                $this->sync_warranty_placeholder_serials($product_stock_relation_id, $prodSerialStatus, $prodWarrantyStatus, $wForLine, $userId);
             }
             //purchase product insert in product table and purchase item table (end)
 

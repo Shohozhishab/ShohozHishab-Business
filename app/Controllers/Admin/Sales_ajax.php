@@ -132,6 +132,7 @@ class Sales_ajax extends BaseController
 
             $data['flow'] = DB()->table('transaction_entries')
                 ->where('sales_id',$sales_id)
+                ->where('sch_id', $shopId)
                 ->get()
                 ->getResult();
 

@@ -285,6 +285,7 @@ class Transaction_ajax extends BaseController
 
             $data['flow'] = DB()->table('transaction_entries')
                 ->where('trans_id',$trans_id)
+                ->where('sch_id', $shopId)
                 ->get()
                 ->getResult();
 

@@ -8,6 +8,16 @@
         </ol>
     </section>
 
+    <style>
+    .sw-wrap{position:relative;display:inline-block;cursor:pointer;margin-left:8px;vertical-align:middle;user-select:none;}
+    .sw-wrap input.sw-box{position:absolute;opacity:0;width:40px;height:20px;margin:0;cursor:pointer;z-index:2;}
+    .sw-slider{display:inline-block;width:40px;height:20px;background:#ccc;border-radius:20px;position:relative;transition:.2s;vertical-align:middle;}
+    .sw-slider:before{content:"";position:absolute;height:16px;width:16px;left:2px;top:2px;background:#fff;border-radius:50%;transition:.2s;}
+    .sw-box:checked + .sw-slider{background:#3c8dbc;}
+    .sw-box:checked + .sw-slider:before{transform:translateX(20px);}
+    .sw-label{font-weight:normal;margin-left:4px;}
+    </style>
+
     <!-- Main content -->
     <section class="content">
         <!-- Small boxes (Stat box) -->
@@ -68,6 +78,25 @@
                             </div>
                             <div id="unitData"></div>
 
+                            <div class="form-group col-xs-3">
+                                <label for="serial_status" style="margin-bottom:0;">Serial Number</label>
+                                <span class="sw-wrap">
+                                    <input type="hidden" name="serial_status" value="0">
+                                    <input type="checkbox" class="sw-box" name="serial_status" id="serial_status" value="1">
+                                    <span class="sw-slider"></span>
+                                    <span class="sw-label">Off</span>
+                                </span>
+                            </div>
+                            <div class="form-group col-xs-3">
+                                <label for="warranty_status" style="margin-bottom:0;">Company Warranty</label>
+                                <span class="sw-wrap">
+                                    <input type="hidden" name="warranty_status" value="0">
+                                    <input type="checkbox" class="sw-box" name="warranty_status" id="warranty_status" value="1">
+                                    <span class="sw-slider"></span>
+                                    <span class="sw-label">Off</span>
+                                </span>
+                            </div>
+
                             <div class="form-group col-xs-12">
                                 <button type="submit" class="btn btn-primary ">Add</button>
                                 <a href="javascript:void(0)" onclick="showData('<?php echo site_url('/Admin/Products_ajax/'); ?>','<?php echo '/Admin/Products/'; ?>')" class="btn btn-danger">Back</a>
@@ -85,3 +114,10 @@
     </section>
     <!-- /.content -->
 </div>
+
+<script>
+// Toggle label text on switch change.
+jQuery(document).on('change', '#geniusform .sw-box', function () {
+    jQuery(this).closest('.sw-wrap').find('.sw-label').text(this.checked ? 'On' : 'Off');
+});
+</script>

@@ -468,6 +468,7 @@ class Bank_deposit extends BaseController
 
     private function bank_deposit_transaction_entries($dep_id, $ledger_id, $table_name, $transaction_type) {
         DB()->table('transaction_entries')->insert([
+            'sch_id'          => $this->session->shopId,
             'dep_id'         => $dep_id,
             'ledger_id'        => $ledger_id,
             'table_name'       => $table_name,
@@ -486,6 +487,7 @@ class Bank_deposit extends BaseController
 
             $data['flow'] = DB()->table('transaction_entries')
                 ->where('dep_id',$dep_id)
+                ->where('sch_id', $shopId)
                 ->get()
                 ->getResult();
 

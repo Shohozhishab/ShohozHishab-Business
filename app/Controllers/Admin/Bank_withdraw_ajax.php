@@ -91,6 +91,7 @@ class Bank_withdraw_ajax extends BaseController
         } else {
             $data['flow'] = DB()->table('transaction_entries')
                 ->where('wthd_id',$wthd_id)
+                ->where('sch_id', $this->session->shopId)
                 ->get()
                 ->getResult();
 

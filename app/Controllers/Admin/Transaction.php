@@ -5681,6 +5681,7 @@ class Transaction extends BaseController
 
     private function transaction_entries($trans_id, $ledger_id, $table_name, $transaction_type) {
         DB()->table('transaction_entries')->insert([
+            'sch_id'          => $this->session->shopId,
             'trans_id'         => $trans_id,
             'ledger_id'        => $ledger_id,
             'table_name'       => $table_name,
@@ -5699,6 +5700,7 @@ class Transaction extends BaseController
 
             $data['flow'] = DB()->table('transaction_entries')
                 ->where('trans_id',$trans_id)
+                ->where('sch_id', $shopId)
                 ->get()
                 ->getResult();
 
