@@ -38,7 +38,7 @@ class Products_short_list_ajax extends BaseController
             $shopId = $this->session->shopId;
 
             $data['products_data'] = DB()->table('product_stock_relation psr')
-                ->select('p.*, SUM(psr.quantity) as total_quantity')
+                ->select('p.*, psr.unit, psr.purchase_price, SUM(psr.quantity) as total_quantity')
                 ->join('products p', 'p.prod_id = psr.product_id')
                 ->where('p.sch_id',$shopId)
                 ->groupBy('psr.product_id')
