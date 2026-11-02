@@ -605,8 +605,10 @@ $saleSerials = (isset($saleSerials) && is_array($saleSerials)) ? $saleSerials : 
             jQuery('#saleSerialWarranty').val(res.warranty || '');
             jQuery('#saleSerialCheckAll').prop('checked', false);
             saleSerialCount();
-        }, 'json').fail(function () {
-            jQuery('#saleSerialRows').html('<tr><td colspan="3" class="text-danger">Unable to load serial numbers.</td></tr>');
+        }, 'json').fail(function (xhr, textStatus) {
+            // 404 = code not deployed, 500 = server/DB error, parsererror = HTML instead of JSON.
+            jQuery('#saleSerialRows').html('<tr><td colspan="3" class="text-danger">Unable to load serial numbers (HTTP '
+                + xhr.status + ', ' + saleEscapeHtml(textStatus) + ').</td></tr>');
         });
     }
 

@@ -678,8 +678,12 @@ $editVatAmount       = $editAfterDisc * $editVatPct / 100;
             }
 
             saleEditUpdateSelectedCount();
-        }, 'json').fail(function () {
-            rows.html('<tr><td colspan="3" class="sale-serial-empty text-danger">Unable to load serial numbers.</td></tr>');
+        }, 'json').fail(function (xhr, textStatus) {
+            // Surface the real failure: 404 = edit_serial_list code not deployed here,
+            // 500 = server/DB error (check writable/logs or PHP error log),
+            // parsererror = HTML error page received instead of JSON.
+            rows.html('<tr><td colspan="3" class="sale-serial-empty text-danger">Unable to load serial numbers (HTTP '
+                + xhr.status + ', ' + saleEditEscapeHtml(textStatus) + ').</td></tr>');
         });
     }
 
