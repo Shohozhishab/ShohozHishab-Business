@@ -192,14 +192,8 @@ class Products extends BaseController
             $warrantyDate = '';
         }
 
-        // Warranty-only: a date is required, but it may arrive per-row (serialData)
-        // instead of via the shared field, so only block when neither is present.
-        $warrantyRowProbe = json_decode((string) $this->request->getPost('serialData'), true);
-        $hasWarrantyRows  = is_array($warrantyRowProbe) && count($warrantyRowProbe) > 0;
-        if ($warrantyStatus === 1 && $serialStatus !== 1 && $warrantyDate === '' && !$hasWarrantyRows) {
-            return $json->setJSON(['status' => 'error', 'message' => 'Company warranty end date is required.']);
-        }
-
+        // Company warranty end date is optional (same rule as the Purchase module):
+        // an empty value means "no date supplied" and never blocks saving.
         $warrantyValue = ($warrantyStatus === 1) ? ($warrantyDate !== '' ? $warrantyDate : null) : null;
 
         $errors  = [];
@@ -227,12 +221,12 @@ class Products extends BaseController
                 $inStockMap[(int) $row['product_serial_id']] = $row['serial_number'];
             }
 
-            $lockedCount = DB()->table('product_serial')
-                ->whereIn('product_stock_relation_id', $relationIds)
-                ->where('status !=', 'in_stock')
-                ->countAllResults();
-
-            $expectedCount = max(0, $totalQty - $lockedCount);
+            // One serial per stocked unit. The stock quantity already excludes sold
+            // units - the sale decrements it and locks the serial row - so the locked
+            // rows must not be subtracted a second time (that demanded fewer serials
+            // than the in-stock rows actually on hand). The target also never falls
+            // below the in-stock rows, which this screen cannot discard.
+            $expectedCount = max(0, $totalQty, min(count($inStock), SERIAL_ENTRY_ROW_LIMIT));
 
             // Bulk-stocked product: one row per unit is not renderable/savable
             if ($expectedCount > SERIAL_ENTRY_ROW_LIMIT) {
@@ -247,20 +241,6 @@ class Products extends BaseController
                     break;
                 }
                 $serials[] = $sn;
-            }
-
-            // Warranty date validation per row
-            if ($warrantyStatus === 1 && empty($errors)) {
-                foreach ($rows as $r) {
-                    $rw = trim((string) ($r['warranty'] ?? ''));
-                    if ($rw !== '' && strtotime($rw) === false) {
-                        $rw = '';
-                    }
-                    if ($rw === '' && $warrantyDate === '') {
-                        $errors[] = 'Company warranty end date is required for all serials.';
-                        break;
-                    }
-                }
             }
 
             if (empty($serials) && $expectedCount > 0) {
@@ -364,29 +344,40 @@ class Products extends BaseController
 
                 if ($sn === '') continue;
 
-                // Effective warranty
-                $rowWarranty = trim((string) ($r['warranty'] ?? ''));
-                if ($rowWarranty !== '' && strtotime($rowWarranty) === false) {
+                // Effective warranty: row cell wins, shared field is the fallback.
+                // The date is optional, but an explicitly submitted empty cell means
+                // "clear this unit's date" - only rows carrying no warranty key at all
+                // (legacy callers) still fall back to the shared date.
+                $warrantySent   = array_key_exists('warranty', $r);
+                $rowWarranty    = trim((string) ($r['warranty'] ?? ''));
+                $warrantyBad    = ($rowWarranty !== '' && strtotime($rowWarranty) === false);
+                if ($warrantyBad) {
                     $rowWarranty = '';
                 }
-                if ($rowWarranty === '') {
+                if ($rowWarranty === '' && !$warrantySent) {
                     $rowWarranty = $warrantyDate;
                 }
-                $rowWarrantyVal = ($warrantyStatus === 1 && $rowWarranty !== '') ? $rowWarranty : null;
+                $rowWarrantyVal  = ($warrantyStatus === 1 && $rowWarranty !== '') ? $rowWarranty : null;
+                $rowWarrantyWipe = ($warrantyStatus === 1 && $warrantySent && !$warrantyBad && $rowWarranty === '');
 
                 if ($sid > 0 && isset($existingById[$sid])) {
                     // ===== UPDATE existing =====
-                    $dateChanged = $rowWarrantyVal !== null && $existingWarrantyById[$sid] !== $rowWarrantyVal;
+                    $warrantyPatch = [];
+                    if ($rowWarrantyWipe) {
+                        if ($existingWarrantyById[$sid] !== '') {
+                            $warrantyPatch['company_warranty_end_date'] = null;
+                        }
+                    } elseif ($rowWarrantyVal !== null && $existingWarrantyById[$sid] !== $rowWarrantyVal) {
+                        $warrantyPatch['company_warranty_end_date'] = $rowWarrantyVal;
+                    }
 
-                    if ($existingById[$sid] !== $sn || $dateChanged) {
+                    if ($existingById[$sid] !== $sn || !empty($warrantyPatch)) {
                         $update = [
                             'serial_number' => $sn,
                             'updatedBy'     => $userId,
                             'updatedDtm'    => date('Y-m-d H:i:s'),
                         ];
-                        if ($rowWarrantyVal !== null) {
-                            $update['company_warranty_end_date'] = $rowWarrantyVal;
-                        }
+                        $update = array_merge($update, $warrantyPatch);
 
                         DB()->table('product_serial')
                             ->where('product_serial_id', $sid)
@@ -506,15 +497,35 @@ class Products extends BaseController
                 if ($sid <= 0 || !isset($inStockWarranty[$sid])) {
                     continue; // unknown / sold row — never touched
                 }
-                $rw = trim((string) ($r['warranty'] ?? ''));
-                if ($rw !== '' && strtotime($rw) === false) {
+                $wSent    = array_key_exists('warranty', $r);
+                $rw       = trim((string) ($r['warranty'] ?? ''));
+                $rwBad    = ($rw !== '' && strtotime($rw) === false);
+                if ($rwBad) {
                     $rw = '';
                 }
-                if ($rw === '') {
-                    $rw = $warrantyDate; // shared field acts as fallback
+                if ($rw === '' && !$wSent) {
+                    $rw = $warrantyDate; // shared field acts as fallback (legacy payload)
                 }
                 if ($rw === '') {
-                    return $json->setJSON(['status' => 'error', 'message' => 'Company warranty end date is required for every unit row.']);
+                    if (!$wSent || $rwBad) {
+                        // Nothing resolved for this row, so leave its stored value
+                        // untouched instead of rejecting the whole save.
+                        continue;
+                    }
+                    // The cell was deliberately emptied: wipe the stored date. It is
+                    // still counted as submitted below, so the shared-date fallback
+                    // cannot stamp the date back onto this unit.
+                    $updatedIds[] = $sid;
+                    if ($inStockWarranty[$sid] !== '') {
+                        DB()->table('product_serial')
+                            ->where('product_serial_id', $sid)
+                            ->update([
+                                'company_warranty_end_date' => null,
+                                'updatedBy'                 => $userId,
+                                'updatedDtm'                => date('Y-m-d H:i:s'),
+                            ]);
+                    }
+                    continue;
                 }
                 $updatedIds[] = $sid;
                 if ($inStockWarranty[$sid] !== $rw) {

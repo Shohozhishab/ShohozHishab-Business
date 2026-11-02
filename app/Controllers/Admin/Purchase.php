@@ -871,10 +871,12 @@ class Purchase extends BaseController
                     }
                 }
 
+                // Company warranty end date is optional; only a supplied value is
+                // checked for a valid date format.
                 if ($wStatus === 1) {
                     $wdate = $warrantyDataAll[$idx] ?? '';
-                    if (empty($wdate) || strtotime($wdate) === false) {
-                        $serialErrors[] = "Company warranty end date is required for '{$prodName}'.";
+                    if (!empty($wdate) && strtotime($wdate) === false) {
+                        $serialErrors[] = "Company warranty end date is invalid for '{$prodName}'.";
                     }
                 }
             }
@@ -936,7 +938,10 @@ class Purchase extends BaseController
             $shopPurBalTable->where('sch_id', $shopId)->update($purUpdata);
 
             //insert log (start)
-            $this->transactionLog->insert_log_data('shops',$shopId,'',$restBalPurc,'','','',$purchaseId,'purchase_balance');
+            // The log must hold THIS purchase's amount (not the running balance): the
+            // edit flow reverses the old value with (balance - logged + new), so a
+            // running balance here corrupts shops.purchase_balance from the 2nd purchase on.
+            $this->transactionLog->insert_log_data('shops',$shopId,'',$totalPrice,'','','',$purchaseId,'purchase_balance');
             //insert log (end)
 
             $purLedgData = array(
@@ -1266,7 +1271,8 @@ class Purchase extends BaseController
                     (int)($serialStatusArr[$i] ?? 0),
                     (int)($warrantyStatusArr[$i] ?? 0),
                     $wForLine,
-                    $userId
+                    $userId,
+                    true
                 );
             }
             //purchase product insert in product table and purchase item table (end)
@@ -1470,13 +1476,17 @@ class Purchase extends BaseController
      *              fractional stock is left untouched); rows carrying a real serial
      *              number are never created or deleted here, and the posted date is
      *              applied to every in-stock row of the relation.
+     * @param bool             $newRowsOnly  purchase-create guard: when the relation was
+     *              reused (same product re-purchased at the same prices) the date must
+     *              land only on the freshly added units; existing units keep their own
+     *              dates. Edit flows leave this false to keep one date per line.
      * @param int              $stockRelationId
      * @param int              $serialStatus   products.serial_status of the line
      * @param int              $warrantyStatus products.warranty_status of the line
      * @param string|null      $warrantyDate   posted company warranty end date (null = keep existing)
      * @param int              $userId
      */
-    private function sync_warranty_placeholder_serials($stockRelationId, $serialStatus, $warrantyStatus, $warrantyDate, $userId)
+    private function sync_warranty_placeholder_serials($stockRelationId, $serialStatus, $warrantyStatus, $warrantyDate, $userId, $newRowsOnly = false)
     {
         // Serialized lines already own real serial rows that carry the date.
         if (empty($stockRelationId) || $serialStatus === 1 || $warrantyStatus !== 1) {
@@ -1506,6 +1516,9 @@ class Purchase extends BaseController
             ->get()->getResultArray();
         $placeholderIds = array_column($placeholderIds, 'product_serial_id');
         $existing = count($placeholderIds);
+        // Boundary marker taken BEFORE the new rows are inserted: rows above it are
+        // the ones added for this purchase.
+        $preInsertMaxId = $placeholderIds ? max($placeholderIds) : 0;
 
         // Rows already sold/consumed (invoice linked) are never removed.
         if ($existing > $target) {
@@ -1539,11 +1552,16 @@ class Purchase extends BaseController
         }
 
         // One warranty date per line: apply it to every in-stock row of the relation.
+        // On purchase-create with a reused relation ($newRowsOnly), existing units keep
+        // their own dates and only the units added by this purchase are stamped.
         if ($warrantyDate !== null && $existing > 0) {
-            DB()->table('product_serial')
+            $warrantyUpdate = DB()->table('product_serial')
                 ->where('product_stock_relation_id', $stockRelationId)
-                ->where('status', 'in_stock')
-                ->update(['company_warranty_end_date' => $warrantyDate, 'updatedBy' => $userId]);
+                ->where('status', 'in_stock');
+            if ($newRowsOnly && $preInsertMaxId > 0) {
+                $warrantyUpdate->where('product_serial_id >', $preInsertMaxId);
+            }
+            $warrantyUpdate->update(['company_warranty_end_date' => $warrantyDate, 'updatedBy' => $userId]);
         }
     }
 
@@ -1770,10 +1788,12 @@ class Purchase extends BaseController
                     $serialErrors[] = "Serial '{$ns}' already exists for '{$prodName}'.";
                 }
             }
+            // Company warranty end date is optional; only a supplied value is
+            // checked for a valid date format.
             if ($warrantyStatus === 1) {
                 $wdate = $warrantyDataAll[$lineProdId] ?? '';
-                if (empty($wdate) || strtotime($wdate) === false) {
-                    $serialErrors[] = "Company warranty end date is required for '{$prodName}'.";
+                if (!empty($wdate) && strtotime($wdate) === false) {
+                    $serialErrors[] = "Company warranty end date is invalid for '{$prodName}'.";
                 }
             }
         }
@@ -2258,6 +2278,7 @@ class Purchase extends BaseController
             // ---- Sync serial numbers & company warranty (purchase edit) (start) ----
             $lineSerialStatus   = (int) get_data_by_id('serial_status', 'products', 'prod_id', $prod_id[$i]);
             $lineWarrantyStatus = (int) get_data_by_id('warranty_status', 'products', 'prod_id', $prod_id[$i]);
+            $warrantyForProduct = !empty($warrantyDataAll[$prod_id[$i]]) ? $warrantyDataAll[$prod_id[$i]] : null;
             $lineRows = $this->parse_purchase_edit_serial_rows($serialDataAll, $prod_id[$i]);
             // A submitted-but-empty list must still run the sync so the serials that
             // dropped out with the reduced quantity get deleted. Warranty-only lines
@@ -2268,7 +2289,6 @@ class Purchase extends BaseController
             }
             if (($lineSerialStatus === 1 || $lineWarrantyStatus === 1) && $lineRows !== null && !empty($purchaseItem->product_stock_relation_id)) {
                 $relationId = $purchaseItem->product_stock_relation_id;
-                $warrantyForProduct = !empty($warrantyDataAll[$prod_id[$i]]) ? $warrantyDataAll[$prod_id[$i]] : null;
 
                 $keepSerials = [];
                 $newSerialRows = [];
@@ -2343,7 +2363,7 @@ class Purchase extends BaseController
 
             // Warranty-only lines keep their date on product_serial placeholder rows
             // (serialized lines were already covered by the serial sync above).
-            $this->sync_warranty_placeholder_serials($purchaseItem->product_stock_relation_id, $lineSerialStatus, $lineWarrantyStatus, $warrantyForProduct, $userId);
+            $this->sync_warranty_placeholder_serials($purchaseItem->product_stock_relation_id ?? null, $lineSerialStatus, $lineWarrantyStatus, $warrantyForProduct, $userId);
         }
         //purchase product insert in product table and purchase item table (end)
 
@@ -2784,12 +2804,13 @@ class Purchase extends BaseController
                     }
                 }
 
-                // Company warranty end date: mandatory whenever warranty_status is
-                // on, independent of whether serial tracking is enabled.
+                // Company warranty end date is optional whenever warranty_status is
+                // on, independent of whether serial tracking is enabled; a supplied
+                // value must still be a valid date.
                 if ($warrantyStatus === 1) {
                     $wdate = $warrantyDataAll[$prodId] ?? '';
-                    if (empty($wdate) || strtotime($wdate) === false) {
-                        $serialErrors[] = "Company warranty end date is required for '{$prodName}'.";
+                    if (!empty($wdate) && strtotime($wdate) === false) {
+                        $serialErrors[] = "Company warranty end date is invalid for '{$prodName}'.";
                     }
                 }
             }
@@ -2859,7 +2880,10 @@ class Purchase extends BaseController
             $shopPurBalTable->where('sch_id', $shopId)->update($purUpdata);
 
             //insert log (start)
-            $this->transactionLog->insert_log_data('shops',$shopId,'',$restBalPurc,'','','',$purchaseId,'purchase_balance');
+            // The log must hold THIS purchase's amount (not the running balance): the
+            // edit flow reverses the old value with (balance - logged + new), so a
+            // running balance here corrupts shops.purchase_balance from the 2nd purchase on.
+            $this->transactionLog->insert_log_data('shops',$shopId,'',$totalPrice,'','','',$purchaseId,'purchase_balance');
             //insert log (end)
 
             $purLedgData = array(
@@ -3096,7 +3120,11 @@ class Purchase extends BaseController
                 $sellingPrice = $this->request->getPost('salePrice[]')[$i];
                 $quantity = $this->request->getPost('qty[]')[$i];
 
-                $oldStock = DB()->table('product_stock_relation')->where('sch_id',$shopId)->where('store_id',$storeId)->where('product_id',$prodId)->where('purchase_price',$purchasePrice)->where('selling_price',$sellingPrice)->where('is_default','0')->countAllResults();
+                // Serialized products must own a dedicated stock relation per purchase:
+                // merging a re-purchase into an older relation would expose the old
+                // line's sold serials as locked rows in this purchase's edit modal.
+                $prodSerialOn = (int) get_data_by_id('serial_status', 'products', 'prod_id', $prodId) === 1;
+                $oldStock = $prodSerialOn ? 0 : DB()->table('product_stock_relation')->where('sch_id',$shopId)->where('store_id',$storeId)->where('product_id',$prodId)->where('purchase_price',$purchasePrice)->where('selling_price',$sellingPrice)->where('is_default','0')->countAllResults();
                 $product_stock_relation_id = 0;
                 if (empty($oldStock)) {
                     //insert data in table product_stock_relation
@@ -3181,7 +3209,9 @@ class Purchase extends BaseController
                 $prodSerialStatus   = (int) get_data_by_id('serial_status', 'products', 'prod_id', $prodId);
                 $prodWarrantyStatus = (int) get_data_by_id('warranty_status', 'products', 'prod_id', $prodId);
                 $wForLine = (isset($warrantyDataAll[$prodId]) && !empty($warrantyDataAll[$prodId])) ? $warrantyDataAll[$prodId] : null;
-                $this->sync_warranty_placeholder_serials($product_stock_relation_id, $prodSerialStatus, $prodWarrantyStatus, $wForLine, $userId);
+                // A same-price re-purchase merges into an existing relation, so stamp
+                // only the units added by this purchase and keep older units' dates.
+                $this->sync_warranty_placeholder_serials($product_stock_relation_id, $prodSerialStatus, $prodWarrantyStatus, $wForLine, $userId, true);
             }
             //purchase product insert in product table and purchase item table (end)
 

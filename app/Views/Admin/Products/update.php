@@ -214,7 +214,7 @@
                                                 Stock Qty: <b><?= (int)$serialTab['quantity']; ?></b>
                                                 <span class="text-muted pu-serial-meta" style="<?= $serialOn ? '' : 'display:none;'; ?>">— editable serials: <b id="pu-expected"><?= (int)$serialTab['expectedCount']; ?></b></span>
                                                 <?php if ($serialTab['lockedCount'] > 0): ?>
-                                                    <span class="text-muted pu-serial-meta" style="<?= $serialOn ? '' : 'display:none;'; ?>">(<?= (int)$serialTab['lockedCount']; ?> sold/locked serial(s) excluded)</span>
+                                                    <span class="text-muted pu-serial-meta" style="<?= $serialOn ? '' : 'display:none;'; ?>">(<?= (int)$serialTab['lockedCount']; ?> sold/locked serial(s) listed read-only)</span>
                                                 <?php endif; ?>
                                             </div>
 
@@ -238,6 +238,23 @@
                                                         <th class="pu-s-col" style="width:100%;<?= $serialOn ? '' : 'display:none;'; ?>">Serial Number</th>
                                                     </tr>
                                                     </thead>
+                                                    <?php $puLockedOffset = 0; ?>
+                                                    <tbody id="serialTableBodyLocked">
+                                                    <?php foreach ($serialTab['lockedSerials'] as $lrow): ?>
+                                                    <?php
+                                                        // A sold/returned/damaged unit is permanent history: it is listed in
+                                                        // its own tbody and disabled, so it is never submitted, counted by
+                                                        // the serial check, saved or deleted
+                                                        $puLockedOffset++;
+                                                        $puLockStatus = ucwords(str_replace('_', ' ', (string) ($lrow['status'] ?? '')));
+                                                    ?>
+                                                    <tr class="pu-serial-row pu-serial-locked" title="<?= esc($puLockStatus); ?> unit - not editable" style="background:#f7f7f7;">
+                                                        <td><?= $puLockedOffset; ?></td>
+                                                        <td class="pu-w-col" style="<?= $warrantyOn ? '' : 'display:none;'; ?>"><input type="date" class="form-control pu-warranty-cell input-sm" value="<?= esc($lrow['company_warranty_end_date'] ?? ''); ?>" disabled></td>
+                                                        <td class="pu-s-col" style="<?= $serialOn ? '' : 'display:none;'; ?>"><input type="text" class="form-control pu-serial-cell input-sm" value="<?= esc($lrow['serial_number'] ?? ''); ?>" disabled></td>
+                                                    </tr>
+                                                    <?php endforeach; ?>
+                                                    </tbody>
                                                     <tbody id="serialTableBody">
                                                     <?php
                                                         $rowCount = max((int)$serialTab['expectedCount'], count($serialTab['serials']));
@@ -245,8 +262,8 @@
                                                             $row = $serialTab['serials'][$i] ?? null;
                                                     ?>
                                                     <tr class="pu-serial-row" data-id="<?= (int)($row['product_serial_id'] ?? 0); ?>">
-                                                        <td><?= $i + 1; ?></td>
-                                                        <td class="pu-w-col" style="<?= $warrantyOn ? '' : 'display:none;'; ?>"><input type="date" class="form-control pu-warranty-cell input-sm" value="<?= esc(!empty($row['company_warranty_end_date']) ? $row['company_warranty_end_date'] : $serialTab['warrantyDate']); ?>"></td>
+                                                        <td><?= $puLockedOffset + $i + 1; ?></td>
+                                                        <td class="pu-w-col" style="<?= $warrantyOn ? '' : 'display:none;'; ?>"><input type="date" class="form-control pu-warranty-cell input-sm" value="<?= esc($row ? ($row['company_warranty_end_date'] ?? '') : $serialTab['warrantyDate']); ?>"></td>
                                                         <td class="pu-s-col" style="<?= $serialOn ? '' : 'display:none;'; ?>"><input type="text" class="form-control pu-serial-cell input-sm" value="<?= esc($row['serial_number'] ?? ''); ?>" placeholder="Serial number"></td>
                                                     </tr>
                                                     <?php endfor; ?>
@@ -427,25 +444,16 @@
             return;
         }
 
-        var allWarranty = true;
-
         if (serialOn) {
             $('#serialTableBody .pu-serial-row').each(function () {
                 var val = ($(this).find('.pu-serial-cell').val() || '').trim();
                 if (val === '') { allFilled = false; } else { serials.push(val); }
-                // A row may carry its own date; the shared field acts as fallback
-                if (warrantyOn && val !== '' && !(($(this).find('.pu-warranty-cell').val() || '') || warrantyDate)) {
-                    allWarranty = false;
-                }
-            });
-        } else if (warrantyOn) {
-            // Warranty-only: every unit row must resolve to a date (its own cell or the shared field)
-            $('#serialTableBody .pu-serial-row').each(function () {
-                if (!(($(this).find('.pu-warranty-cell').val() || '') || warrantyDate)) { allWarranty = false; }
             });
         }
         var dup = serials.some(function (s, i) { return serials.indexOf(s) !== i; });
 
+        // The Company Warranty End Date is optional - an empty value (shared field
+        // or per-row cell) is accepted and keeps the stored date untouched.
         var error = null;
         if (serialOn && serials.length !== expected) {
             error = 'Please provide exactly ' + expected + ' serial number(s) (row count follows the editable quantity).';
@@ -453,10 +461,6 @@
             error = 'All serial numbers must be filled.';
         } else if (dup) {
             error = 'Duplicate serial numbers are not allowed.';
-        } else if (warrantyOn && !allWarranty) {
-            error = 'Company warranty end date is required for every unit row (set it per row or via the field above).';
-        } else if (warrantyOn && !serialOn && warrantyDate === '' && $('#serialTableBody .pu-serial-row').length === 0) {
-            error = 'Company warranty end date is required.';
         }
         if (error) {
             $('#message').html('<div class="alert alert-danger alert-dismissible" role="alert">' + error + ' <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
@@ -514,10 +518,13 @@
     });
     }
 
-    // Re-render the table from freshly saved in-stock serials (row count always equals expected qty)
+    // Re-render the editable table from freshly saved in-stock serials (row count
+    // always equals the expected qty). The read-only sold/locked tbody is never
+    // touched, so the editable numbering simply continues after it.
     window.puRebuildSerialRows = function (rows, warrantyDate) {
         if (!isSerialOn() || $('#pu-serial-overlimit').length) { return; }
         var warrantyOn = isWarrantyOn();
+        var offset = $('#serialTableBodyLocked .pu-serial-row').length;
         var expected = parseInt($('#pu-expected').text(), 10) || 0;
         var count = Math.min(<?= $serialRowLimit; ?>, Math.max(expected, rows.length));
         var html = '';
@@ -525,12 +532,13 @@
             var row = rows[i] || null;
             var serial = row && row.serial_number ? $('<span>').text(row.serial_number).html() : '';
             var id = row ? row.product_serial_id : 0;
-            // Prefer the row's own saved warranty date; shared date is the fallback
-            var wv = (row && row.company_warranty_end_date) ? row.company_warranty_end_date : (warrantyDate || '');
+            // A saved row shows exactly its own date (empty means deliberately cleared);
+            // only the extra rows not backed by a stored unit are prefilled from the shared date
+            var wv = row ? (row.company_warranty_end_date || '') : (warrantyDate || '');
             html += '<tr class="pu-serial-row" data-id="' + id + '">';
-            html += '<td>' + (i + 1) + '</td>';
+            html += '<td>' + (offset + i + 1) + '</td>';
             html += '<td class="pu-w-col" style="' + (warrantyOn ? '' : 'display:none;') + '"><input type="date" class="form-control pu-warranty-cell input-sm" value="' + wv + '"></td>';
-            html += '<td><input type="text" class="form-control pu-serial-cell input-sm" value="' + serial + '" placeholder="Serial number"></td>';
+            html += '<td class="pu-s-col"><input type="text" class="form-control pu-serial-cell input-sm" value="' + serial + '" placeholder="Serial number"></td>';
             html += '</tr>';
         }
         $('#serialTableBody').html(html);
