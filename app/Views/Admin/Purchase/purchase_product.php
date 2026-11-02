@@ -481,11 +481,8 @@
                 }
             }
 
+            // Company Warranty End Date is optional - an empty value is accepted.
             var warranty = $rows.find('.serial-warranty').first().val() || '';
-            if (current.warrantyStatus === 1 && !warranty) {
-                alert('Company Warranty End Date is required.');
-                return;
-            }
 
             jQuery('#serialData_' + current.prodId).val(serials.length ? JSON.stringify(serials) : '');
             jQuery('#warrantyData_' + current.prodId).val(warranty);
@@ -506,8 +503,8 @@
         // are handled by the inline purchaseQtyChanged(this) handler.
         window.calculateGrandTotal = recalcPurchaseCards;
 
-        // Final purchase submit guard: validate serial_status and warranty_status
-        // independently so a warranty-only product is still enforced.
+        // Final purchase submit guard: serial numbers are enforced per product;
+        // the company warranty end date is optional and never blocks saving.
         jQuery('#purchaseProductForm').on('submit', function () {
             var block = null;
             jQuery('.add-serial-btn').each(function () {
@@ -515,7 +512,6 @@
                 var pid = $btn.data('prod-id');
                 var qty = parseInt($btn.data('qty'), 10) || 0;
                 var serialOn = parseInt($btn.data('serial-status'), 10) === 1;
-                var warrantyOn = parseInt($btn.data('warranty-status'), 10) === 1;
 
                 if (serialOn) {
                     var raw = jQuery('#serialData_' + pid).val();
@@ -535,11 +531,6 @@
                         block = 'All serial numbers must be filled for "' + $btn.data('prod-name') + '".';
                         return false;
                     }
-                }
-
-                if (warrantyOn && !jQuery('#warrantyData_' + pid).val()) {
-                    block = 'Company warranty end date is required for "' + $btn.data('prod-name') + '".';
-                    return false;
                 }
             });
             if (block) {

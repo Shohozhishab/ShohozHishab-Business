@@ -689,12 +689,9 @@ $isCapitalPurchase = empty($purchase->supplier_id);
                     }
                 }
 
+                // Company Warranty End Date is optional - an empty value is accepted.
                 var warranty = editableRows().find('.serial-warranty').first().val()
                     || jQuery('#warrantyData_' + current.prodId).val() || '';
-                if (current.warrantyStatus === 1 && !warranty) {
-                    alert('Company Warranty End Date is required.');
-                    return;
-                }
 
                 jQuery('#serialData_' + current.prodId).val(rows.length ? JSON.stringify(rows) : '');
                 jQuery('#warrantyData_' + current.prodId).val(warranty);
@@ -703,7 +700,8 @@ $isCapitalPurchase = empty($purchase->supplier_id);
                 $modal.modal('hide');
             });
 
-            // Final submit guard: validate serial_status and warranty_status independently
+            // Final submit guard: serial numbers are enforced per product; the
+            // company warranty end date is optional and never blocks saving.
             document.addEventListener('submit', function (e) {
                 if (!e.target || e.target.id !== 'editPurchaseForm') { return; }
                 if (!window.jQuery) { return; }
@@ -736,7 +734,6 @@ $isCapitalPurchase = empty($purchase->supplier_id);
                     qty = qty - window.peLockedCount(pid);
                     if (qty < 0) { qty = 0; }
                     var serialOn = parseInt($btn.attr('data-serial-status'), 10) === 1;
-                    var warrantyOn = parseInt($btn.attr('data-warranty-status'), 10) === 1;
 
                     if (serialOn) {
                         var list = window.peParseSerials(pid);
@@ -757,11 +754,6 @@ $isCapitalPurchase = empty($purchase->supplier_id);
                             block = 'All serial numbers must be filled for "' + $btn.attr('data-prod-name') + '".';
                             return false;
                         }
-                    }
-
-                    if (warrantyOn && !$('#warrantyData_' + pid).val()) {
-                        block = 'Company warranty end date is required for "' + $btn.attr('data-prod-name') + '".';
-                        return false;
                     }
                 });
                 if (block) {

@@ -483,11 +483,8 @@
                 }
             }
 
+            // Company Warranty End Date is optional - an empty value is accepted.
             var warranty = $rows.find('.serial-warranty').first().val() || '';
-            if (current.warrantyStatus === 1 && !warranty) {
-                alert('Company Warranty End Date is required.');
-                return;
-            }
 
             jQuery('#serialData_' + current.rowIdx).val(serials.length ? JSON.stringify(serials) : '');
             jQuery('#warrantyData_' + current.rowIdx).val(warranty);
@@ -502,7 +499,8 @@
             $modal.modal('hide');
         });
 
-        // Submit guard: validate serial and warranty per row independently.
+        // Submit guard: serial numbers are enforced per row; the company warranty
+        // end date is optional and never blocks saving.
         jQuery('form[action*="product_create_action"]').on('submit', function () {
             var block = null;
             jQuery('.add-serial-btn').each(function () {
@@ -510,7 +508,6 @@
                 var idx = $btn.data('row-idx');
                 var qty = parseInt($btn.data('qty'), 10) || 0;
                 var serialOn = parseInt($btn.data('serial-status'), 10) === 1;
-                var warrantyOn = parseInt($btn.data('warranty-status'), 10) === 1;
 
                 if (serialOn) {
                     var raw = jQuery('#serialData_' + idx).val();
@@ -530,11 +527,6 @@
                         block = 'All serial numbers must be filled for "' + $btn.data('prod-name') + '".';
                         return false;
                     }
-                }
-
-                if (warrantyOn && !jQuery('#warrantyData_' + idx).val()) {
-                    block = 'Company warranty end date is required for "' + $btn.data('prod-name') + '".';
-                    return false;
                 }
             });
             if (block) {

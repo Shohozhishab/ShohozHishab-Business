@@ -544,3 +544,38 @@ $invContacts = array_values(array_filter(array_map('trim', explode(',', $__inv('
         </div>
     </section>
 </div>
+
+<script>
+     //new invoice view
+  function calculateTotals() {
+      // Subtotal
+      let totalAmount = parseFloat($('#totalAmount').val()) || 0;
+
+      // Discount %
+      let discount = parseFloat($('#discount').val()) || 0;
+
+      // VAT %
+      let vat = parseFloat($('#vat').val()) || 0;
+
+      // Calculate discount
+      let discountAmount = (totalAmount * discount) / 100;
+
+      // Amount after discount
+      let afterDiscount = totalAmount - discountAmount;
+
+      // Calculate VAT after discount
+      let vatAmount = (afterDiscount * vat) / 100;
+
+      // Display values
+      $('#discountAmount').text('৳ ' + discountAmount.toFixed(2) + ' /-');
+      $('#discountAmount2').text('৳ ' + discountAmount.toFixed(2) + ' /-');
+      $('#vatAmount').text('৳ ' + vatAmount.toFixed(2) + ' /-');
+      $('#vatAmount2').text('৳ ' + vatAmount.toFixed(2) + ' /-');
+  }
+
+  // Run calculation
+  $(document).ready(function () {
+      calculateTotals();
+  });
+  //new invoice view
+</script>

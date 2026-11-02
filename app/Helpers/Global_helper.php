@@ -2395,7 +2395,8 @@ if (!defined('SERIAL_ENTRY_ROW_LIMIT')) {
  *              Serial tab. Aggregates across every product_stock_relation row
  *              of the product in the shop (total qty + all serials). Only
  *              in-stock serials are editable; sold/returned/damaged rows are
- *              locked and simply reduce the expected serial count.
+ *              locked history. A sale already reduces the stock quantity when it
+ *              locks the serial row, so the quantity is the editable unit count.
  * @param object $product products table row
  * @return array
  */
@@ -2413,6 +2414,7 @@ function product_serial_tab_data($product)
         'quantity'        => 0,
         'serials'         => [],
         'lockedCount'     => 0,
+        'lockedSerials'   => [],
         'expectedCount'   => 0,
         'warrantyDate'    => '',
         'targetRelationId' => null,
@@ -2451,7 +2453,22 @@ function product_serial_tab_data($product)
         ->where('status !=', 'in_stock')
         ->countAllResults();
 
-    $data['expectedCount'] = max(0, $data['quantity'] - $data['lockedCount']);
+    // Sold/returned/damaged units are history: the tab lists them read-only so every
+    // unit stays visible, but they are never editable, submitted, counted or written.
+    // The row fetch is capped so a long sold history cannot bloat the grid.
+    $data['lockedSerials'] = DB()->table('product_serial')
+        ->select('product_serial_id, product_stock_relation_id, serial_number, status, company_warranty_end_date')
+        ->whereIn('product_stock_relation_id', $data['relationIds'])
+        ->where('status !=', 'in_stock')
+        ->orderBy('product_serial_id', 'ASC')
+        ->limit(SERIAL_ENTRY_ROW_LIMIT)
+        ->get()->getResultArray();
+
+    // One row per stocked unit. The live quantity already excludes sold units
+    // (the sale decrements it and locks the serial row), so lockedCount must NOT
+    // be subtracted again. It never drops below the in-stock rows already saved,
+    // because this screen offers no way to discard a stocked serial.
+    $data['expectedCount'] = max(0, $data['quantity'], min(count($data['serials']), SERIAL_ENTRY_ROW_LIMIT));
 
     foreach ($data['serials'] as $row) {
         if (!empty($row['company_warranty_end_date'])) {
@@ -2465,7 +2482,8 @@ function product_serial_tab_data($product)
     $data['tooLarge'] = ($data['expectedCount'] > SERIAL_ENTRY_ROW_LIMIT)
         || (count($data['serials']) > SERIAL_ENTRY_ROW_LIMIT);
     if ($data['tooLarge']) {
-        $data['serials'] = [];
+        $data['serials']       = [];
+        $data['lockedSerials'] = [];
     }
     return $data;
 }
